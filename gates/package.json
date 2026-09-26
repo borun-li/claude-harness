@@ -1,0 +1,6 @@
+{
+  "name": "claude-harness-gates",
+  "private": true,
+  "description": "Evidence capture for the frontend gates: playwright-core drives the system Chrome.",
+  "dependencies": { "playwright-core": "1.63.0" }
+}

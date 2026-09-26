@@ -1,0 +1,93 @@
+{
+  "harness_version": "2.7.4",
+  "_comment": "Global defaults for the backend agent team. A project may override any key by creating .claude/backend.json in the project root (shallow merge, top-level keys).",
+  "model_plan": {
+    "_active_tier": "quality",
+    "tiers": {
+      "quality": {
+        "label": "Quality first (default)",
+        "orchestrator": "opus",
+        "be-analyst": "opus",
+        "be-architect": "opus",
+        "be-developer": "opus",
+        "be-tester": "sonnet",
+        "be-reviewer": "opus"
+      },
+      "balanced": {
+        "label": "Balanced",
+        "orchestrator": "opus",
+        "be-analyst": "sonnet",
+        "be-architect": "opus",
+        "be-developer": "sonnet",
+        "be-tester": "haiku",
+        "be-reviewer": "opus"
+      },
+      "economy": {
+        "label": "Economy",
+        "orchestrator": "sonnet",
+        "be-analyst": "sonnet",
+        "be-architect": "opus",
+        "be-developer": "sonnet",
+        "be-tester": "haiku",
+        "be-reviewer": "sonnet"
+      },
+      "max": {
+        "label": "All Opus (no cost ceiling)",
+        "orchestrator": "opus",
+        "be-analyst": "opus",
+        "be-architect": "opus",
+        "be-developer": "opus",
+        "be-tester": "opus",
+        "be-reviewer": "opus"
+      }
+    }
+  },
+  "language": {
+    "default_docs": "en",
+    "code_and_identifiers": "en",
+    "confirm_at_kickoff": true
+  },
+  "artifacts": {
+    "dir": "docs/backend",
+    "state_file": "docs/backend/state.json",
+    "template_dir": "~/.claude/backend/templates"
+  },
+  "gates": {
+    "_comment": "Human stops. Plan and Acceptance are fixed; everything else stops only for a Constitution §5 case (PLAYBOOK §3F).",
+    "Plan": true,
+    "Acceptance": true,
+    "G0_detailed_design": false,
+    "G0_build": false,
+    "G0_verification": false,
+    "G0_review": false
+  },
+  "parallelism": {
+    "architecture_critique": true,
+    "architecture_critique_lenses": [
+      "feasibility-and-risk",
+      "simplicity-and-alternatives"
+    ],
+    "build_test_design_in_parallel": true,
+    "review_lenses": [
+      "correctness",
+      "security-and-robustness",
+      "maintainability-and-simplicity",
+      "operator-experience"
+    ],
+    "traceability_audit": true
+  },
+  "loops": {
+    "max_gate_fix_rounds": 3,
+    "max_fix_rounds_after_review": 2
+  },
+  "policy": {
+    "require_traceability_ids": true,
+    "requirement_id_prefix": "REQ",
+    "design_id_prefix": "DES",
+    "testcase_id_prefix": "TC",
+    "finding_id_prefix": "FND",
+    "block_phase_on_missing_upstream_doc": true,
+    "developer_may_change_scope": false,
+    "tests_derived_from_requirements_not_implementation": true
+  }
+}

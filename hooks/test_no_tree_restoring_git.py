@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+"""``no-tree-restoring-git.py`` 的回归矩阵。跑法：``python3 <本文件>``，退出码即结果。
+
+**前 8 条不是想出来的，是发生过的** —— 2026-09-03 至 09-08 四次代理越界的原命令
+（`git checkout --` / `git apply -R` / 对语料 docx 的 `git checkout` / `git stash`），
+外加同族的 reset / clean / restore。
+
+**后半的 ALLOW 同样重要，而且更容易被忽略。** 一个会对
+``grep -rn 'git checkout' docs/`` 开火的守卫，会在第一次有人查这条禁令的出处时
+显得愚蠢，然后被关掉。**守卫的假阳性率决定它能活多久**，所以这些用例和拦截
+用例是同一等级的验收项，不是补充。
+"""
+import json
+import pathlib
+import subprocess
+import sys
+
+HOOK = pathlib.Path(__file__).with_name("no-tree-restoring-git.py")
+
+CASES: list[tuple[str, bool]] = [
+    # —— 四次真实越界的原命令 ——
+    ("git checkout -- review/views.py", True),          # 吞掉 fe-engineer 未提交的三处改动
+    ("git apply -R /tmp/round1.diff", True),            # diff 对 HEAD 算，连别人的活一起撤
+    ("git checkout tests/corpus/synthetic/x.docx", True),
+    ("git stash push -u", True),
+    ("git stash pop", True),
+    # 真实探针抓到的假阳性：这两条只读，拦了它们守卫就会被关掉
+    ("git stash list", False),
+    ("git stash show -p", False),
+    # —— 同族 ——
+    ("git reset --hard HEAD", True),
+    ("git clean -fd", True),
+    ("cd /x && git restore --staged f.py", True),
+    ("git rm --cached f", True),
+    ("git branch -D old", True),
+    ("git switch main", True),
+    ("echo hi && git checkout main", True),             # 藏在复合命令里
+    # —— 只读，必须放行 ——
+    ("git status --short", False),
+    ("git diff --stat", False),
+    ("git log --oneline -5", False),
+    ("git ls-files", False),
+    # —— 认可的替代路径，必须放行 ——
+    ("git show HEAD:review/views.py > review/views.py", False),
+    ("git archive HEAD | tar -x -C /tmp/base", False),
+    ("git worktree add /tmp/base HEAD", False),
+    # 自建的临时 worktree 要清得掉，否则这条替代路径没人会用第二次
+    ("git worktree remove /tmp/base", False),
+    ("git worktree remove --force /tmp/base", True),
+    ("git checkout -b feature/x", False),
+    ("git add -A && git commit -m x", False),
+    # —— 假阳性：命令里出现的是字符串，不是命令 ——
+    ("grep -rn 'git checkout' docs/", False),
+    ('grep -rn "git stash" ~/.claude/', False),
+    ("cat > d.md <<'EOF'\n禁止 git checkout -- 与 git stash\nEOF", False),
+    # —— 但 heredoc 之后的真命令仍要拦 ——
+    ("cat > d.md <<'EOF'\n正文\nEOF\ngit reset --hard", True),
+    # —— 非 Bash 工具与空命令 ——
+    ("", False),
+]
+
+
+def denies(command: str) -> bool:
+    out = subprocess.run(
+        [sys.executable, str(HOOK)],
+        input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}),
+        capture_output=True, text=True, check=True,
+    ).stdout.strip()
+    if not out:
+        return False
+    return json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def main() -> int:
+    failures = 0
+    for command, want_deny in CASES:
+        got = denies(command)
+        if got != want_deny:
+            failures += 1
+            print("FAIL want=%s got=%s  %r"
+                  % ("DENY" if want_deny else "ALLOW",
+                     "DENY" if got else "ALLOW", command))
+    # 非 Bash 工具一律不管
+    out = subprocess.run(
+        [sys.executable, str(HOOK)],
+        input=json.dumps({"tool_name": "Edit", "tool_input": {"command": "git stash"}}),
+        capture_output=True, text=True, check=True).stdout.strip()
+    if out:
+        failures += 1
+        print("FAIL 非 Bash 工具被拦了")
+    print("%d cases, %d failures" % (len(CASES) + 1, failures))
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

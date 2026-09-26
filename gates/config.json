@@ -1,0 +1,101 @@
+{
+  "_comment": "Defaults for every project. A project's .claude/gates.json overrides any top-level key. Per-test results come from JUnit: automatic for pytest, vitest, playwright and jest (with jest-junit); set \"junit\": \"<report path or glob>\" for any other runner.",
+  "required_commands": [
+    "test"
+  ],
+  "timeout_seconds": 1800,
+  "min_doc_lines": 10,
+  "frontend_globs": [
+    "**/templates/**",
+    "**/static/**",
+    "**/*.html",
+    "**/*.css",
+    "**/*.scss",
+    "**/*.vue",
+    "**/*.svelte",
+    "**/*.jsx",
+    "**/*.tsx"
+  ],
+  "test_globs": [
+    "tests/**",
+    "test/**",
+    "**/test_*.py",
+    "**/*_test.py",
+    "**/*_test.go",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/__tests__/**",
+    "**/conftest.py"
+  ],
+  "doc_globs": [
+    "docs/**",
+    "contracts/**",
+    "product/**",
+    "team/**",
+    ".claude/**",
+    "**/*.md"
+  ],
+  "dependency_manifests": [
+    "requirements*.txt",
+    "**/requirements*.txt",
+    "pyproject.toml",
+    "package.json",
+    "go.mod",
+    "Cargo.toml",
+    "Gemfile",
+    "environment.yml"
+  ],
+  "test_def_patterns": [
+    "^\\s*(?:async\\s+)?def\\s+test\\w*\\s*\\(",
+    "\\b(?:it|test)\\s*\\(\\s*['\"`]",
+    "^func\\s+Test\\w+\\s*\\(",
+    "@Test\\b",
+    "#\\[test\\]"
+  ],
+  "skip_patterns": [
+    "@pytest\\.mark\\.skip",
+    "\\bpytest\\.skip\\(",
+    "@pytest\\.mark\\.xfail",
+    "\\bpytest\\.xfail\\(",
+    "@unittest\\.skip",
+    "\\.skipTest\\(",
+    "\\b(?:it|test|describe)\\.skip\\(",
+    "\\bx(?:it|describe|test)\\(",
+    "@Disabled\\b",
+    "@Ignore\\b",
+    "\\bt\\.Skip\\(",
+    "#\\[ignore\\]"
+  ],
+  "secret_patterns": [
+    "AKIA[0-9A-Z]{16}",
+    "-----BEGIN [A-Z ]*PRIVATE KEY-----",
+    "\\bsk-[A-Za-z0-9_-]{20,}",
+    "\\bghp_[A-Za-z0-9]{36}\\b",
+    "\\bxox[baprs]-[A-Za-z0-9-]{10,}",
+    "(?i)\\b(?:api[_-]?key|secret|token|password)\\b\\s*[:=]\\s*['\"][^'\"\\s]{12,}['\"]"
+  ],
+  "personal_path_patterns": [
+    "/Users/[^/\\s'\"]+/",
+    "/home/[^/\\s'\"]+/",
+    "[A-Za-z]:\\\\Users\\\\[^\\\\\\s]+\\\\"
+  ],
+  "fixtures_dir": "tests/fixtures/approved",
+  "fixture_candidates_dir": "tests/fixtures/candidates",
+  "fixture_compare_rules": [
+    "exact",
+    "json-unordered",
+    "text-whitespace",
+    "numeric:<tolerance>"
+  ],
+  "doc_budgets": {
+    "req_words": 60,
+    "des_words": 120,
+    "prose_unit_words": 50,
+    "architecture_prose_words": 800,
+    "fe_page_words": 200,
+    "fe_flow_words": 80,
+    "fe_finding_words": 80,
+    "fe_row_words": 80
+  },
+  "junit": null
+}

@@ -1,0 +1,64 @@
+{
+  "harness_version": "5.5.0",
+  "_comment": "Frontend Agent Team defaults. A project may override any top-level key in <project>/.claude/frontend.json. Model tier names live in ~/.claude/backend/config.json; roles below map this team one by one.",
+  "roles": {
+    "orchestrator": {
+      "model": "opus"
+    },
+    "fe-critic": {
+      "model": "opus",
+      "floor": true
+    },
+    "fe-designer": {
+      "model": "opus",
+      "down_to_sonnet_when": "carrying out a decided change: wording, sync, fill-in"
+    },
+    "fe-engineer": {
+      "model": "sonnet",
+      "up_to_opus_when": "cross-stack row, template data layer, or a written invariant is touched"
+    },
+    "fe-tester": {
+      "model": "sonnet",
+      "up_to_opus_when": "writing a new assertion that must be shown to fail"
+    }
+  },
+  "model_tiering_rule": "Judgement -> opus; carrying out a decided conclusion -> sonnet. Say which and why at each dispatch.",
+  "artifacts": {
+    "run_dir": "docs/frontend",
+    "contract": "contracts/FRONTEND_BACKEND_CONTRACT.md",
+    "evidence_dir": "docs/frontend/evidence",
+    "template_dir": "~/.claude/frontend/templates"
+  },
+  "backend_team": {
+    "harness": "~/.claude/backend",
+    "run_dir": "docs/backend",
+    "contract": "contracts/FRONTEND_BACKEND_CONTRACT.md"
+  },
+  "gates": {
+    "_comment": "Human stops. Plan (and Acceptance in implement) are fixed; everything else stops only for a PLAYBOOK §3F case.",
+    "Plan": true,
+    "Acceptance": true
+  },
+  "parallelism": {
+    "audit_lenses": [
+      "task-completion",
+      "information-scent",
+      "state-coverage"
+    ],
+    "review_lenses": [
+      "ux-flow",
+      "design-system",
+      "accessibility-and-content",
+      "contract-and-feasibility"
+    ],
+    "final_critic_pass": true
+  },
+  "loops": {
+    "max_interview_rounds_before_gate": 2,
+    "max_revision_rounds_after_review": 2,
+    "max_rework_rounds_after_verification": 2
+  },
+  "delivery_surface": null,
+  "primary_user_role": null,
+  "frontend_backend_boundary": "Declared by the project, with who ruled it and a date, in <project>/.claude/project-context.md. The harness presets nothing; an unwritten line stops the queue."
+}
