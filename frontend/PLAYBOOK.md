@@ -69,12 +69,17 @@ A picture alone is never evidence.
 
 ## 2. Phase 0 — Kickoff (always runs)
 
+**2.0 Tier — first, alone.** Unless `/route` already asked it: one `AskUserQuestion`, Small change
+/ Prototype / Full development (Constitution §7). Small change → `~/.claude/commands/route.md` §4;
+Prototype → `~/.claude/route/PROTOTYPE.md`; either way leave this PLAYBOOK. Full development →
+continue, with `tier: "full"` in `state.json`.
+
 **2.1 Mode.** Ambiguous → ask; never guess.
 
 | Mode | Runs |
 |---|---|
-| `new` | 1 → 3 → 4 → 5 → **Plan** (design approval) |
-| `redesign` | 1 → 2 → 3 → 4 → 5 → **Plan** |
+| `new` | 1 → 1b → 3 → 4 → 5 → **Plan** (design approval) |
+| `redesign` | 1 → 2 → 1b → 3 → 4 → 5 → **Plan** |
 | `audit` | 1 → 2, then report |
 | `review` | 5 on existing artifacts, then report |
 | `implement` | 6 → **Plan** → 7 → 8 → **Acceptance** (needs an approved design) |
@@ -108,6 +113,12 @@ tasks, scope and cut line, non-goals, assumptions (`[confirmed]` / `[unconfirmed
 questions, each with what its answer would change. You file it. Questions that change what gets
 built are a conditional stop (§3F): ask the fewest that branch the design, at most
 `loops.max_interview_rounds_before_gate` rounds.
+
+**Phase 1b — Prototype** (`new`, `redesign`; `~/.claude/route/PROTOTYPE.md`) → intent questions,
+then one `fe-engineer` builds a rough, runnable page sketch in `prototype/`; the user confirms it
+(fixed stop, §3F). If the confirmation changed scope, `fe-critic` amends `01-brief.md`. Phase 3
+starts only after the confirmation (Constitution §2.7). In a cross-stack run the Backend team's
+Phase 1b covers it; do not build a second prototype, but log the same `Prototype` stop here.
 
 **Phase 2 — Audit** (brownfield) → `04-findings.md`. First capture evidence yourself (§1C) into
 `docs/frontend/evidence/` with a manifest (file · state shown · instrument). Then one `fe-critic` per
@@ -194,7 +205,7 @@ the build.
 
 ## 3F. Human stops
 
-**Fixed:** Plan, and Acceptance in `implement`. **Conditional**, batched per phase in one
+**Fixed:** Prototype (in `new` and `redesign`, before Phase 3), Plan, and Acceptance in `implement`. **Conditional**, batched per phase in one
 `AskUserQuestion` with a recommendation each:
 
 - a Constitution §5 case;
@@ -210,7 +221,8 @@ overturn it). An agent's ruling is never recorded as the user's.
 
 Same as the Backend team (backend PLAYBOOK §3G), with `--team frontend`: log every dispatch and
 return, every human stop and every agent's own ruling. `fe-accept` checks the trail, including that
-the Plan approval precedes the first `fe-engineer` dispatch.
+the Plan approval precedes the first `fe-engineer` dispatch outside Phase 1b, and (`tier: "full"`)
+that the Prototype approval precedes the first Phase 3 dispatch.
 
 ## 3H. Evidence capture
 
@@ -278,9 +290,10 @@ Accepted rows become permanent: `fe-promote` adds each row verified done to
 
 ```
 docs/frontend/      (second round: docs/frontend/<slug>/…)
-  01-brief.md  02-structure.md  03-spec.md  04-findings.md
+  01-brief.md  01b-prototype.md  02-structure.md  03-spec.md  04-findings.md
   05-queue.md  06-verification.md  state.json  run-log.jsonl  evidence/  gates/
 contracts/          FRONTEND_BACKEND_CONTRACT.md
+prototype/          throwaway prototype from Phase 1b
 ```
 
 ## 8. `frontend/state.json` schema
@@ -292,6 +305,7 @@ contracts/          FRONTEND_BACKEND_CONTRACT.md
   "feature": "one line", "slug": "round-slug",
   "started_at": "ISO-8601 from `date -u +%FT%TZ`", "updated_at": "ISO-8601",
   "status": "in_progress | blocked | design_approved | conditional | implementing | verified | rework_capped",
+  "tier": "full",
   "language": { "docs": "en", "identifiers": "en" },
   "delivery_surface": "…", "primary_user_role": "…",
   "models": { "orchestrator": "opus", "fe-critic": "opus", "fe-designer": "opus",

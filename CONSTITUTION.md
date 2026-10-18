@@ -22,6 +22,9 @@ needs human approval.
 5. **Raise contradictions.** When two sources disagree, quote both and stop that item. Never
    resolve it by editing whichever is easier to change.
 6. **Disclose your own mistakes** immediately, in your return value.
+7. **Show it running before detailed design.** In Full development, the user sees a rough,
+   runnable prototype or page sketch and confirms it before any detailed design starts
+   (`~/.claude/route/PROTOTYPE.md`). A requirements document is not a substitute.
 
 ## 3. Agent Roles
 
@@ -42,7 +45,8 @@ needs human approval.
 
 1. **Understand first.** Read the code you will change and its callers before editing.
 2. **Plan large changes.** A change touching more than 3 files, or any schema, API, public
-   interface or dependency, starts only from an approved design or written plan.
+   interface or dependency, starts only from an approved design or written plan. Prototype code
+   (§7) is exempt: it is throwaway and never becomes product code without that design.
 3. **Follow the plan.** Log every deviation with its reason; report a wrong plan instead of
    improvising.
 4. **Test after every change**, and show the commands and their results.
@@ -80,3 +84,21 @@ with what is missing.
 5. Deviations, deferrals and unmeasured qualities are listed.
 6. The report says what the user must do to make it live.
 7. For team runs: the user — the developer — accepted it at the final gate, recorded with date.
+
+This list is for Full development. A Small change is done when the project's checks pass, it
+was run through its real entry point, and the user accepted it. A Prototype is done when the user
+confirmed it (§7).
+
+## 7. Run tiers
+
+At the start of every task, ask the user which tier it is — never infer it. Ask in the user's
+language; the three options are **Small change**, **Prototype** and **Full development**.
+
+| Tier | What runs | Ends when |
+|---|---|---|
+| Small change | A short written plan the user confirms, then one engineer per side, a fresh dispatch each; no phase documents or gates (`~/.claude/commands/route.md` §4) | Checks pass and the user accepts it running |
+| Prototype | Understanding the ask, intent questions, then a rough runnable version (`~/.claude/route/PROTOTYPE.md`) | The user confirms the prototype |
+| Full development | The team's whole phase flow, with the prototype phase (1b) after requirements and before detailed design | The user accepts at the final gate (§6) |
+
+If the work turns out bigger than its tier (new data model, new dependency, scope change), stop
+and ask the user whether to switch tiers. Never switch silently.

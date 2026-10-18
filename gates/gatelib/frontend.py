@@ -15,6 +15,8 @@ def state(ctx):
         return bad("ALL.state", "state.json missing", "orchestrator")
     missing = [k for k in ("harness_version", "mode", "feature", "status", "current_phase", "phases", "models")
                if k not in s]
+    if "tier" in s and s["tier"] not in ("small", "prototype", "full"):
+        missing.append(f"tier must be small|prototype|full, got {s['tier']!r}")
     return (bad("ALL.state", "state.json does not match the schema (PLAYBOOK §8)", "orchestrator", missing)
             if missing else ok("ALL.state", "state.json valid", "orchestrator"))
 

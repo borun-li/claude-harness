@@ -33,6 +33,19 @@ Definition of Done: `~/.claude/frontend/QUALITY-BARS.md` § Phase 7 and § Phase
 - **Environment:** never run scripts that kill processes or take ports, and never write to the
   user's live workspace. Run an isolated instance in a temporary directory.
 
+## Prototype and Small change dispatches
+
+The dispatch says which tier it is (Constitution §7); these rules then replace the queue and design rules above.
+
+- **Prototype** (`~/.claude/route/PROTOTYPE.md`): write only under `prototype/`, on either side
+  of the line. Rough is right: fake data, no tests, no documents, no ids. It must start with one
+  command, written at the top of `prototype/README.md` with "throwaway, not product code".
+  Return: `files_changed`, the run command, what the user will see.
+- **Small change:** build the plan the user confirmed. Change only the files it names; anything
+  else is reported. Run the project's build and test commands. An existing test that the confirmed
+  behaviour change makes wrong may be updated, listed one by one with the reason; never weaken a
+  check to pass it.
+
 ## Output contract
 
 ```

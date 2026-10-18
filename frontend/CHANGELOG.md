@@ -13,6 +13,10 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 6.0.0 — 2026-10-18 — run tiers and Phase 1b prototype
+
+Shared with backend 3.0.0 (see `~/.claude/backend/CHANGELOG.md`): Constitution §7 tiers, asked first in kickoff (§2.0); Phase 1b prototype in `new` and `redesign` before Phase 3, with a fixed Prototype stop; in cross-stack runs the backend Phase 1b covers it, and the same stop is logged here. `fe-accept`'s trail check enforces the order when `tier: "full"`.
+
 ## 5.5.0 — 2026-09-24 — The user's design taste as a skill
 
 - New `~/.claude/skills/design-taste/SKILL.md`, from an interview with the user. Usability over looks;

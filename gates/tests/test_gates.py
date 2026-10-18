@@ -721,6 +721,50 @@ class RunLog(Base):
         self.assertIn("before the Plan was approved", joined)
         self.assertIn("be-tester: 1 dispatch(es) never returned", joined)
 
+    def _trail(self):
+        import importlib
+        sys.path.insert(0, str(GATE.parent))
+        checks = importlib.import_module("gatelib.checks")
+        return checks._log_trail(checks.Ctx(self.p.root, "docs/backend", {"test_globs": [], "doc_globs": []}))
+
+    def _tier(self, tier):
+        st = dict(STATE, tier=tier)
+        self.p.write("docs/backend/state.json", json.dumps(st))
+
+    def test_prototype_dispatch_may_precede_plan(self):
+        self._tier("full")
+        self.p.log("dispatch", "--agent", "fe-engineer", "--model", "sonnet", "--step", "1b", "--note", "prototype")
+        self.p.log("return", "--agent", "fe-engineer", "--step", "1b", "--status", "ok", "--note", "runs")
+        self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
+        self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "3", "--note", "design")
+        self.p.log("return", "--agent", "be-architect", "--step", "3", "--status", "ok", "--note", "done")
+        self.p.approve()
+        r = self._trail()
+        self.assertEqual(r["status"], "pass", r.get("details"))
+
+    def test_full_tier_needs_prototype_before_detailed_design(self):
+        self._tier("full")
+        self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "3", "--note", "design")
+        self.p.log("return", "--agent", "be-architect", "--step", "3", "--status", "ok", "--note", "done")
+        self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "late")
+        self.p.approve()
+        r = self._trail()
+        self.assertEqual(r["status"], "fail")
+        self.assertIn("before the Prototype was approved", " ".join(r["details"]))
+
+    def test_full_tier_without_prototype_fails_and_old_runs_unaffected(self):
+        self.p.approve()
+        self.assertEqual(self._trail()["status"], "pass")  # no tier key: runs before 2.8.0
+        self._tier("full")
+        r = self._trail()
+        self.assertEqual(r["status"], "fail")
+        self.assertIn("no approved Prototype stop", " ".join(r["details"]))
+
+    def test_state_rejects_unknown_tier(self):
+        self._tier("huge")
+        code, out, rep = self.p.gate("p1")
+        self.assertEqual(self.p.status(rep, "ALL.state"), "fail")
+
 
 class JsRunners(unittest.TestCase):
     """JUnit for JS runners, without needing node: detection, flags, stale reports, title mapping."""

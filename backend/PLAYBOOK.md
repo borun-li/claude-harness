@@ -46,6 +46,11 @@ Interface work is built by the Frontend team (`fe-designer`, `fe-critic`, `fe-en
 
 ## 2. Phase 0 — Kickoff (always runs)
 
+**2.0 Tier — first, alone.** Unless `/route` already asked it: one `AskUserQuestion`, Small change
+/ Prototype / Full development (Constitution §7). Small change → `~/.claude/commands/route.md` §4;
+Prototype → `~/.claude/route/PROTOTYPE.md`; either way leave this PLAYBOOK. Full development →
+continue, with `tier: "full"` in `state.json`.
+
 **2.1 Understand the ask.** Read any file it names. Empty request → ask what to build.
 
 **2.1a Cut line.** Write the ask in the user's words, then its simplest useful version: that is
@@ -84,6 +89,11 @@ gate exits 0 (§3D).**
 **Phase 1 — Requirements** → `be-analyst`. It writes §0 Understanding first; if an ambiguity would
 change what gets built, it stops there and returns the questions, which you ask the user (§3F),
 then it finishes. It also picks real fixture inputs (§3E).
+
+**Phase 1b — Prototype** (`~/.claude/route/PROTOTYPE.md`) → intent questions, then one engineer
+builds a rough, runnable version in `prototype/`; the user confirms it (fixed stop, §3F). If the
+confirmation changed scope, `be-analyst` amends `01-requirements.md` and `p1` runs again. Nothing
+in Phase 3 starts before the confirmation (Constitution §2.7).
 
 **Phase 2 — Architecture** → `be-architect`. If `parallelism.architecture_critique`: one
 `be-reviewer` per `architecture_critique_lenses`, each arguing against the design; then one
@@ -214,6 +224,7 @@ it, never the agent whose work it checks. Exit `0` pass · `1` fail · `3` fix-r
 |---|---|
 | First run in a project | `profile`, then user confirms `.claude/gates.json` (§2.3) |
 | After Phase 1 / 2 / 3 | `p1` / `p2` / `p3` |
+| Phase 1b | no gate; log its dispatch with `--step 1b` and the `Prototype` stop (`LOG.trail` checks the order) |
 | After Phase 3b, before the Plan stop | `plan` |
 | After the user approves the Plan | `fixtures-approve --by <user>` |
 | Phase 4 start | `baseline` |
@@ -256,7 +267,8 @@ Human-confirmed input/output pairs that every later test must match.
 
 ## 3F. Human stops
 
-**Fixed:** Plan (before any code) and Acceptance (Constitution §6.7). Nothing else stops by default.
+**Fixed:** Prototype (before detailed design, Constitution §2.7), Plan (before any product code)
+and Acceptance (Constitution §6.7). Nothing else stops by default.
 
 **Conditional:** stop only for a Constitution §5 case: an ambiguity that changes what gets built, a
 fact only the user knows, a new dependency or schema change, a genuine tie, a loop cap. Collect
@@ -272,11 +284,12 @@ line breaks `LOG.valid`. Gates write their own `gate`, `mark` and `approve` even
 |---|---|
 | Before each agent dispatch | `gate.py log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` |
 | When it returns | `gate.py log return --agent <a> --step <phase> --status ok\|blocked\|failed --note "<result>"` |
-| Every human stop | `gate.py log human --stop Plan\|Acceptance\|conditional --decision approved\|changes\|rejected\|answered --by <user> --note "<what>"` |
+| Every human stop | `gate.py log human --stop Prototype\|Plan\|Acceptance\|conditional --decision approved\|changes\|rejected\|answered --by <user> --note "<what>"` |
 | Every decision an agent made alone (Constitution §5) | `gate.py log decision --agent <a> --note "<what and why>"` |
 
 `gate.py timeline` renders `run-log.md`. `P7` requires every dispatch to have returned, every mark
-to be followed by its dispatch, and the Plan approval to precede the first `be-developer` dispatch.
+to be followed by its dispatch, the Plan approval to precede the first `be-developer` dispatch
+outside Phase 1b, and (`tier: "full"`) the Prototype approval to precede the first Phase 3 dispatch.
 
 ---
 
@@ -309,9 +322,10 @@ to `be-architect` for an amendment and tell the user.
 
 ```
 <project>/docs/backend/            (second feature: docs/backend/<slug>/…)
-  state.json  01-requirements.md  02-architecture.md  03-detailed-design.md
+  state.json  01-requirements.md  01b-prototype.md  02-architecture.md  03-detailed-design.md
   04-test-plan.md  05-test-report.md  06-review-report.md  07-acceptance.md
   08-implementation-log.md  NN-deferred.md
+<project>/prototype/               throwaway prototype from Phase 1b
 ```
 
 ## 8. `state.json` schema
@@ -322,6 +336,7 @@ to `be-architect` for an amendment and tell the user.
   "feature": "one line", "slug": "feature-slug",
   "started_at": "ISO-8601 from `date -u +%FT%TZ`", "updated_at": "ISO-8601",
   "status": "in_progress | blocked | accepted",
+  "tier": "full",
   "language": { "docs": "en", "code": "en" },
   "models": { "orchestrator": "…", "be-analyst": "…", "be-architect": "…",
               "be-developer": "…", "be-tester": "…", "be-reviewer": "…" },

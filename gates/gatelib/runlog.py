@@ -15,7 +15,7 @@ REQUIRED = {
     "capture": ("round", "captures"),
 }
 ALLOWED = {"status": {"ok", "blocked", "failed"},
-           "stop": {"Plan", "Acceptance", "conditional"},
+           "stop": {"Prototype", "Plan", "Acceptance", "conditional"},
            "decision": {"approved", "changes", "rejected", "answered"}}
 GENESIS = "0" * 64
 

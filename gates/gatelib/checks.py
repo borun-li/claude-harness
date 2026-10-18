@@ -65,6 +65,8 @@ def state(ctx):
         problems.append(f"status must be in_progress|blocked|accepted, got {s.get('status')!r}")
     if not isinstance(s.get("phases", []), list):
         problems.append("phases must be a list")
+    if "tier" in s and s["tier"] not in ("small", "prototype", "full"):
+        problems.append(f"tier must be small|prototype|full, got {s['tier']!r}")
     if problems:
         return bad("ALL.state", "state.json does not match the schema (PLAYBOOK §8)", "orchestrator", problems)
     return ok("ALL.state", "state.json valid", "orchestrator")
@@ -238,12 +240,22 @@ def _log_trail(ctx):
                 problems.append(f"#{ev['seq']}: mark for {ev['role']} not followed by its dispatch")
     plan = next((e["seq"] for e in events if e["event"] == "human" and e["stop"] == "Plan"
                  and e["decision"] == "approved"), None)
+    # Phase 1b prototype dispatches are throwaway work and may precede the Plan (route/PROTOTYPE.md).
     build = next((e["seq"] for e in events if e["event"] == "dispatch"
-                  and e["agent"] in ("be-developer", "fe-engineer")), None)
+                  and e["agent"] in ("be-developer", "fe-engineer") and str(e["phase"]) != "1b"), None)
     if plan is None:
         problems.append("no approved Plan stop in the log")
     elif build is not None and build < plan:
         problems.append(f"builder dispatched (#{build}) before the Plan was approved (#{plan})")
+    # Full-development runs: the user confirms a running prototype before detailed design (Constitution §2.7).
+    if (read_json(ctx.run / "state.json") or {}).get("tier") == "full":
+        proto = next((e["seq"] for e in events if e["event"] == "human" and e["stop"] == "Prototype"
+                      and e["decision"] == "approved"), None)
+        design = next((e["seq"] for e in events if e["event"] == "dispatch" and str(e["phase"]) == "3"), None)
+        if proto is None:
+            problems.append("no approved Prototype stop in the log")
+        elif design is not None and design < proto:
+            problems.append(f"detailed design dispatched (#{design}) before the Prototype was approved (#{proto})")
     return (bad("LOG.trail", "Run log does not account for the run", owner, problems) if problems
             else ok("LOG.trail", f"{len(events)} events account for every dispatch and the Plan approval", owner))
 

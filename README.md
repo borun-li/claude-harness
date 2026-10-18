@@ -36,7 +36,15 @@ In a project folder, start Claude Code and type:
 | `/backend-status`, `/backend-resume`, `/frontend-resume` | See or continue a run |
 | `/backend-config`, `/frontend-config` | Show or change models, gates, caps |
 
-You approve the plan and the final acceptance; everything irreversible or outward-facing (deploys, pushes, deletes) waits for you.
+Every task starts with one question: which tier is it?
+
+| Tier | What happens |
+|---|---|
+| Small change | Claude shows a short plan, you confirm, one engineer makes the change, you check it running |
+| Prototype | A few questions about what you want, then a rough, runnable version for you to confirm |
+| Full development | The whole team process. After requirements, you see and confirm a rough running prototype before any detailed design |
+
+In Full development you also approve the plan and the final acceptance. Everything irreversible or outward-facing (deploys, pushes, deletes) waits for you.
 
 ## What is in here
 
@@ -46,12 +54,12 @@ You approve the plan and the final acceptance; everything irreversible or outwar
 | `commands/` | The slash commands above |
 | `agents/` | Nine roles: `be-analyst`, `be-architect`, `be-developer`, `be-tester`, `be-reviewer`, `fe-critic`, `fe-designer`, `fe-engineer`, `fe-tester` |
 | `backend/`, `frontend/` | Playbooks, quality bars, document templates, changelogs |
-| `route/` | Template for the frontend/backend capability table |
+| `route/` | `PROTOTYPE.md` (the prototype procedure) and the capability-table template |
 | `gates/` | `gate.py`: automatic checks between steps, run log, fixtures, waivers, screenshot capture (tests in `gates/tests`) |
 | `hooks/` | The git safety hook and its test |
 | `skills/design-taste/` | Design guidance for `fe-designer` |
 
-Harness version: backend 2.7.4 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
+Harness version: backend 3.0.0, frontend 6.0.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
 
 ## Changing the harness
 

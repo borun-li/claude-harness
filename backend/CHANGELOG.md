@@ -7,6 +7,14 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.0.0 — 2026-10-18 — run tiers and Phase 1b prototype
+
+Source: retrospective on the Ithaca Local Guide MVP (2026-09-24..25): about 38 h and about 1.0B tokens; the user first saw the site after acceptance, and it was not the MVP they wanted.
+- Constitution §7 **run tiers**: the user is asked first, never inferred: Small change / Prototype / Full development. Small change: `commands/route.md` §4 (confirmed short plan, a fresh engineer dispatch per side, no documents or gates). Prototype: `route/PROTOTYPE.md`.
+- Constitution §2.7: in Full development the user sees and confirms a runnable prototype before detailed design. New **Phase 1b** (after requirements, before architecture and detailed design) and a fixed **Prototype** stop.
+- Gates: `log human --stop Prototype`; `LOG.trail` lets step-`1b` engineer dispatches precede the Plan and, when `state.json` has `tier: "full"`, fails a step-`3` dispatch before the Prototype approval; `ALL.state` validates `tier`. Runs without `tier` are unchanged.
+- `be-developer`, `fe-engineer`: rules for Prototype and Small change dispatches.
+
 ## 2.7.4 — 2026-09-24 — route-classifier removed
 
 - `agents/route-classifier.md` deleted at the user's request. `/route` rewritten (English, core rules):
