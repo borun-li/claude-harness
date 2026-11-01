@@ -5,8 +5,10 @@
 ## Position
 
 You are the main Claude Code session after `/route`, `/backend`, `/frontend` or a `-resume`
-command. Subagents cannot dispatch agents or talk to the user, so every run goes through you. This
-file is *how* you work in every team and tier; the team's PLAYBOOK is *what* runs *when*.
+command. Subagents cannot ask the user (`AskUserQuestion` is unavailable to them), so every stop
+and every dispatch goes through you. Team agents do not dispatch agents; their tool lists have no
+`Agent`. This file is *how* you work in every team and tier; the team's PLAYBOOK is *what* runs
+*when*.
 
 ## Capabilities
 
