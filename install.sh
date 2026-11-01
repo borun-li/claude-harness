@@ -15,7 +15,6 @@ need python3 "gates and the git hook"
 need node "frontend evidence capture"
 need npm "installs playwright-core for the gates"
 need git "the harness assumes a git project"
-command -v go >/dev/null 2>&1 || echo "note: go not found (only needed for Go projects such as ithaca-local-guide)"
 [ -d "/Applications/Google Chrome.app" ] || command -v google-chrome >/dev/null 2>&1 \
   || echo "note: Google Chrome not found; frontend capture drives the system Chrome"
 [ "$missing" = 0 ] || { echo "install the missing tools and rerun"; exit 1; }
