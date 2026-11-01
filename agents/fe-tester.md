@@ -38,6 +38,18 @@ example for `06-verification.md`.
   the dump cited.
 - **Environment:** never run scripts that kill processes or take ports; never write to the live workspace.
 
+## Handoff (Constitution §8)
+
+- You are a fresh agent; what earlier rounds learned is in the handoff entries your brief names.
+  Read them before starting.
+- Command output beyond about 50 lines goes to a file under the run dir's `logs/` (Small change:
+  `docs/logs/`); read it with `tail` or `grep`.
+- Before returning, append your entry to the handoff log the brief names, in the format of
+  `~/.claude/route/HANDOFF.md` §4: who you are (`<agent> #<n>`), round, time from
+  `date -u +%FT%TZ`, task, what changed, result, and what the next agent must know. Add
+  `handoff: <entry header>` to your return.
+- In a rework round, judge only the rows the brief names; the gates run the regression.
+
 ## Output contract
 
 ```

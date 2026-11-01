@@ -51,10 +51,11 @@ In Full development you also approve the plan and the final acceptance. Everythi
 | Path | What |
 |---|---|
 | `CONSTITUTION.md` | Rules that override every playbook |
+| `ORCHESTRATOR.md` | How the orchestrator (the main session) dispatches, decides, keeps context and uses gates in every team |
 | `commands/` | The slash commands above |
 | `agents/` | Nine roles: `be-analyst`, `be-architect`, `be-developer`, `be-tester`, `be-reviewer`, `fe-critic`, `fe-designer`, `fe-engineer`, `fe-tester` |
 | `backend/`, `frontend/` | Playbooks, quality bars, document templates, changelogs |
-| `route/` | `PROTOTYPE.md` (the prototype procedure) and the capability-table template |
+| `route/` | `PROTOTYPE.md` (the prototype procedure), `HANDOFF.md` (dispatch brief and handoff log) and the capability-table template |
 | `gates/` | `gate.py`: automatic checks between steps, run log, fixtures, waivers, screenshot capture (tests in `gates/tests`) |
 | `hooks/` | The git safety hook and its test |
 | `skills/design-taste/` | Design guidance for `fe-designer` |

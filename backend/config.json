@@ -1,5 +1,5 @@
 {
-  "harness_version": "3.0.0",
+  "harness_version": "3.1.0",
   "_comment": "Global defaults for the backend agent team. A project may override any key by creating .claude/backend.json in the project root (shallow merge, top-level keys).",
   "model_plan": {
     "_active_tier": "quality",

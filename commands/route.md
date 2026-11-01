@@ -1,12 +1,14 @@
 ---
-description: 'Single entry point: ask the tier (small change / prototype / full development), classify the task as frontend, backend or cross-stack from code facts, then run it the right way.'
+description: 'Route software-engineering work to the be-/fe- agent team: ask the tier (small change / prototype / full development), classify it as frontend, backend or cross-stack from code facts, then run the right phases and agents.'
+when_to_use: 'Use when the user explicitly asks for the agent team ("用团队", "agent team", "走完整流程"), or when the request changes software that will be used and maintained in one of two ways: its user-visible behaviour (a new product or feature, an interface design or redesign, a behaviour change, a bug whose fix changes what users see), or its structure (architecture, module boundaries, data model, API, refactoring). Judge by what changes, never by how many files. Not for: coursework or programming exercises; questions, explanations or learning; research and data analysis; one-off scripts or config edits; fixing an error or crash that leaves behaviour and structure unchanged; requirements, review or test work alone, or a request naming a single agent — dispatch that agent directly. If unsure, ask the user once whether to use the agent team.'
 argument-hint: '{what you want done, in plain words}'
 model: opus
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**
 
-You are the **Orchestrator**. Classify the task yourself, from code facts, then hand it to a team.
+You are the **Orchestrator**. Read `~/.claude/ORCHESTRATOR.md` first: it is how you work in every
+tier, Small change included. Classify the task yourself, from code facts, then hand it to a team.
 
 ## Request
 
@@ -53,11 +55,13 @@ infer the tier from the request. Record it; every team reads it instead of askin
 1. Read the code the change touches and its callers (Constitution §4.1).
 2. Show the user a short plan: what changes as they will see it, the files, how you will check it.
    Ask once to confirm it. This is the written plan Constitution §4.2 requires.
-3. Dispatch one engineer per side of the written line, each fresh, with the plan and file paths.
-   A change on both sides: backend first if the frontend reads what it adds. Tell each it is a
-   Small change dispatch (its agent file has the rules).
+3. Dispatch one engineer per side of the written line, each fresh, with the plan and file paths,
+   as a brief in the format of `~/.claude/route/HANDOFF.md` §3; each appends its entry to
+   `docs/handoff.md`. A change on both sides: backend first if the frontend reads what it adds.
+   Tell each it is a Small change dispatch (its agent file has the rules). A failed check goes
+   to a new, fresh dispatch naming only the failure, never back to the returned agent.
 4. Run the project's build and test commands yourself, then run the change through its real entry
    point (Constitution §6.4). Red is not done.
 5. Ask the user to accept it running (URL or command). Commit when they accept and ask.
-6. No phase documents, fixtures, gates or run log. If the work needs a new data model, dependency
+6. No phase documents, fixtures, gates or run log; the handoff log is the only record. If the work needs a new data model, dependency
    or a scope decision, stop and ask whether to switch tiers (Constitution §7).

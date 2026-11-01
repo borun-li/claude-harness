@@ -774,7 +774,7 @@ def phase6(ctx):
     d = snap.diff(before, ctx.snapshot())
     changed = [p for p in snap.changed(d) if not glob_match(p, [f"{ctx.run_rel}/**"])]
     res = [state(ctx),
-           bad("P6.tree-unchanged", "Files changed while reviewers ran (PLAYBOOK §4.7)", owner, changed)
+           bad("P6.tree-unchanged", "Files changed while reviewers ran (backend PLAYBOOK §4.4)", owner, changed)
            if changed else ok("P6.tree-unchanged", "Tree unchanged during review", owner),
            upstream(ctx, ["06-review-report.md"], owner)]
     if res[-1]["status"] == FAIL:

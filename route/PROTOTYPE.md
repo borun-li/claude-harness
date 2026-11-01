@@ -30,8 +30,9 @@ later phases and runs read them.
   interface (it then shows the behaviour through a runnable command with sample input and output).
 - **Where:** `prototype/` at the project root, and nowhere else. It may contain throwaway stubs
   on either side of the frontend/backend line.
-- **Brief:** the intent answers, the must-see screen or flow, and the non-goals. Paths, not pasted
-  documents.
+- **Brief:** the intent answers, the must-see screen or flow, and the non-goals, in the format of
+  `~/.claude/route/HANDOFF.md` §3 (round 1). Paths, not pasted documents. The engineer appends
+  its handoff entry to `<run-dir>/handoff.md`.
 - **Rules for the engineer:** rough is right. Hard-coded or fake data, no tests, no design
   documents, no ids, no polish beyond what makes the main idea readable. It must start with one
   command, written at the top of `prototype/README.md` along with "throwaway, not product code".
@@ -43,7 +44,8 @@ later phases and runs read them.
 1. Run it yourself through its one command (Constitution §6.4), on a free port, never the user's.
 2. Give the user the URL or the command and a two-line summary of what it shows.
 3. Ask: **confirm**, **change** (what), or **stop**.
-4. **Change:** a new, fresh dispatch with a short brief listing only the changes. After 3 rounds,
+4. **Change:** a new, fresh dispatch with a short brief listing only the changes, the next round
+   number, and the pitfalls from the previous engineer's handoff entry. After 3 rounds,
    ask the user whether to continue.
 5. **Confirm:** log `gate.py log human --stop Prototype --decision approved --by <user> --note "<what was confirmed>"`
    (cross-stack runs: in both teams' run logs). Write `<run-dir>/01b-prototype.md`: what the user

@@ -1,12 +1,13 @@
 # Frontend Agent Team — Orchestration Playbook
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**
+> **Then read `~/.claude/ORCHESTRATOR.md`: how you dispatch, decide, keep context and use gates.**
 
-Harness version: `harness_version` in `~/.claude/frontend/config.json`. This file is the single
-source of truth for how the team runs; the command and agent files are thin loaders.
-
-You are the **Orchestrator**. You interview the user, capture evidence, write the queue, run the
-gates, enforce the stops, keep state and report. You never write briefs, specs, findings or code yourself.
+Harness version: `harness_version` in `~/.claude/frontend/config.json`. This file is *what* the
+Frontend team runs and *when*: roles, modes, phases, fixed stops, gate table, evidence,
+artifacts, state. *How* the orchestrator works in every phase is `ORCHESTRATOR.md`; this file does
+not repeat it. In this team you also interview the user, capture evidence and write the queue;
+you never write briefs, specs, findings or code.
 
 ---
 
@@ -38,9 +39,7 @@ gates, enforce the stops, keep state and report. You never write briefs, specs, 
 
 ## 1A. Project context vs. harness
 
-- Read `<project>/.claude/project-context.md` at kickoff if it exists, and say so. The user writes it.
-- A preference for **this project** goes there. A rule enters this harness only after it held on
-  more than one unrelated project.
+See `ORCHESTRATOR.md`, Boundaries.
 
 ## 1C. The delivery surface
 
@@ -110,9 +109,10 @@ Serial between phases; fan-outs in one message. **A phase ends only when its gat
 
 **Phase 1 — Discovery** → `01-brief.md`. `fe-critic` returns §0 Understanding, the named user and
 tasks, scope and cut line, non-goals, assumptions (`[confirmed]` / `[unconfirmed]`) and open
-questions, each with what its answer would change. You file it. Questions that change what gets
-built are a conditional stop (§3F): ask the fewest that branch the design, at most
-`loops.max_interview_rounds_before_gate` rounds.
+questions, each with what its answer would change. You file it. Each open question carries a
+recommended default, used until answered; you ask the ones that change what gets built together
+with the Phase 1b intent questions (or at the Plan stop in modes without 1b), the fewest that
+branch the design, at most `loops.max_interview_rounds_before_gate` rounds.
 
 **Phase 1b — Prototype** (`new`, `redesign`; `~/.claude/route/PROTOTYPE.md`) → intent questions,
 then one `fe-engineer` builds a rough, runnable page sketch in `prototype/`; the user confirms it
@@ -163,8 +163,8 @@ Record each row as done / blocked / skipped, with the reason.
 **Phase 8 — Verify** → `06-verification.md`. You capture every touched screen, at every size the
 spec commits to, in the states that need real data, with `gate.py capture` (§3H) into
 `docs/frontend/evidence/verify-<round>/`. `fe-tester` gives each row exactly one verdict: **done** · **not done** ·
-**not observable** (never counted as done: recapture, or fix the row). Not done → the row's
-engineer, then verify again, capped at `loops.max_rework_rounds_after_verification`, then
+**not observable** (never counted as done: recapture, or fix the row). Not done → a fresh dispatch of the row's
+engineer naming only that row and its verdict (`ORCHESTRATOR.md`, Handoff), then a fresh `fe-tester` verifies again, capped at `loops.max_rework_rounds_after_verification`, then
 escalate with each survivor's history and whether the spec is unbuildable or a capability is
 missing. When the running interface contradicts the spec, the spec may be the defect: route it to
 `fe-designer`; that costs no rework round.
@@ -177,8 +177,8 @@ missing. When the running interface contradicts the spec, the spec may be the de
 
 `python3 ~/.claude/gates/gate.py <gate> --project <root>`, run by you, never by the agent checked.
 Shared with the Backend team: `profile`, and `baseline`, `mark`, `log`, `timeline` with
-`--team frontend`. Exit 0 pass · 1 fail (send to `fail_by_owner`, `mark`, re-dispatch, re-run) ·
-3 fix-round cap (escalate) · 2 config error. Reports: `docs/frontend/gates/`.
+`--team frontend`. Exit codes, fix routing and waivers: `ORCHESTRATOR.md`, Key information and Boundaries. Reports:
+`docs/frontend/gates/`.
 
 | When | Run |
 |---|---|
@@ -193,9 +193,6 @@ Shared with the Backend team: `profile`, and `baseline`, `mark`, `log`, `timelin
 | Before the Acceptance stop | `fe-accept` |
 | After the user accepts | `fe-promote --by <user>` (`--exclude Q-…` for rows they leave out) |
 
-Never edit a gate, its config or its reports to get green; waivers are the user's alone
-(`gates/waivers.json`).
-
 ## 3E. Approved observables
 
 Each queue row's `observable` is the result the running interface must show. At the Plan stop the
@@ -205,24 +202,18 @@ the build.
 
 ## 3F. Human stops
 
-**Fixed:** Prototype (in `new` and `redesign`, before Phase 3), Plan, and Acceptance in `implement`. **Conditional**, batched per phase in one
-`AskUserQuestion` with a recommendation each:
+**Fixed:** Prototype (in `new` and `redesign`, before Phase 3), Plan, and Acceptance in `implement`.
 
-- a Constitution §5 case;
-- a domain fact only the user knows;
-- changing words the user wrote;
-- a genuine tie: no numbered invariant, decision or measurement on disk derives the answer;
-- a contract capability the backend team cannot confirm.
-
-Anything else is ruled and logged as a `decision` (who ruled, the derivation, what would
-overturn it). An agent's ruling is never recorded as the user's.
+**Otherwise** only a Constitution §5 case stops the run (`ORCHESTRATOR.md`, Decisions). Domain facts,
+ties, wording choices and contract capabilities the backend team cannot confirm are decided with a
+recommended default, labelled in the artifact, and shown together at the next fixed stop. The
+user's own words are never changed without asking (Constitution §5.1).
 
 ## 3G. Run log
 
-Same as the Backend team (backend PLAYBOOK §3G), with `--team frontend`: log every dispatch and
-return, every human stop and every agent's own ruling. `fe-accept` checks the trail, including that
-the Plan approval precedes the first `fe-engineer` dispatch outside Phase 1b, and (`tier: "full"`)
-that the Prototype approval precedes the first Phase 3 dispatch.
+Commands in `ORCHESTRATOR.md`, Key information, with `--team frontend`. `fe-accept` checks the trail, including
+that the Plan approval precedes the first `fe-engineer` dispatch outside Phase 1b, and
+(`tier: "full"`) that the Prototype approval precedes the first Phase 3 dispatch.
 
 ## 3H. Evidence capture
 
@@ -259,39 +250,29 @@ Accepted rows become permanent: `fe-promote` adds each row verified done to
 
 ## 4. Rules in every phase
 
+The dispatch cycle, context, briefs and handoff are `ORCHESTRATOR.md`, Capabilities and Handoff. In this team also:
+
 1. No phase starts without its upstream artifact, present and non-trivial.
-2. Give agents file paths, not pasted content; they return compact summaries.
-3. A role writes each artifact to disk as it finishes it, so a dead agent costs one file. On a
-   death, check the filesystem, then resume the same agent and name the files that exist.
-4. Report to the user after every phase: what was produced, verdict, models used, next step.
-5. Update `docs/frontend/state.json` after every phase transition and human stop.
-6. Never fabricate research, evidence or a user quote.
-7. Dispatch the real `fe-*` type; if one is missing, stop and ask for a restart. `fe-critic`
-   holds Bash, and `fe-designer` / `fe-tester` are confined by their dispatch: check the tree is
-   unchanged, or changed only in their named directory, when they return.
+2. The handoff log is `docs/frontend/handoff.md`; resume with `/frontend-resume`.
+3. A role writes each artifact to disk as it finishes it, so a dead agent costs one file.
+4. `fe-critic` holds Bash, and `fe-designer` / `fe-tester` are confined by their dispatch: check the
+   tree is unchanged, or changed only in their named directory, when they return.
 
 ## 5. Orchestrator discipline
 
-1. Verify a count before relaying it.
-2. Before asserting a screen lacks something, print what it rendered.
-3. Exercise the real product yourself before believing a report.
-4. Relay disagreement with both sides' evidence.
-5. A returned agent has stopped; never write an intention in the past tense.
-6. Look at a file before overwriting or deleting it.
+In `ORCHESTRATOR.md`, Key information, for every team.
 
 ## 6. Cost discipline
 
-- Name the model used per phase.
 - One page or component: run `ux-flow` and `contract-and-feasibility` only, plus
   `accessibility-and-content` when forms, errors or empty states change. Say that you narrowed it.
-- Small later changes get a targeted amendment, not a re-run.
 
 ## 7. Artifact layout
 
 ```
 docs/frontend/      (second round: docs/frontend/<slug>/…)
   01-brief.md  01b-prototype.md  02-structure.md  03-spec.md  04-findings.md
-  05-queue.md  06-verification.md  state.json  run-log.jsonl  evidence/  gates/
+  05-queue.md  06-verification.md  state.json  run-log.jsonl  handoff.md  evidence/  gates/  logs/
 contracts/          FRONTEND_BACKEND_CONTRACT.md
 prototype/          throwaway prototype from Phase 1b
 ```

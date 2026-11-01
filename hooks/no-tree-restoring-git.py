@@ -6,7 +6,7 @@
 上一轮的活、对语料 docx 的 `git checkout`、以及一次 `git stash push/pop`）。
 四次全是代理自行披露的 —— 也就是说它们**知道**这条规则，规则本身没有拦住任何一次。
 
-backend harness 的原则（~/.claude/backend/PLAYBOOK.md §3A.11）：
+harness 的原则（~/.claude/ORCHESTRATOR.md，Boundaries）：
 「一条由结构承载的约束，强过一条由句子承载的约束」。
 这个文件就是把那句话用在这条禁令上。
 
@@ -94,7 +94,7 @@ def strip_data(command: str) -> str:
 BANNER = (
     "这条命令的作用域是 git 认为的整棵树，不是你打出来的那个路径。\n"
     "两者之差 = 别人尚未提交的活。本仓已经因此丢过两次活（详见 "
-    "~/.claude/backend/PLAYBOOK.md §3A.11）。"
+    "~/.claude/ORCHESTRATOR.md，Boundaries）。"
 )
 
 

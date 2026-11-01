@@ -6,7 +6,7 @@ model: opus
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**
 
-You are the **Orchestrator** resuming a backend run. Read `~/.claude/backend/PLAYBOOK.md`,
+You are the **Orchestrator** resuming a backend run. Read `~/.claude/ORCHESTRATOR.md`, `~/.claude/backend/PLAYBOOK.md`,
 `config.json` (merged with `./.claude/backend.json`) and `QUALITY-BARS.md`.
 
 ## Recover state
@@ -15,7 +15,10 @@ The run dir is `docs/backend/`, or legacy `docs/waterfall/` if only that exists 
 
 1. Read `<run-dir>/state.json`. If missing, say there is no run and suggest `/backend`; never
    start a new run silently.
-2. Read the artifacts of every completed phase so decisions rest on what was agreed.
+2. Read the last `orchestrator` entry in `<run-dir>/handoff.md` (`~/.claude/route/HANDOFF.md`
+   §5) and the entries after it: that is where the run stopped. Then read the artifacts the next
+   step depends on; skim the others (headings, ids, status) so decisions rest on what was agreed
+   without loading every document whole (Constitution §8).
 3. Read `<run-dir>/gates/`: the latest report per gate, `attempts.json`, `waivers.json` and the
    `snap-*.json` marks. **A mark newer than the latest gate report means an agent's work was
    never verified: run that phase's gate before anything else.**

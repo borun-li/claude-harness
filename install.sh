@@ -7,7 +7,7 @@ set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
 dest=${CLAUDE_HOME:-$HOME/.claude}
-parts="CONSTITUTION.md agents commands backend frontend route gates hooks skills/design-taste"
+parts="CONSTITUTION.md ORCHESTRATOR.md agents commands backend frontend route gates hooks skills/design-taste"
 
 missing=0
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing: $1 ($2)"; missing=1; }; }
@@ -42,19 +42,21 @@ for p in $parts; do
 done
 echo "installed into $dest"
 
-# Register the no-tree-restoring-git hook in settings.json (idempotent; other settings untouched).
+# Register the harness hooks in settings.json (idempotent; other settings untouched).
 python3 - "$dest/settings.json" <<'EOF'
 import json, os, sys
 path = sys.argv[1]
-cmd = 'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"'
+hooks = [("Bash", 'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"'),
+         ("SendMessage", 'python3 "$HOME/.claude/hooks/no-agent-continuation.py"')]
 s = json.load(open(path)) if os.path.exists(path) else {}
 pre = s.setdefault("hooks", {}).setdefault("PreToolUse", [])
-if any(h.get("command") == cmd for e in pre for h in e.get("hooks", [])):
-    print("hook already registered")
-else:
-    pre.append({"matcher": "Bash", "hooks": [{"type": "command", "command": cmd}]})
-    json.dump(s, open(path, "w"), indent=2)
-    print("hook registered in settings.json")
+for matcher, cmd in hooks:
+    if any(h.get("command") == cmd for e in pre for h in e.get("hooks", [])):
+        print("hook already registered:", cmd)
+    else:
+        pre.append({"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]})
+        print("hook registered in settings.json:", cmd)
+json.dump(s, open(path, "w"), indent=2)
 EOF
 
 (cd "$dest/gates" && npm ci --silent) && echo "gates dependencies installed"

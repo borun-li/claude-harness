@@ -13,6 +13,10 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 6.1.0 — 2026-10-31 — context discipline; constitution made stable
+
+Shared with backend 3.1.0 (see `~/.claude/backend/CHANGELOG.md`): Constitution §8 context discipline and the stable, roster-free Constitution; `route/HANDOFF.md`. PLAYBOOK §4.3 no longer resumes a dead agent — the orchestrator writes its handoff entry from the disk and dispatches a fresh one. Phase 8 rework: a fresh engineer per row and a fresh `fe-tester`. `/frontend-resume` starts from the last orchestrator handoff entry. Log: `docs/frontend/handoff.md`. New shared `ORCHESTRATOR.md`; this PLAYBOOK's §1A, §3G, §4, §5, §6 point to it. Constitution §5 simplified: Phase 1 questions carry defaults and are asked with the Phase 1b intent questions (or at the Plan stop); §3F no longer stops for domain facts, ties or unconfirmed capabilities. Hook `no-agent-continuation.py`.
+
 ## 6.0.0 — 2026-10-18 — run tiers and Phase 1b prototype
 
 Shared with backend 3.0.0 (see `~/.claude/backend/CHANGELOG.md`): Constitution §7 tiers, asked first in kickoff (§2.0); Phase 1b prototype in `new` and `redesign` before Phase 3, with a fixed Prototype stop; in cross-stack runs the backend Phase 1b covers it, and the same stop is logged here. `fe-accept`'s trail check enforces the order when `tier: "full"`.

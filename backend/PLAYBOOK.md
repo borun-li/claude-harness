@@ -1,12 +1,12 @@
 # Backend Agent Team — Orchestration Playbook
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**
+> **Then read `~/.claude/ORCHESTRATOR.md`: how you dispatch, decide, keep context and use gates.**
 
-Harness version: `harness_version` in `~/.claude/backend/config.json`. This file is the single
-source of truth for how the team runs; commands and agent files are thin loaders.
-
-You are the **Orchestrator**. You delegate, enforce gates, keep state and report. You never write
-production code or requirement documents yourself.
+Harness version: `harness_version` in `~/.claude/backend/config.json`. This file is *what* the
+Backend team runs and *when*: roles, phases, fixed stops, gate table, artifacts, state. *How* the
+orchestrator works in every phase is `ORCHESTRATOR.md`; this file does not repeat it. Commands and
+agent files are thin loaders.
 
 ---
 
@@ -36,11 +36,7 @@ Interface work is built by the Frontend team (`fe-designer`, `fe-critic`, `fe-en
 
 ## 1A. Project context vs. harness
 
-- Read `<project>/.claude/project-context.md` at kickoff if it exists, and say so. The user writes
-  it; do not edit it uninvited.
-- A preference for **this project** goes there. A rule goes into this harness only if it has held
-  on more than one unrelated project. When in doubt, it is project context.
-- Never write one project's nouns, thresholds or rulings into harness files.
+See `ORCHESTRATOR.md`, Boundaries.
 
 ---
 
@@ -77,7 +73,7 @@ interface). Then `AskUserQuestion` with these questions:
 **2.4 Init state.** Create the artifact dir and `state.json` (§8). If a `state.json` with
 `status != "accepted"` exists, stop and point to `/backend-resume`.
 
-**2.5 Apply the model plan.** Pass the resolved model explicitly on every dispatch.
+**2.5 Apply the model plan** on every dispatch (`ORCHESTRATOR.md`, Capabilities).
 
 ---
 
@@ -86,9 +82,9 @@ interface). Then `AskUserQuestion` with these questions:
 Serial between phases; fan-outs inside a phase go in one message. **A phase ends only when its
 gate exits 0 (§3D).**
 
-**Phase 1 — Requirements** → `be-analyst`. It writes §0 Understanding first; if an ambiguity would
-change what gets built, it stops there and returns the questions, which you ask the user (§3F),
-then it finishes. It also picks real fixture inputs (§3E).
+**Phase 1 — Requirements** → `be-analyst`. It writes §0 Understanding first, takes the recommended
+default for every open question, labels it, and finishes; you ask the questions together with the
+Phase 1b intent questions, and `be-analyst` amends what the answers change. It also picks real fixture inputs (§3E).
 
 **Phase 1b — Prototype** (`~/.claude/route/PROTOTYPE.md`) → intent questions, then one engineer
 builds a rough, runnable version in `prototype/`; the user confirms it (fixed stop, §3F). If the
@@ -97,8 +93,8 @@ in Phase 3 starts before the confirmation (Constitution §2.7).
 
 **Phase 2 — Architecture** → `be-architect`. If `parallelism.architecture_critique`: one
 `be-reviewer` per `architecture_critique_lenses`, each arguing against the design; then one
-revision pass by the architect. A decision the Constitution §5 reserves for the user (new
-dependency, schema change, genuine tie) is a conditional stop (§3F); everything else continues.
+revision pass by the architect. New dependencies, schema changes and genuine ties are
+decided with a recommendation, logged, and shown at the Plan stop (§3F); the phase continues.
 
 **Phase 3 — Detailed design** → `be-architect`. Every `DES-###` names its `REQ-###` and a
 `side` (§3C.3). No gate.
@@ -118,13 +114,14 @@ yes run `fixtures-approve --by <user>` if there are fixtures. Nothing is built b
 
 **Phase 5 — Verification** → `be-tester` runs every `TC-###` and records real output; frontend
 items are verified by `fe-tester` (§3C.5). Failures go to the owning engineer (§3C.6) through the
-`p5` loop (§3D). Never relax a test.
+`p5` loop (§3D), each round a fresh engineer and a fresh `be-tester` (`ORCHESTRATOR.md`, Handoff). Never relax a test.
 
 **Phase 6 — Review.** One `be-reviewer` per `review_lenses`, plus, if
 `parallelism.traceability_audit`, a `traceability` lens that judges only whether each TC really
 verifies its REQ (the id matrix is the gates' job), all in one message. Merge into `06-review-report.md`:
 de-duplicate, rank `FND-###` blocker/major/minor, drop findings without a failure scenario.
-Blockers and majors go to the owning engineer, then Phase 5 again. Cap
+Blockers and majors go to the owning engineer as a fresh dispatch naming only those `FND-###`
+(`ORCHESTRATOR.md`, Handoff), then Phase 5 again with a fresh `be-tester` that re-runs the affected TCs. Cap
 `loops.max_fix_rounds_after_review`, then escalate.
 
 **Phase 7 — Acceptance (human).** You write `07-acceptance.md` per the Phase 7 bar. Stop for
@@ -134,40 +131,7 @@ acceptance; on yes set `status = "accepted"`.
 
 ## 3A. Orchestrator discipline
 
-1. **Numbers.** Verify a count before relaying it. Never report a split, ratio or precision you
-   did not measure; say "not measured".
-2. **Right instrument.** To test "this does not depend on X", change X — do not remove it.
-3. **Run the real thing yourself** — real entry point, real input, an environment with prior
-   state — before believing a green suite.
-4. **The user's session, server, workspace and port are off-limits.** Tell agents to isolate.
-5. **Relay disagreement** with both sides' evidence; do not overrule a measurement with memory.
-6. **A fix is delivered only when the process the user runs contains it.** Lead the report with
-   the action that makes it live (restart, reload, reinstall, re-run).
-7. **One instance, one workspace** — confirm before diagnosing anything.
-8. **The user's observation outranks your analysis.** Reproduce their view before explaining it.
-9. **Long work is resumable.** One file per finished unit, resume skips what is on disk, per-unit
-   exit code in the log. No agent ends its turn waiting on its own background job.
-10. **Verify by artefact, never by exit code.** Count files, read log lines, check timestamps.
-    Watch for `set -e` on `[ -f x ] &&`, reaped `&` jobs, empty zsh globs, zsh word-splitting.
-11. **Tree safety.** Before dispatching a writing agent, show `git status --porcelain` is clean
-    (or the user accepted the risk). A mutating agent gets its files exclusively; never share a
-    backup path. Tree-restoring git commands are blocked by `~/.claude/hooks/no-tree-restoring-git.py`:
-
-    | Want | Use |
-    |---|---|
-    | restore one file | `git show HEAD:<path> > <path>` |
-    | clean baseline | `git worktree add <tmp> HEAD` or `git archive HEAD \| tar -x -C <tmp>` |
-    | undo own mutation | `cp` aside, `cp` back, `cmp` |
-    | drop stray files | `rm` them by name |
-
-12. **Credit self-disclosure.** When an agent reports its own breach: record it, fix the structure
-    that allowed it, and say in your report that it disclosed.
-13. **Criteria can be wrong.** State acceptance criteria as observable outcomes. Tell every agent
-    that disputing a criterion is part of its job. Verify each refusal and rule on it explicitly.
-14. **A description is not the thing.** Annotations, docstrings, declarations and prior findings
-    are not evidence. Ask "let it be wrong — what turns red?" and make it wrong once.
-15. **Status carries evidence.** "Last wrote at 22:33", not "is building". A returned subagent has
-    stopped. Never write an intention in the past tense.
+In `ORCHESTRATOR.md`, Key information, for every team.
 
 ## 3B. Re-baseline — the brief changes mid-run
 
@@ -192,7 +156,7 @@ acceptance; on yes set `status = "accepted"`.
 | frontend | human-operated GUI/TUI: templates, styles, client scripts, display-only fields | `fe-engineer` (design `fe-designer`) |
 
 **3C.2 When the line must be written.** Only if the round touches the interface. Then, if
-unwritten, ask at the next conditional stop (§3F) and have the user sign one; offer 3C.1 as the draft.
+unwritten, ask at the next fixed stop (§3F) and have the user sign one; offer 3C.1 as the draft.
 
 **3C.3 Design.** Every `DES-###` has `side: backend | frontend`. A frontend item specifies only
 the seam (name, type, nullable, who computes, endpoint/field) in
@@ -229,21 +193,14 @@ it, never the agent whose work it checks. Exit `0` pass · `1` fail · `3` fix-r
 | After the user approves the Plan | `fixtures-approve --by <user>` |
 | Phase 4 start | `baseline` |
 | Before dispatching any writing agent | `mark --role <agent>` |
-| Before / after every dispatch | `log dispatch …` / `log return …` (§3G) |
+| Before / after every dispatch | `log dispatch …` / `log return …` (`ORCHESTRATOR.md`, Key information) |
 | After Phase 4 / Phase 5 | `p4` / `p5` |
 | Before the review fan-out | `mark --role be-reviewer` |
 | After compiling `06-review-report.md` | `p6` |
 | After writing `07-acceptance.md`, before the Acceptance stop | `p7` |
 
-1. **Exit 1:** send each failure to its owner (`fail_by_owner`), `mark` before re-dispatching, re-run
-   the gate. After any code change, re-run `p4` then `p5`.
-2. **Exit 3:** `loops.max_gate_fix_rounds` rounds failed; stop and escalate (Constitution §5.8).
-3. **Waivers** are the user's alone: record them in `<run-dir>/gates/waivers.json` (`check`,
-   `reason`, `approved_by`, `date`) only after explicit approval.
-4. **Never edit a gate, its config or its reports to get green.** A gate you think is wrong is a
-   contradiction to report (Constitution §2.5).
-5. **Inferential checks** (Phase 2 critique, Phase 6 lenses) run only after the phase's gate is green.
-6. Record each result in `state.json` `gates`.
+Exit codes, fix routing, waivers and the rule never to edit a gate: `ORCHESTRATOR.md`, Key information and Boundaries. After
+any code change, re-run `p4` then `p5`.
 
 ## 3E. Approved fixtures
 
@@ -268,55 +225,40 @@ Human-confirmed input/output pairs that every later test must match.
 ## 3F. Human stops
 
 **Fixed:** Prototype (before detailed design, Constitution §2.7), Plan (before any product code)
-and Acceptance (Constitution §6.7). Nothing else stops by default.
+and Acceptance (Constitution §6.7).
 
-**Conditional:** stop only for a Constitution §5 case: an ambiguity that changes what gets built, a
-fact only the user knows, a new dependency or schema change, a genuine tie, a loop cap. Collect
-them and ask at the end of the current phase in one `AskUserQuestion`, each with a recommendation.
-Anything answerable from approved artifacts, code or data is decided and logged, not asked.
+**Otherwise** only a Constitution §5 case stops the run (`ORCHESTRATOR.md`, Decisions). Ambiguities, domain
+facts, ties, new dependencies and schema changes are decided with a recommended default, labelled
+as assumptions or decisions in the artifact, and shown together at the next fixed stop; the Plan
+stop comes before any product code, so a wrong default costs no build.
 
 ## 3G. Run log
 
-`<run-dir>/run-log.jsonl` is the audit trail: append-only and hash-chained, so an edited or deleted
-line breaks `LOG.valid`. Gates write their own `gate`, `mark` and `approve` events. You write the rest:
-
-| When | Command |
-|---|---|
-| Before each agent dispatch | `gate.py log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` |
-| When it returns | `gate.py log return --agent <a> --step <phase> --status ok\|blocked\|failed --note "<result>"` |
-| Every human stop | `gate.py log human --stop Prototype\|Plan\|Acceptance\|conditional --decision approved\|changes\|rejected\|answered --by <user> --note "<what>"` |
-| Every decision an agent made alone (Constitution §5) | `gate.py log decision --agent <a> --note "<what and why>"` |
-
-`gate.py timeline` renders `run-log.md`. `P7` requires every dispatch to have returned, every mark
-to be followed by its dispatch, the Plan approval to precede the first `be-developer` dispatch
-outside Phase 1b, and (`tier: "full"`) the Prototype approval to precede the first Phase 3 dispatch.
+Commands in `ORCHESTRATOR.md`, Key information. `P7` requires every dispatch to have returned, every mark to be
+followed by its dispatch, the Plan approval to precede the first `be-developer` dispatch outside
+Phase 1b, and (`tier: "full"`) the Prototype approval to precede the first Phase 3 dispatch.
 
 ---
 
 ## 4. Rules in every phase
 
+The dispatch cycle, context, briefs and handoff are `ORCHESTRATOR.md`, Capabilities and Handoff. In this team also:
+
 1. No phase starts without its upstream document (`policy.block_phase_on_missing_upstream_doc`).
-2. Give agents file paths, not pasted content.
-3. Agents return compact structured summaries; the work lives in files.
-4. Report to the user after every phase: what was produced, verdict, models used, next step.
-5. Update `state.json` after every phase transition and gate decision, before moving on.
-6. Traceability ids are mandatory; send an id-less document back once.
-7. **Dispatch the real `be-*` agent type.** If one is missing, stop and ask for a session
-   restart; never substitute `general-purpose` with a "be the reviewer" preamble. `be-reviewer`
-   has no Write/Edit but has Bash, so run `gate.py mark --role be-reviewer` before the fan-out;
-   `p6` verifies the tree is unchanged. Mutations belong in a throwaway tree.
+2. The handoff log is `<run-dir>/handoff.md`; resume with `/backend-resume`.
+3. Traceability ids are mandatory; send an id-less document back once.
+4. `be-reviewer` has no Write/Edit but has Bash, so run `gate.py mark --role be-reviewer` before the
+   fan-out; `p6` verifies the tree is unchanged. Mutations belong in a throwaway tree.
 
 ## 5. Escalation
 
-Follow Constitution §5. In this team the design being unimplementable also stops the run: send it
-to `be-architect` for an amendment and tell the user.
+`ORCHESTRATOR.md`, Decisions. A design reported unimplementable goes to `be-architect` for an amendment
+as a logged decision; it stops the run only if the amendment changes scope (Constitution §5.1).
 
 ## 6. Cost discipline
 
-- Name the model used per phase in each report.
 - Diff under ~200 lines: run only `correctness` + traceability, plus `operator-experience` if the
   change touches anything the user sees or operates. Say so.
-- Small later changes get a targeted amendment, not a re-run of a phase.
 
 ## 7. Artifact layout
 
@@ -324,7 +266,7 @@ to `be-architect` for an amendment and tell the user.
 <project>/docs/backend/            (second feature: docs/backend/<slug>/…)
   state.json  01-requirements.md  01b-prototype.md  02-architecture.md  03-detailed-design.md
   04-test-plan.md  05-test-report.md  06-review-report.md  07-acceptance.md
-  08-implementation-log.md  NN-deferred.md
+  08-implementation-log.md  NN-deferred.md  handoff.md  logs/
 <project>/prototype/               throwaway prototype from Phase 1b
 ```
 
