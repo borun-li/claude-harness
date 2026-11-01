@@ -1,11 +1,12 @@
 # Claude Harness
 
-The shared Claude Code agent team for our web_dev group: a Backend team and a Frontend team, run by one orchestrator, with automatic gates between steps.
+The shared Claude Code agent team for our web_dev group: a Backend team and a Frontend team with automatic gates between steps.
+The orchestrator is your own Claude Code session: once `/route` (or a team command) loads `ORCHESTRATOR.md`, it dispatches the nine agents, holds the human stops and keeps the run on disk.
 It lives in `~/.claude`, so it works in every project you open with Claude Code.
 
 ## Install
 
-Prerequisites: [Claude Code](https://claude.com/claude-code), Python 3, Node.js with npm, git, and Google Chrome (used for frontend screenshots). Go only if the project is in Go.
+Prerequisites: [Claude Code](https://claude.com/claude-code), Python 3, Node.js with npm, git, and Google Chrome (used for frontend screenshots). Plus whatever toolchain your own project needs.
 
 ```sh
 git clone https://github.com/borun-li/claude-harness.git
@@ -15,9 +16,11 @@ cd claude-harness
 ```
 
 What `install.sh` does:
-- copies `CONSTITUTION.md agents commands backend frontend route gates hooks skills/design-taste` into `~/.claude` (set `CLAUDE_HOME` to install somewhere else);
+- copies `CONSTITUTION.md ORCHESTRATOR.md agents commands backend frontend route gates hooks skills/design-taste` into `~/.claude` (set `CLAUDE_HOME` to install somewhere else);
 - backs up any existing copies of those folders first, to `~/.claude/backup-harness-<date>.tgz`;
-- adds one hook to `~/.claude/settings.json` that blocks git commands which throw away work (`git checkout -- .`, `git reset --hard`, …); your other settings stay as they are;
+- adds two hooks to `~/.claude/settings.json`, leaving your other settings as they are:
+  - one blocks git commands that throw away work (`git checkout -- .`, `git reset --hard`, …);
+  - one stops a finished `be-*` / `fe-*` agent from being continued a second time, so each round gets a fresh agent;
 - installs `playwright-core` for the gates.
 
 Restart Claude Code afterwards.
@@ -26,13 +29,15 @@ Restart Claude Code afterwards.
 
 ## Use
 
-In a project folder, start Claude Code and type:
+In a project folder, start Claude Code and either describe the work in plain words or type a command.
+
+**Plain words.** A request that changes what users see (a new feature, a redesign, a behaviour change) or how the software is built (architecture, data model, API, refactoring) starts `/route` on its own. Coursework, questions, research, one-off scripts and fixes that change no behaviour do not. When it is unclear, Claude asks whether to use the team. You can also name one agent directly, for example "have `be-reviewer` review this module for security".
 
 | Command | Does |
 |---|---|
 | `/route <what you want>` | Single entry point: decides frontend, backend or cross-stack and runs the right team |
-| `/backend <what to build>` | Backend team directly: requirements → architecture → design → build + tests → review |
-| `/frontend <what to build>` | Frontend team directly: brief → structure → spec → queue → build → verify |
+| `/backend <what to build>` | Backend team directly: requirements → architecture → design → build + tests → review (typed only) |
+| `/frontend <what to build>` | Frontend team directly: brief → structure → spec → queue → build → verify (typed only) |
 | `/backend-status`, `/backend-resume`, `/frontend-resume` | See or continue a run |
 | `/backend-config`, `/frontend-config` | Show or change models, gates, caps |
 
@@ -44,7 +49,9 @@ Every task starts with one question: which tier is it?
 | Prototype | A few questions about what you want, then a rough, runnable version for you to confirm |
 | Full development | The whole team process. After requirements, you see and confirm a rough running prototype before any detailed design |
 
-In Full development you also approve the plan and the final acceptance. Everything irreversible or outward-facing (deploys, pushes, deletes) waits for you.
+In Full development you also approve the plan and the final acceptance. Everything irreversible or outward-facing (deploys, pushes, deletes) waits for you. Other questions do not stop the run: the team takes a recommended default, marks it, and shows it to you at the next stop.
+
+**Long runs.** Every round is done by a fresh agent with a short brief; what it learned goes into the run's `handoff.md`. At each stop the orchestrator writes its own entry and suggests `/clear`, then `/backend-resume` or `/frontend-resume`, so the session's context stays small.
 
 ## What is in here
 
@@ -57,10 +64,10 @@ In Full development you also approve the plan and the final acceptance. Everythi
 | `backend/`, `frontend/` | Playbooks, quality bars, document templates, changelogs |
 | `route/` | `PROTOTYPE.md` (the prototype procedure), `HANDOFF.md` (dispatch brief and handoff log) and the capability-table template |
 | `gates/` | `gate.py`: automatic checks between steps, run log, fixtures, waivers, screenshot capture (tests in `gates/tests`) |
-| `hooks/` | The git safety hook and its test |
+| `hooks/` | The git safety hook, the agent-continuation hook, and their tests |
 | `skills/design-taste/` | Design guidance for `fe-designer` |
 
-Harness version: backend 3.0.0, frontend 6.0.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
+Harness version: backend 3.1.0, frontend 6.1.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
 
 ## Changing the harness
 
@@ -70,6 +77,7 @@ Before merging, run:
 ```sh
 (cd gates && python3 -m unittest discover -s tests)
 python3 hooks/test_no_tree_restoring_git.py
+python3 hooks/test_no_agent_continuation.py
 ```
 
 Record the change in the matching `CHANGELOG.md`.
