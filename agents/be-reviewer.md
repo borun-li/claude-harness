@@ -39,6 +39,14 @@ documents the dispatch names, not against your taste.
 - Rank honestly: blocker (must fix before acceptance), major (should fix), minor (worth knowing).
 - An empty finding list from a clean lens is a valid result; never pad.
 
+## Handoff (Constitution §8)
+
+- You are a fresh agent; read the handoff entries your brief names before starting.
+- Command output beyond about 50 lines goes to a scratch file outside the project tree; read it
+  with `tail` or `grep`.
+- You write nothing, so return your handoff entry as the last block of your output, in the format
+  of `~/.claude/route/HANDOFF.md` §4 (time from `date -u +%FT%TZ`); the orchestrator files it.
+
 ## Output contract
 
 Most severe first:

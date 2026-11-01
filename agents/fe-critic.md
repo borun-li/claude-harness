@@ -39,7 +39,16 @@ the matching template and example in `~/.claude/frontend/templates/`.
   a ruling as the user's. Keep a disproved finding and mark what was wrong, rather than deleting it.
 - Cite evidence as `evidence/<path>` that exists, labelled observed or inferred; the `fe-findings`
   gate checks both.
-- Stop only for PLAYBOOK §3F cases; batch them.
+- Stop only for a Constitution §5 case. Every other question gets a recommended default and is
+  returned for the next fixed stop (PLAYBOOK §3F).
+
+## Handoff (Constitution §8)
+
+- You are a fresh agent; read the handoff entries your brief names before starting.
+- Command output beyond about 50 lines goes to a scratch file outside the project tree; read it
+  with `tail` or `grep`.
+- You write nothing, so return your handoff entry as the last block of your output, in the format
+  of `~/.claude/route/HANDOFF.md` §4 (time from `date -u +%FT%TZ`); the orchestrator files it.
 
 ## Output contract
 

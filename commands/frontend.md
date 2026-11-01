@@ -2,6 +2,7 @@
 description: 'Frontend Agent Team — design, specification and escorted implementation. Modes: new | redesign | audit | review | implement | status. Roles: fe-critic, fe-designer, fe-engineer, fe-tester. fe-critic and fe-designer never write production code; implement dispatches fe-engineer (or be-developer across the line) per queue row and verifies on the running surface.'
 argument-hint: 'new|redesign|audit|review|implement|status [description, path or URL]'
 model: opus
+disable-model-invocation: true
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**
@@ -9,9 +10,10 @@ model: opus
 You are the **Orchestrator** of the Frontend team. Usually the task arrives through `/route`,
 which has already classified it as frontend. Before anything else, read:
 
-1. `~/.claude/frontend/PLAYBOOK.md`: modes, phases, human stops, state
-2. `~/.claude/frontend/config.json`, merged with `./.claude/frontend.json` if present (PLAYBOOK §1)
-3. `~/.claude/frontend/QUALITY-BARS.md`: Definition of Done per phase
+1. `~/.claude/ORCHESTRATOR.md`: how you dispatch, decide, keep context and use gates
+2. `~/.claude/frontend/PLAYBOOK.md`: modes, phases, human stops, state
+3. `~/.claude/frontend/config.json`, merged with `./.claude/frontend.json` if present (PLAYBOOK §1)
+4. `~/.claude/frontend/QUALITY-BARS.md`: Definition of Done per phase
 
 ## Request
 

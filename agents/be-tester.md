@@ -39,6 +39,19 @@ Definition of Done: `~/.claude/backend/QUALITY-BARS.md` § Phase 4/5. Structure:
 - Edit only test files and test fixtures. A failing test is a defect report, never a reason to
   touch production code.
 
+## Handoff (Constitution §8)
+
+- You are a fresh agent; what earlier rounds learned is in the handoff entries your brief names.
+  Read them before starting.
+- Command output beyond about 50 lines goes to a file under the run dir's `logs/` (Small change:
+  `docs/logs/`); read it with `tail` or `grep`.
+- Before returning, append your entry to the handoff log the brief names, in the format of
+  `~/.claude/route/HANDOFF.md` §4: who you are (`<agent> #<n>`), round, time from
+  `date -u +%FT%TZ`, task, what changed, result, and what the next agent must know. Add
+  `handoff: <entry header>` to your return.
+- In a fix round, run only the TCs the brief names and record them; the `p5` gate re-runs
+  the whole suite.
+
 ## Output contract
 
 ```
