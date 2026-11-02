@@ -1,8 +1,8 @@
 # Quality Bars — Definition of Done per Phase
 
-A phase is done only when every bar in its section holds. Raise the team's level here.
-`[P1.cut-line]` = also enforced by that gate (`~/.claude/gates`, PLAYBOOK §3D). Meet the bar
-anyway; the gate proves it.
+What "done" means for each Backend phase. Each agent checks its own section before returning; the
+orchestrator checks it before the phase's gate and stop. `[P1.cut-line]` = also enforced by that
+gate (PLAYBOOK §3D): meet the bar anyway; the gate proves it.
 
 ---
 
@@ -36,8 +36,9 @@ anyway; the gate proves it.
 
 ---
 
-## Phase 2 — Architecture (`be-architect`)
+## Phase 2 — Design (`be-architect`, then `be-analyst` for fixture answers)
 
+**Architecture (`02-architecture.md`)**
 - Components, each with a one-sentence responsibility.
 - Data model: entities, key fields, ownership, persistence.
 - External contracts: signatures, auth, error shapes, rate limits.
@@ -51,10 +52,7 @@ anyway; the gate proves it.
   declaration read by many. Name a test that measures the footprint (e.g. a synthetic extra
   member); without one, label the cost an estimate.
 
----
-
-## Phase 3 — Detailed design (`be-architect`)
-
+**Detailed design (`03-detailed-design.md`)**
 - File layout with each file's responsibility; typed signatures for every public function/class.
 - Each DES at most 120 words outside code; behaviour as numbered one-line steps. `[P3.des-length · P3.prose]`
 - Error taxonomy (which errors, which retry, where handled); state transitions; config and
@@ -70,6 +68,18 @@ anyway; the gate proves it.
 - A catch-all names what must pass through it untouched (framework control-flow signals first).
 - Each sentinel ("missing", "unknown", …) has one predicate, used everywhere.
 - Each durable id is declared content-derived, persisted, or per-run, matching what consumers need.
+
+**Design review (`risk: high` only)**
+- Each panelist argues against the design through its own lens: where it breaks, what is assumed
+  without evidence, a materially simpler design that meets the same requirements.
+- The revision answers every point: changed, or why not, in one line each.
+
+**Fixture answers (`be-analyst`)** `[PLAN.expected · PLAN.meta]`
+- Every declared fixture has `expected.*` and a `meta.json` with `req`, `source` and `compare`.
+- The value comes from the requirement; the shape (fields, format, message text) from the design.
+  Where the design does not deliver the REQ as written, quote both and report it; never follow the
+  design. Preserved behaviour is captured from the current output and says so in `source`.
+- Fixture outputs come from requirements and design, never from new code.
 
 ---
 
@@ -91,8 +101,7 @@ anyway; the gate proves it.
 - Every automated `TC` is tagged in test code and passes in the orchestrator's own run.
   `[P5.tc-in-code · P5.tc-results]`
 - No test is removed or newly skipped. `[CMD.test · P4/P5.test-drift]`
-- Expected fixture outputs come from the spec, not the code. Tests load the approved fixtures and
-  pass; nobody edits them. `[PLAN.expected · P4/P5.fixtures · P5.fixtures-used]`
+- Tests load the approved fixtures and pass; nobody edits them. `[P4/P5.fixtures · P5.fixtures-used]`
 - Each seam has a `TC` showing the contracted shape from the backend side, including its empty case.
 - Fixtures include the legitimately-absent shape of every optional field.
 - One fixture is state written by an earlier version, upgraded in the test.
@@ -112,18 +121,14 @@ anyway; the gate proves it.
   - An assertion over several sources must fail for each source.
 - A negative result ("unchanged", "identical") needs a positive control on the same run.
 - A new guard is tested on innocent cases as well as guilty ones.
-- **Mutate-and-restore:** copy aside → mutate → run → copy back → `cmp` against the copy →
-  confirm no diff vs. the repo → delete the copy. Never restore with git. Never mutate files
-  another agent is editing.
+- Mutation follows `ORCHESTRATOR.md`, Boundaries (copy aside, mutate, copy back, `cmp`); never on
+  files another agent is editing.
 
-**Reporting**
-- Only real captured output. Each pass names its assertion precisely enough to grep. Not run →
-  `blocked`. `[P5.report-complete · P5.report-honest]`
+**Reporting** (Constitution §2.3 and §2.5 apply)
+- Each pass names its assertion precisely enough to grep. `[P5.report-complete · P5.report-honest]`
 - Non-deterministic results: state the run count, mean and range; separate always-errors from
   sometimes-errors.
 - Fix the mechanism, not the instance; name what else it reaches, or what stays broken.
-- If acceptance criteria contradict each other or the code: do the unambiguous part, quote both
-  artifacts, and do not edit whichever is easier to change.
 
 **If the round scores accuracy** (otherwise write "N/A" in the test report):
 - Units that produced no answer leave the denominator; report the failure rate next to accuracy.
@@ -131,27 +136,51 @@ anyway; the gate proves it.
 
 ---
 
-## Phase 6 — Review (`be-reviewer`)
+## Phase 6 — Review (panelists, then `be-reviewer`)
 
-- Each `FND-###` has a concrete failure scenario, a `file:line`, a severity, and the `REQ` above
-  the cut line it breaks. Anything else goes to `NN-deferred.md` with file:line and scenario.
-  `[P6.findings]`
-- Every guard the round relies on is broken once by the reviewer (mutate-and-restore). "Nothing
-  catches X" is reportable only after letting X be wrong.
-- **Maintainability lens:** measure the cost of the next member against the code; run Phase 2's
-  footprint test and report the delta. A fact spelled twice with nothing reconciling the two is a
-  finding.
-- **Traceability lens:** the id matrix is `P7.matrix`'s. Judge whether each `TC` really verifies
-  its `REQ`; list every zero-caller public symbol. Coverage counts only what a user can reach from
-  the delivered entry point.
-- Declared non-goals are verified absent in code.
-- Every number carries its composition and measurement conditions.
-- Completion and accuracy are separate claims; an unmeasured one is stated as unmeasured.
-- A deferral names the user-visible path it sits on; nothing on the first-run path is deferred
-  quietly.
+**Every panelist**
+- Read-only: never edit code, tests or documents. `[P6.tree-unchanged]`
+- Stay in your lens; the other lenses run in parallel. Judge against the requirements and design
+  the dispatch names, not against taste. Style is never a finding unless it breaks a written
+  project convention.
+- Each candidate has a concrete failure scenario (inputs/state → wrong result), a `file:line`, a
+  severity, the `REQ` above the cut line it breaks, and the evidence that it is real. Grep before
+  reporting that something is missing. Anything outside the cut line is a deferral, not a finding.
+- "Nothing catches X" is reportable only after letting X be wrong (mutate-and-restore).
 - A diagnosis based on a string in an artifact locates the code that produced it.
-- Style nits are dropped unless they break a written project convention.
-- Reviewers never edit. `[P6.tree-unchanged]`
+- Severity: **blocker** (must fix before acceptance) · **major** (should fix) · **minor** (worth
+  knowing). An empty list from a clean lens is a valid result; never pad.
+
+**Behaviors & Contracts** — does the logic do what the REQ says in the normal case?
+- Each REQ's behaviour, boundaries and error paths against its acceptance criteria.
+- Contracts between components and at the seam: shapes, nullability, ordering, units.
+- Whether each `TC` really verifies its `REQ` or merely touches the code; happy-path-only
+  coverage; code serving no REQ; declared non-goals absent in code. (The id matrix is `P7.matrix`'s.)
+
+**Reliability & Operations** — does it break under failure, load or a real operator?
+- Dependency failure, timeouts, retries, partial writes, restart and upgrade from earlier state,
+  concurrency, resource limits.
+- Operability: failure messages carry stage, cause and next step on screen and in the log; every
+  required action has a way to do it. Run the product read-only, never in the user's workspace.
+- The cost of the next member, measured against the code with Phase 2's footprint test; a fact
+  spelled twice with nothing reconciling the two.
+
+**Security & Trust boundaries** — can an attacker use it?
+- Every input crossing a trust boundary: validation, injection, path traversal, unsafe
+  deserialisation, file and upload handling.
+- Authentication, authorisation, secret handling, unsafe defaults, resource exhaustion.
+
+**Coordinator (`be-reviewer`)**
+- Merges duplicates across panelists, keeping each source panelist.
+- Tries to disprove every candidate against the code. A candidate is dropped only with concrete
+  counter-evidence (`file:line` or command output), and every drop is listed with it.
+- Ranks the survivors as `FND-###`, most severe first; numbers carry their composition and
+  measurement conditions; completion and accuracy stay separate claims.
+- A deferral names the user-visible path it sits on; nothing on the first-run path is deferred
+  quietly. `[P6.findings]`
+
+**Re-check (`be-reviewer`)**
+- Judges only the `FND-###` the dispatch names: fixed (with evidence) or still open.
 
 ---
 
@@ -162,7 +191,8 @@ anyway; the gate proves it.
 - The run log accounts for every dispatch, return and human stop, and is intact.
   `[LOG.valid · LOG.trail]`
 - Frontend items: who built each, and `fe-tester`'s verdict ("can't tell" is not "works").
-- Accepted-but-unfixed findings, with rationale; known limitations; follow-up work.
+- Accepted-but-unfixed findings, with rationale; findings the coordinator dropped (count and where
+  listed); known limitations; follow-up work.
 - Size against the ask: what was asked (in the user's words), shipped, deferred.
 - Deferred items are never folded into a fix round without the user.
 - Constitution §6 (Definition of Completion) holds in full.

@@ -67,6 +67,8 @@ def state(ctx):
         problems.append("phases must be a list")
     if "tier" in s and s["tier"] not in ("small", "prototype", "full"):
         problems.append(f"tier must be small|prototype|full, got {s['tier']!r}")
+    if "risk" in s and s["risk"] not in ("high", "normal"):
+        problems.append(f"risk must be high|normal, got {s['risk']!r}")
     if problems:
         return bad("ALL.state", "state.json does not match the schema (PLAYBOOK §8)", "orchestrator", problems)
     return ok("ALL.state", "state.json valid", "orchestrator")
@@ -143,9 +145,14 @@ def _load_mark(ctx, role):
     return m
 
 
+def _is_reviewer(role):
+    """be-reviewer and the be-review-* panelists are read-only: their mark guards the tree, not a writer."""
+    return role == "be-reviewer" or role.startswith("be-review-")
+
+
 def _latest_writer(ctx):
     marks = [read_json(p) for p in ctx.gdir.glob("snap-*.json")]
-    marks = [m for m in marks if m and m["role"] != "be-reviewer"]
+    marks = [m for m in marks if m and not _is_reviewer(m["role"])]
     if not marks:
         raise ConfigError("no writer mark: run `gate.py mark --role <agent>` before dispatching it")
     return max(marks, key=lambda m: m["time_ns"])
@@ -219,8 +226,11 @@ def log_valid(ctx):
             else ok("LOG.valid", "Run log intact", "orchestrator"))
 
 
-def _log_trail(ctx):
-    """Every dispatch returned; every writer mark was followed by its dispatch; Plan approved before build."""
+def _log_trail(ctx, design_phases=("2", "3")):
+    """Every dispatch returned; every writer mark was followed by its dispatch; Plan approved before build.
+
+    design_phases: the phases that must follow the Prototype approval. Backend: Phase 2 (design) since
+    3.2.0, Phase 3 in older runs. Frontend passes ("3",): its Phase 2 is an audit that may precede 1b."""
     events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
     owner, problems = "orchestrator", []
     open_ = {}
@@ -234,7 +244,7 @@ def _log_trail(ctx):
                 open_[ev["agent"]] -= 1
     problems += [f"{a}: {n} dispatch(es) never returned" for a, n in open_.items() if n]
     for i, ev in enumerate(events):
-        if ev["event"] == "mark" and ev["role"] != "be-reviewer":
+        if ev["event"] == "mark" and not _is_reviewer(ev["role"]):
             nxt = next((e for e in events[i + 1:] if e["event"] in ("dispatch", "mark", "gate")), None)
             if not nxt or nxt["event"] != "dispatch" or nxt["agent"] != ev["role"]:
                 problems.append(f"#{ev['seq']}: mark for {ev['role']} not followed by its dispatch")
@@ -247,20 +257,21 @@ def _log_trail(ctx):
         problems.append("no approved Plan stop in the log")
     elif build is not None and build < plan:
         problems.append(f"builder dispatched (#{build}) before the Plan was approved (#{plan})")
-    # Full-development runs: the user confirms a running prototype before detailed design (Constitution §2.7).
+    # Full-development runs: the user confirms a running prototype before design (Constitution §2.7).
     if (read_json(ctx.run / "state.json") or {}).get("tier") == "full":
         proto = next((e["seq"] for e in events if e["event"] == "human" and e["stop"] == "Prototype"
                       and e["decision"] == "approved"), None)
-        design = next((e["seq"] for e in events if e["event"] == "dispatch" and str(e["phase"]) == "3"), None)
+        design = next((e["seq"] for e in events if e["event"] == "dispatch"
+                       and str(e["phase"]) in design_phases), None)
         if proto is None:
             problems.append("no approved Prototype stop in the log")
         elif design is not None and design < proto:
-            problems.append(f"detailed design dispatched (#{design}) before the Prototype was approved (#{proto})")
+            problems.append(f"design dispatched (#{design}) before the Prototype was approved (#{proto})")
     return (bad("LOG.trail", "Run log does not account for the run", owner, problems) if problems
             else ok("LOG.trail", f"{len(events)} events account for every dispatch and the Plan approval", owner))
 
 
-# ---------- Phase 1–3: documents ----------
+# ---------- Phase 1–2: documents ----------
 
 def _prose_check(ctx, cid, text, owner):
     limit = ctx.cfg["doc_budgets"]["prose_unit_words"]
@@ -312,7 +323,7 @@ def phase1(ctx):
     return res, {"active_reqs": sorted(docs.active_reqs(reqs)), "interface_reqs": iface}
 
 
-def phase2(ctx):
+def _architecture(ctx):
     owner = "be-architect"
     res = [state(ctx), upstream(ctx, ["01-requirements.md", "02-architecture.md"], owner)]
     if res[-1]["status"] == FAIL:
@@ -329,7 +340,7 @@ def phase2(ctx):
     return res, {}
 
 
-def phase3(ctx):
+def _detailed_design(ctx):
     owner = "be-architect"
     res = [state(ctx), upstream(ctx, ["01-requirements.md", "03-detailed-design.md"], owner)]
     if res[-1]["status"] == FAIL:
@@ -360,6 +371,16 @@ def phase3(ctx):
     res.append(bad("P3.contract", "Frontend DES missing from contracts/FRONTEND_BACKEND_CONTRACT.md",
                    owner, absent) if absent else ok("P3.contract", f"{len(fe)} frontend DES in contract", owner))
     return res, {"frontend_des": fe}
+
+
+def phase2(ctx):
+    """Phase 2 — Design: architecture, detailed design and fixture answers; writes the Plan review sheet."""
+    res, data = [], {}
+    for part in (_architecture, _detailed_design, _fixtures_for_plan):
+        r, d = part(ctx)
+        res += [x for x in r if not (x["id"] == "ALL.state" and any(y["id"] == "ALL.state" for y in res))]
+        data.update(d)
+    return res, data
 
 
 # ---------- Phase 4 start ----------
@@ -578,10 +599,11 @@ def _preview(path, lines=15):
     return out[:lines] + ([f"… ({len(out) - lines} more lines)"] if len(out) > lines else [])
 
 
-def gate_plan(ctx):
+def _fixtures_for_plan(ctx):
     """Before the user's Plan review: fixture candidates complete; writes the one-page review sheet."""
     res = [state(ctx)]
-    if any(ctx.gdir.glob("snap-*.json")):
+    marks = [read_json(p) for p in ctx.gdir.glob("snap-*.json")]
+    if any(m and not _is_reviewer(m["role"]) for m in marks):
         res += role_checks(ctx)[0]
     man, cand = _manifest(ctx), ctx.project / _fx_cand(ctx)
     declared = _declared_fx(ctx)
@@ -612,10 +634,10 @@ def gate_plan(ctx):
                     sheet += [f"**{label}** `{f.relative_to(ctx.project)}`", "```", *_preview(f), "```", ""]
     res.append(bad("PLAN.inputs", "Declared fixtures without a real input", "be-analyst", missing_in)
                if missing_in else ok("PLAN.inputs", "Every declared fixture has an input", "be-analyst"))
-    res.append(bad("PLAN.expected", "Declared fixtures without a drafted expected output", "be-tester", missing_out)
-               if missing_out else ok("PLAN.expected", "Every declared fixture has an expected output", "be-tester"))
-    res.append(bad("PLAN.meta", "Fixture meta.json incomplete", "be-tester", bad_meta)
-               if bad_meta else ok("PLAN.meta", "Every fixture names its REQ, source and compare rule", "be-tester"))
+    res.append(bad("PLAN.expected", "Declared fixtures without a drafted expected output", "be-analyst", missing_out)
+               if missing_out else ok("PLAN.expected", "Every declared fixture has an expected output", "be-analyst"))
+    res.append(bad("PLAN.meta", "Fixture meta.json incomplete", "be-analyst", bad_meta)
+               if bad_meta else ok("PLAN.meta", "Every fixture names its REQ, source and compare rule", "be-analyst"))
     if not declared:
         sheet.append("_No fixtures this round._")
     (ctx.gdir / "plan-review.md").parent.mkdir(parents=True, exist_ok=True)
@@ -654,9 +676,9 @@ def _section(text, patterns):
 
 def approve_fixtures(ctx, by, reapprove):
     """Lock the candidates the user approved at Plan. Never run without the user's explicit yes."""
-    plan = read_json(ctx.gdir / "plan-latest.json")
+    plan = read_json(ctx.gdir / "p2-latest.json")
     if not plan or plan["overall"] != PASS:
-        raise ConfigError("`plan` has not passed; run it and get the user's approval first")
+        raise ConfigError("`p2` has not passed; run it and get the user's approval first")
     man, base, cand = _manifest(ctx), ctx.project / _fx_dir(ctx), ctx.project / _fx_cand(ctx)
     todo = plan["data"]["to_approve"]
     blocked = [fx for fx in todo if fx in man["cases"] and fx not in reapprove]
@@ -811,7 +833,7 @@ def phase6(ctx):
 def phase7(ctx):
     owner = "orchestrator"
     res = [state(ctx), upstream(ctx, ["07-acceptance.md"], owner)]
-    latest = {p: read_json(ctx.gdir / f"{p}-latest.json") for p in ("p1", "p2", "p3", "p4", "p5", "p6")}
+    latest = {p: read_json(ctx.gdir / f"{p}-latest.json") for p in ("p1", "p2", "p4", "p5", "p6")}
     problems = [f"{p}: {'never run' if r is None else r['overall']}" for p, r in latest.items()
                 if r is None or r["overall"] not in (PASS, WAIVED)]
     if latest["p4"] and latest["p5"] and latest["p5"]["time"] < latest["p4"]["time"]:
@@ -857,5 +879,5 @@ def phase7(ctx):
         "Constitution §6.7: user accepted at Acceptance, with date"]}
 
 
-PHASES = {"p1": phase1, "p2": phase2, "p3": phase3, "plan": gate_plan, "baseline": baseline, "p4": phase4,
+PHASES = {"p1": phase1, "p2": phase2, "baseline": baseline, "p4": phase4,
           "p5": phase5, "p6": phase6, "p7": phase7}

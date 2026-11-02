@@ -19,6 +19,8 @@ Delivered: {n}/{total}. Deferred: {list with reason}.
 | FND | Severity | Why accepted | Follow-up |
 |---|---|---|---|
 
+Dropped by the coordinator: {n} (`06-review-report.md` §3).
+
 ## 5. Known limitations
 {Stated plainly. Anything skipped, partially done, or unverified is named here.}
 

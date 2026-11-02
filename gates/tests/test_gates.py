@@ -206,7 +206,7 @@ class Project:
 
     def approve(self):
         self.draft_fixture()
-        assert self.gate("plan")[0] == 0, self.gate("plan")[1]
+        assert self.gate("p2")[0] == 0, self.gate("p2")[1]
         self.log("human", "--stop", "Plan", "--decision", "approved", "--by", "user", "--note", "plan ok")
         assert self.gate("fixtures-approve", "--by", "user")[0] == 0
 
@@ -267,23 +267,54 @@ class DocGates(Base):
         self.assertEqual(self.p.gate("p1")[0], 0)
 
     def test_p2_green_and_uncovered(self):
+        self.p.draft_fixture()
         self.assertEqual(self.p.gate("p2")[0], 0)
         self.p.write("docs/backend/02-architecture.md", ARCH.replace("REQ-002", ""))
         code, _, rep = self.p.gate("p2")
         self.assertEqual(code, 1)
         self.assertEqual(self.p.status(rep, "P2.coverage"), "fail")
 
-    def test_p3_green_and_defects(self):
-        self.assertEqual(self.p.gate("p3")[0], 0)
+    def test_p2_detailed_design_defects(self):
+        self.p.draft_fixture()
+        self.assertEqual(self.p.gate("p2")[0], 0)
         d = DESIGN.replace("- **Serves:** REQ-002\n- **Side:** backend\n", "- **Serves:** REQ-009\n")
         d += "### DES-003 — ui\n- **Serves:** REQ-001\n- **Side:** frontend\n"
         self.p.write("docs/backend/03-detailed-design.md", d)
-        code, _, rep = self.p.gate("p3")
+        code, _, rep = self.p.gate("p2")
         self.assertEqual(code, 1)
         for cid in ("P3.serves", "P3.side", "P3.req-claimed", "P3.contract"):
             self.assertEqual(self.p.status(rep, cid), "fail", cid)
+        self.assertEqual(self.p.status(rep, "P2.coverage"), "pass")
         self.p.write("contracts/FRONTEND_BACKEND_CONTRACT.md", "DES-003 shape")
-        self.assertEqual(self.p.status(self.p.gate("p3")[2], "P3.contract"), "pass")
+        self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.contract"), "pass")
+
+    def test_p2_needs_fixture_answers(self):
+        """The merged design gate also requires every declared fixture's expected output (be-analyst)."""
+        code, _, rep = self.p.gate("p2")
+        self.assertEqual(code, 1)
+        self.assertEqual(self.p.status(rep, "PLAN.inputs"), "fail")
+        self.assertEqual(rep["fail_by_owner"], {"be-analyst": ["PLAN.inputs", "PLAN.expected"]})
+        self.assertEqual(self.p.status(rep, "P2.coverage"), "pass")
+        self.assertEqual(sum(c["id"] == "ALL.state" for c in rep["checks"]), 1)
+
+    def test_old_gate_names_are_gone(self):
+        self.assertEqual(self.p.gate("p3")[0], 2)
+        self.assertEqual(self.p.gate("plan")[0], 2)
+
+    def test_increment_section_is_read_and_retired_items_exempt(self):
+        """PLAYBOOK §3B: an increment appends new items; a replaced item is retired in place."""
+        t = REQS.replace("### REQ-002 — subtract\n", "### REQ-002 — subtract (retired, increment 2)\n")
+        t += ("\n## Increment 2 — 2026-11-02\n### REQ-004 — subtract, saturating at zero\n- **Cut:** above\n"
+              "- **Fixtures:** n/a — covered by unit tests\n- **Source:** \"never negative\"\n"
+              "- Given 1 and 2, When sub is called, Then it returns 0\n")
+        self.p.write("docs/backend/01-requirements.md", t)
+        code, out, rep = self.p.gate("p1")
+        self.assertEqual(code, 0, out)
+        self.assertIn("REQ-004", rep["data"]["active_reqs"])
+        self.assertNotIn("REQ-002", rep["data"]["active_reqs"])
+        t2 = t.replace("### REQ-004", "### REQ-001")  # reusing an id is caught
+        self.p.write("docs/backend/01-requirements.md", t2)
+        self.assertEqual(self.p.status(self.p.gate("p1")[2], "P1.req-ids"), "fail")
 
     def test_missing_state(self):
         (self.p.run / "state.json").unlink()
@@ -482,10 +513,37 @@ filler
     def _p7(self, status):
         self.p.write("docs/backend/06-review-report.md", self.FINDINGS.format(status=status))
         assert self.p.gate("p6")[0] == 0
-        for ph in ("p1", "p2", "p3"):
+        for ph in ("p1", "p2"):
             assert self.p.gate(ph)[0] == 0, ph
         self.p.write("docs/backend/07-acceptance.md", "\n".join(["accepted"] * 12))
         return self.p.gate("p7")
+
+    def test_full_tier_run_in_3_2_order(self):
+        """Full development, 3.2.0 order: Prototype → Phase 2 → Plan → 4 → 5 → panel + coordinator → 7."""
+        q = Project()
+        try:
+            q.write("docs/backend/state.json", json.dumps(dict(STATE, tier="full", risk="normal", prototype="built")))
+            q.log("dispatch", "--agent", "fe-engineer", "--model", "sonnet", "--step", "1b", "--note", "prototype")
+            q.log("return", "--agent", "fe-engineer", "--step", "1b", "--status", "ok", "--note", "runs")
+            self.assertEqual(q.gate("p1")[0], 0)
+            q.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
+            for agent in ("be-architect", "be-analyst"):
+                q.log("dispatch", "--agent", agent, "--model", "opus", "--step", "2", "--note", "design")
+                q.log("return", "--agent", agent, "--step", "2", "--status", "ok", "--note", "done")
+            q.to_p5()
+            assert q.gate("p5")[0] == 0
+            q.gate("mark", "--role", "be-reviewer")
+            for agent in ("be-review-behavior", "be-review-security", "be-reviewer"):
+                q.log("dispatch", "--agent", agent, "--model", "opus", "--step", "6", "--note", "review")
+                q.log("return", "--agent", agent, "--step", "6", "--status", "ok", "--note", "done")
+            q.write("docs/backend/06-review-report.md", self.FINDINGS.format(status="fixed in round 1"))
+            self.assertEqual(q.gate("p6")[0], 0, q.gate("p6")[1])
+            q.write("docs/backend/07-acceptance.md", "\n".join(["accepted"] * 12))
+            code, out, rep = q.gate("p7")
+            self.assertEqual(code, 0, out)
+            self.assertEqual(q.status(rep, "LOG.trail"), "pass")
+        finally:
+            q.close()
 
     def test_p7_open_major_blocks(self):
         code, _, rep = self._p7("open")
@@ -533,15 +591,15 @@ class Fixtures(Base):
 
     def test_plan_missing_expected_and_meta(self):
         self.p.write("tests/fixtures/candidates/FX-001/input.json", '{"args": [2, 3]}')
-        code, _, rep = self.p.gate("plan")
+        code, _, rep = self.p.gate("p2")
         self.assertEqual(code, 1)
         self.assertEqual(self.p.status(rep, "PLAN.expected"), "fail")
         self.assertEqual(self.p.status(rep, "PLAN.meta"), "fail")
-        self.assertEqual(rep["fail_by_owner"], {"be-tester": ["PLAN.expected", "PLAN.meta"]})
+        self.assertEqual(rep["fail_by_owner"], {"be-analyst": ["PLAN.expected", "PLAN.meta"]})
 
     def test_plan_green_writes_review_sheet(self):
         self.p.draft_fixture()
-        code, out, rep = self.p.gate("plan")
+        code, out, rep = self.p.gate("p2")
         self.assertEqual(code, 0, out)
         sheet = (self.p.run / "gates" / "plan-review.md").read_text()
         self.assertIn("## FX-001 — REQ-001", sheet)
@@ -550,7 +608,7 @@ class Fixtures(Base):
     def test_approve_needs_green_gf_and_approver(self):
         self.assertEqual(self.p.gate("fixtures-approve", "--by", "user")[0], 2)
         self.p.draft_fixture()
-        self.p.gate("plan")
+        self.p.gate("p2")
         self.assertEqual(self.p.gate("fixtures-approve")[0], 2)
         self.assertEqual(self.p.gate("fixtures-approve", "--by", "user")[0], 0)
         man = json.loads(self.p.read("tests/fixtures/approved/APPROVED.json"))
@@ -562,7 +620,7 @@ class Fixtures(Base):
     def test_reapproval_is_explicit_and_keeps_history(self):
         self.p.approve()
         self.p.draft_fixture(expected=6)
-        self.assertEqual(self.p.gate("plan")[0], 0)
+        self.assertEqual(self.p.gate("p2")[0], 0)
         self.assertIn("RE-APPROVAL", (self.p.run / "gates" / "plan-review.md").read_text())
         self.assertEqual(self.p.gate("fixtures-approve", "--by", "user")[0], 2)
         self.assertEqual(self.p.gate("fixtures-approve", "--by", "user", "--reapprove", "FX-001")[0], 0)
@@ -594,7 +652,7 @@ class Clarity(Base):
                            "- **Serves:** REQ-001\n```python\n# a comment, not a heading\ndef add(a, b): ...\n```\n"
                            "- **Side:** backend\n")
         self.p.write("docs/backend/03-detailed-design.md", d)
-        code, out, rep = self.p.gate("p3")
+        code, out, rep = self.p.gate("p2")
         self.assertEqual(self.p.status(rep, "P3.side"), "pass", out)
 
     def test_missing_understanding_and_source(self):
@@ -638,13 +696,13 @@ class Clarity(Base):
         d = DESIGN.replace("- **Side:** backend\n### DES-002", "- **Side:** backend\n- **Behaviour:** "
                            + " ".join(["step"] * 130) + "\n### DES-002")
         self.p.write("docs/backend/03-detailed-design.md", d)
-        self.assertEqual(self.p.status(self.p.gate("p3")[2], "P3.des-length"), "fail")
+        self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.des-length"), "fail")
 
     def test_plan_sheet_without_fixtures(self):
         t = REQS.replace("- **Fixtures:** FX-001", "- **Fixtures:** n/a — pure function")
         self.p.write("docs/backend/01-requirements.md", t)
         self.p.write("docs/backend/02-architecture.md", ARCH + "## 4. Decisions\n| Decision | Chosen |\n|---|---|\n| store | none |\n")
-        code, out, _ = self.p.gate("plan")
+        code, out, _ = self.p.gate("p2")
         self.assertEqual(code, 0, out)
         sheet = (self.p.run / "gates" / "plan-review.md").read_text()
         for needle in ("| REQ-001 — add numbers | above |", "## Non-goals", "- No export.", "| store | none |",
@@ -661,9 +719,10 @@ class TemplateExamples(Base):
             self.skipTest(f"{self.EXAMPLES} not installed next to the gates")
         for n in ("01-requirements", "02-architecture", "03-detailed-design"):
             self.p.write(f"docs/backend/{n}.md", (self.EXAMPLES / f"{n}.example.md").read_text())
-        for g in ("p1", "p2", "p3"):
-            code, out, _ = self.p.gate(g)
-            self.assertEqual(code, 0, f"{g}: {out}")
+        self.assertEqual(self.p.gate("p1")[0], 0)
+        rep = self.p.gate("p2")[2]  # fixture files are not part of the examples: judge the document checks only
+        docs_failing = [c["id"] for c in rep["checks"] if c["id"].startswith(("P2.", "P3.")) and c["status"] == "fail"]
+        self.assertEqual(docs_failing, [])
 
 
 class RunLog(Base):
@@ -736,21 +795,57 @@ class RunLog(Base):
         self.p.log("dispatch", "--agent", "fe-engineer", "--model", "sonnet", "--step", "1b", "--note", "prototype")
         self.p.log("return", "--agent", "fe-engineer", "--step", "1b", "--status", "ok", "--note", "runs")
         self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
-        self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "3", "--note", "design")
-        self.p.log("return", "--agent", "be-architect", "--step", "3", "--status", "ok", "--note", "done")
+        self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "2", "--note", "design")
+        self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "done")
         self.p.approve()
         r = self._trail()
         self.assertEqual(r["status"], "pass", r.get("details"))
 
-    def test_full_tier_needs_prototype_before_detailed_design(self):
+    def test_full_tier_needs_prototype_before_design(self):
+        for step in ("2", "3"):  # Phase 2 since 3.2.0; Phase 3 in older runs
+            with self.subTest(step=step):
+                self.p.close()
+                self.p = Project()
+                self._tier("full")
+                self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", step, "--note", "design")
+                self.p.log("return", "--agent", "be-architect", "--step", step, "--status", "ok", "--note", "done")
+                self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "late")
+                self.p.approve()
+                r = self._trail()
+                self.assertEqual(r["status"], "fail")
+                self.assertIn("before the Prototype was approved", " ".join(r["details"]))
+
+    def test_frontend_audit_may_precede_prototype(self):
+        """Frontend redesign runs 1 → 2 (audit) → 1b: its Phase 2 is not design (frontend.py passes ("3",))."""
         self._tier("full")
-        self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "3", "--note", "design")
-        self.p.log("return", "--agent", "be-architect", "--step", "3", "--status", "ok", "--note", "done")
-        self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "late")
+        self.p.log("dispatch", "--agent", "fe-critic", "--model", "opus", "--step", "2", "--note", "audit")
+        self.p.log("return", "--agent", "fe-critic", "--step", "2", "--status", "ok", "--note", "findings")
+        self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
         self.p.approve()
-        r = self._trail()
-        self.assertEqual(r["status"], "fail")
-        self.assertIn("before the Prototype was approved", " ".join(r["details"]))
+        import importlib
+        sys.path.insert(0, str(GATE.parent))
+        checks = importlib.import_module("gatelib.checks")
+        ctx = checks.Ctx(self.p.root, "docs/backend", {"test_globs": [], "doc_globs": []})
+        self.assertEqual(checks._log_trail(ctx, design_phases=("3",))["status"], "pass")
+        self.assertEqual(checks._log_trail(ctx)["status"], "fail")  # the backend reading of the same log
+
+    def test_reused_prototype_logged_at_kickoff_passes(self):
+        self._tier("full")
+        self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user",
+                   "--note", "reused docs/backend/01b-prototype.md, confirmed 2026-10-30")
+        self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "2", "--note", "design")
+        self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "done")
+        self.p.approve()
+        self.assertEqual(self._trail()["status"], "pass")
+
+    def test_panelist_marks_are_reviewer_marks(self):
+        self.p.gate("mark", "--role", "be-reviewer")
+        for a in ("be-review-behavior", "be-review-security"):
+            self.p.log("dispatch", "--agent", a, "--model", "opus", "--step", "6", "--note", "panel")
+            self.p.log("return", "--agent", a, "--step", "6", "--status", "ok", "--note", "findings")
+        self.p.gate("mark", "--role", "be-review-reliability")  # a panelist's own mark: also exempt
+        self.p.approve()
+        self.assertEqual(self._trail()["status"], "pass", self._trail().get("details"))
 
     def test_full_tier_without_prototype_fails_and_old_runs_unaffected(self):
         self.p.approve()
@@ -764,6 +859,11 @@ class RunLog(Base):
         self._tier("huge")
         code, out, rep = self.p.gate("p1")
         self.assertEqual(self.p.status(rep, "ALL.state"), "fail")
+
+    def test_state_risk_values(self):
+        for risk, want in (("high", "pass"), ("normal", "pass"), ("medium", "fail")):
+            self.p.write("docs/backend/state.json", json.dumps(dict(STATE, risk=risk)))
+            self.assertEqual(self.p.status(self.p.gate("p1")[2], "ALL.state"), want, risk)
 
 
 class JsRunners(unittest.TestCase):

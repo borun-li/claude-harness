@@ -54,9 +54,12 @@ later phases and runs read them.
 ## 5. After confirmation
 
 - **Prototype tier:** report and stop. Offer Full development as the next step; the confirmed
-  prototype and the intent answers become its input.
+  prototype and the intent answers become its input, and its Phase 1b is skipped.
 - **Full development:** if the confirmation changed scope, the Phase 1 owner (`be-analyst` or
   `fe-critic`) amends the requirements or brief first. Then continue with the next phase. The gates
-  refuse a detailed-design dispatch (step `3`) before the Prototype approval (`LOG.trail`).
+  refuse a design dispatch (backend step `2`, frontend step `3`) before the Prototype approval
+  (`LOG.trail`).
+- **A later Full development run** on the same ask may reuse a confirmed prototype instead of
+  building another (backend PLAYBOOK §2.3).
 - The prototype stays in `prototype/` as a reference. Product code is written from the design,
   never copied from it without the design saying so.

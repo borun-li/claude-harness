@@ -486,7 +486,7 @@ def accept(ctx):
     res.append(bad("FEA.rows", "Rows not verified done (blocked or skipped rows must say why)", owner, undone)
                if undone else ok("FEA.rows", f"{len(rows)} rows done, blocked or skipped with a reason", owner))
     res.append(_matrix(ctx, verdicts))
-    res.append(checks._log_trail(ctx))
+    res.append(checks._log_trail(ctx, design_phases=("3",)))  # frontend Phase 2 is an audit
     return res, {"not_machine_checked": ["Constitution §6.6: what the user must do to make it live",
                                          "Constitution §6.7: user accepted, with date"]}
 

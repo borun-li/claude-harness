@@ -1,6 +1,6 @@
 # Detailed design — {feature}
 
-- Author: be-architect · Input: `01-requirements.md`, `02-architecture.md`
+- Author: be-architect (Phase 2, same dispatch as `02-architecture.md`) · Input: `01-requirements.md`, `02-architecture.md`
 - Style: signatures in code, behaviour as numbered one-line steps, each DES at most 120 words
   (code excluded). See `examples/03-detailed-design.example.md`.
 

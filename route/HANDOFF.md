@@ -9,6 +9,7 @@ writes the handoff entry. Together they replace an agent's memory between rounds
 |---|---|
 | Full development, Prototype | `<run-dir>/handoff.md` (`docs/backend/…` or `docs/frontend/…`) |
 | Small change | `docs/handoff.md` |
+| Direct call (one agent named, no tier) | `docs/handoff.md` |
 | Cross-stack | the orchestrating team's run dir; both teams' agents append to it |
 
 The brief always names the file. Append only; never rewrite or delete an entry.
@@ -26,8 +27,9 @@ The brief always names the file. Append only; never rewrite or delete an entry.
 About 10–15 lines. Ids and paths, never pasted documents, logs or earlier conversation.
 
 ```
-You are <agent> #<n> — <phase or tier>, round <r>.
+You are <agent> #<n> — <phase or tier>, round <r>[, increment <i>].
 Task: <one sentence: what is done when you return>
+Increment: <i — append only to the `## Increment <i>` section of your documents; omit if none>
 Only: <TC-014, FND-003, Q-5 … — the items of this round>
 Evidence: <report path#entry for each failing item>
 Read: <paths>; handoff entries: <their headers>
@@ -45,7 +47,7 @@ reported the failure), not the whole log.
 Time from a real `date -u +%FT%TZ`. At most about 15 lines.
 
 ```
-## <agent> #<n> · <phase or tier> · round <r> · <ISO-8601 UTC>
+## <agent> #<n> · <phase or tier> · round <r>[ · increment <i>] · <ISO-8601 UTC>
 Task: <the brief's task line>
 Changed: <path (+a/-b) — what it does now>, or "nothing"
 Result: <pass/fail counts, gate verdict or outcome> — evidence: <path>
