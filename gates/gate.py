@@ -2,8 +2,8 @@
 """Computational gates for the backend team.
 
     gate.py profile                      draft <project>/.claude/gates.json (user confirms it)
-    gate.py p1 | p2 | p3                 document gates after Phases 1–3
-    gate.py plan                         after Phase 3b: fixtures complete; writes the Plan review sheet
+    gate.py p1                           after Phase 1 (requirements)
+    gate.py p2                           after Phase 2 (design + fixture answers); writes the Plan review sheet
     gate.py fixtures-approve --by <who>  lock the fixtures the user approved at Plan (never without their yes)
     gate.py baseline                     Phase 4 start: clean tree, baseline tests, snapshot
     gate.py mark --role <agent>          snapshot before dispatching a writing agent or reviewers

@@ -14,11 +14,18 @@ tier, Small change included. Classify the task yourself, from code facts, then h
 
 $ARGUMENTS
 
-## 0. Ask the tier — first, before anything else
+## 0. Ask the tier — after a read-only look, before any work
 
-`AskUserQuestion`, in the user's language, one question: **Small change / Prototype / Full
-development** (Constitution §7), each option describing what runs and roughly what it costs. Never
-infer the tier from the request. Record it; every team reads it instead of asking again.
+Do §1 and §2 first (read-only, about 30 s), so one question can carry what the team needs. Then one
+`AskUserQuestion`, in the user's language:
+
+- **Tier:** Small change / Prototype / Full development (Constitution §7), each option describing
+  what runs and roughly what it costs. Never infer the tier from the request.
+- **Backend or cross-stack class:** in the same call, the rest of backend PLAYBOOK §2.3 (model plan,
+  risk, gate profile when unconfirmed), used only if the answer is Full development.
+- **Frontend class:** the tier alone; the Frontend PLAYBOOK asks its own kickoff questions.
+
+Record the answers; every team reads them instead of asking again.
 
 ## 1. Gather facts
 

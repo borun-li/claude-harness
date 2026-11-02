@@ -1,5 +1,5 @@
 ---
-description: Start a full backend software-development run — phase-gated waterfall (requirements -> architecture -> detailed design -> build -> verification -> review -> acceptance) with a 5-role agent team and computational gates.
+description: Start a full backend software-development run — phase-gated (requirements -> prototype -> design -> build -> verification -> review panel -> acceptance) with the be-* agent team and computational gates.
 argument-hint: <what to build, or a path to a brief e.g. instructions.md>
 model: opus
 disable-model-invocation: true

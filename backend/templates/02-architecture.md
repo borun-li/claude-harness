@@ -1,6 +1,6 @@
 # Architecture — {feature}
 
-- Author: be-architect · Input: `01-requirements.md` · Status: draft | revised after critique
+- Author: be-architect · Input: `01-requirements.md` · Status: draft | revised after design review (risk: high)
 - Style: tables, not prose; at most 800 words of prose in total. See `examples/02-architecture.example.md`.
 
 ## 1. Components

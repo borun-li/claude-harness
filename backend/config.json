@@ -1,5 +1,5 @@
 {
-  "harness_version": "3.1.0",
+  "harness_version": "3.2.0",
   "_comment": "Global defaults for the backend agent team. A project may override any key by creating .claude/backend.json in the project root (shallow merge, top-level keys).",
   "model_plan": {
     "_active_tier": "quality",
@@ -11,7 +11,10 @@
         "be-architect": "opus",
         "be-developer": "opus",
         "be-tester": "sonnet",
-        "be-reviewer": "opus"
+        "be-reviewer": "opus",
+        "be-review-behavior": "opus",
+        "be-review-reliability": "opus",
+        "be-review-security": "opus"
       },
       "balanced": {
         "label": "Balanced",
@@ -20,7 +23,10 @@
         "be-architect": "opus",
         "be-developer": "sonnet",
         "be-tester": "haiku",
-        "be-reviewer": "opus"
+        "be-reviewer": "opus",
+        "be-review-behavior": "opus",
+        "be-review-reliability": "opus",
+        "be-review-security": "opus"
       },
       "economy": {
         "label": "Economy",
@@ -29,7 +35,10 @@
         "be-architect": "opus",
         "be-developer": "sonnet",
         "be-tester": "haiku",
-        "be-reviewer": "sonnet"
+        "be-reviewer": "sonnet",
+        "be-review-behavior": "sonnet",
+        "be-review-reliability": "sonnet",
+        "be-review-security": "sonnet"
       },
       "max": {
         "label": "All Opus (no cost ceiling)",
@@ -38,14 +47,18 @@
         "be-architect": "opus",
         "be-developer": "opus",
         "be-tester": "opus",
-        "be-reviewer": "opus"
+        "be-reviewer": "opus",
+        "be-review-behavior": "opus",
+        "be-review-reliability": "opus",
+        "be-review-security": "opus"
       }
     }
   },
   "language": {
-    "default_docs": "en",
+    "_comment": "Documents follow the user's language unless a project sets default_docs; stated in the Kickoff preview, not asked (PLAYBOOK §2.3).",
+    "default_docs": "user",
     "code_and_identifiers": "en",
-    "confirm_at_kickoff": true
+    "confirm_at_kickoff": false
   },
   "artifacts": {
     "dir": "docs/backend",
@@ -62,19 +75,19 @@
     "G0_review": false
   },
   "parallelism": {
-    "architecture_critique": true,
-    "architecture_critique_lenses": [
-      "feasibility-and-risk",
-      "simplicity-and-alternatives"
+    "_comment": "Design review runs only when state.json risk is high (PLAYBOOK §3). The review panel is trimmed by risk (PLAYBOOK §6); the coordinator runs whenever a panelist ran.",
+    "design_review": "high_risk",
+    "design_review_panel": [
+      "be-review-behavior",
+      "be-review-reliability"
     ],
     "build_test_design_in_parallel": true,
-    "review_lenses": [
-      "correctness",
-      "security-and-robustness",
-      "maintainability-and-simplicity",
-      "operator-experience"
+    "review_panel": [
+      "be-review-behavior",
+      "be-review-reliability",
+      "be-review-security"
     ],
-    "traceability_audit": true
+    "review_coordinator": "be-reviewer"
   },
   "loops": {
     "max_gate_fix_rounds": 3,

@@ -9,6 +9,7 @@ writes the handoff entry. Together they replace an agent's memory between rounds
 |---|---|
 | Full development, Prototype | `<run-dir>/handoff.md` (`docs/backend/…` or `docs/frontend/…`) |
 | Small change | `docs/handoff.md` |
+| Direct call (one agent named, no tier) | `docs/handoff.md` |
 | Cross-stack | the orchestrating team's run dir; both teams' agents append to it |
 
 The brief always names the file. Append only; never rewrite or delete an entry.

@@ -1,6 +1,6 @@
 # Architecture — Duplicate upload guard
 
-- Author: be-architect · Input: `01-requirements.md` · Status: revised after critique
+- Author: be-architect · Input: `01-requirements.md` · Status: revised after design review
 
 ## 1. Components
 | Component | Responsibility (one sentence) | Serves |

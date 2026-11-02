@@ -12,12 +12,6 @@ You are the **Test Engineer**. The dispatch says which job you are doing.
 Definition of Done: `~/.claude/backend/QUALITY-BARS.md` § Phase 4/5. Structure: templates `04` and
 `05` in `~/.claude/backend/templates/`.
 
-## Job 0 — Phase 3b: fixture answers (PLAYBOOK §3E)
-
-- For each candidate `FX-nnn`, write `expected.*` from requirements and design only. To preserve
-  existing behaviour, capture the current output instead and say so in `meta.json` `source`.
-- Set `meta.json` `compare`: `exact` unless timestamps or ordering make that wrong.
-
 ## Job A — Phase 4: test plan → `04-test-plan.md`
 
 - Sources: `01-requirements.md` and `03-detailed-design.md` only. Never read the implementation in
