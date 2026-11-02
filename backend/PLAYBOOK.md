@@ -140,15 +140,28 @@ acceptance; on yes set `status = "accepted"`.
 
 ---
 
-## 3B. Re-baseline — the brief changes mid-run
+## 3B. Increments — the user adds or changes requirements mid-run
 
-1. Stop the phase in flight.
-2. Restate the change in the user's terms; get it confirmed.
-3. Re-enter at Phase 1.
-4. Retire `REQ-###`, never delete; never reuse ids.
-5. Verify each scope cut is absent in code, not only in prose.
-6. Recompute every count and restate its composition.
-7. Record in `state.json`: what changed, artifacts reissued, gates re-taken.
+The run in flight is never restarted. The change becomes increment `n` and joins it.
+
+1. **Record and confirm.** Write the user's words verbatim into `state.json` `increments` and an
+   orchestrator handoff entry. Restate the change in their terms and ask once whether it adds new
+   requirements or changes approved ones; a change to an approved one is a Constitution §5.1 stop.
+2. **The original flow continues** to its next fixed stop (Prototype, Plan or Acceptance).
+3. **At that stop the increment starts at Phase 1** and runs only its own items through every phase
+   the original has passed, then the two continue as one line, sharing the stop: one Plan, one
+   Acceptance. Phase 1b runs for the increment only if it adds something the user will see.
+4. **Updates only, appended.** Each agent appends a `## Increment <n> — <date>` section to the
+   documents it owns, holding only the new or changed items, and its handoff entry records only
+   that delta. New items take the next free ids (`REQ`, `DES`, `TC`, `FX`, `FND`); ids are never
+   reused. The one edit allowed to earlier content is retiring a replaced item in place (`retired,
+   increment <n>` in its heading); its replacement goes in the increment section.
+5. **Gates read the whole documents**, so every earlier item is still checked. After any code
+   change `p4` and `p5` run the full suite: the original behaviour must still pass. New fixtures
+   are approved at the shared Plan; approved ones change only by `--reapprove`.
+6. **Review** covers the increment's diff, plus whatever of the original was not yet reviewed.
+7. Verify each retired item is absent in code, not only in prose; recompute every count and restate
+   its composition.
 
 ## 3C. The frontend/backend line
 
@@ -295,6 +308,8 @@ Say which panelists you dispatched and why. A change of risk mid-run is a Consti
   "frontend_items": [ { "des": "DES-021", "queue_row": "Q-3", "status": "verified" } ],
   "gates": { "p1": { "overall": "pass", "time": "ISO-8601" } },
   "loops": { "review_rounds": 0 },
+  "increments": [ { "n": 2, "asked": "the user's words", "date": "ISO-8601", "joined_at": "Plan",
+                    "items": ["REQ-019", "REQ-020"] } ],
   "open_questions": [], "notes": []
 }
 ```

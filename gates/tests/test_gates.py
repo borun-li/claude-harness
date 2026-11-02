@@ -301,6 +301,21 @@ class DocGates(Base):
         self.assertEqual(self.p.gate("p3")[0], 2)
         self.assertEqual(self.p.gate("plan")[0], 2)
 
+    def test_increment_section_is_read_and_retired_items_exempt(self):
+        """PLAYBOOK §3B: an increment appends new items; a replaced item is retired in place."""
+        t = REQS.replace("### REQ-002 — subtract\n", "### REQ-002 — subtract (retired, increment 2)\n")
+        t += ("\n## Increment 2 — 2026-11-02\n### REQ-004 — subtract, saturating at zero\n- **Cut:** above\n"
+              "- **Fixtures:** n/a — covered by unit tests\n- **Source:** \"never negative\"\n"
+              "- Given 1 and 2, When sub is called, Then it returns 0\n")
+        self.p.write("docs/backend/01-requirements.md", t)
+        code, out, rep = self.p.gate("p1")
+        self.assertEqual(code, 0, out)
+        self.assertIn("REQ-004", rep["data"]["active_reqs"])
+        self.assertNotIn("REQ-002", rep["data"]["active_reqs"])
+        t2 = t.replace("### REQ-004", "### REQ-001")  # reusing an id is caught
+        self.p.write("docs/backend/01-requirements.md", t2)
+        self.assertEqual(self.p.status(self.p.gate("p1")[2], "P1.req-ids"), "fail")
+
     def test_missing_state(self):
         (self.p.run / "state.json").unlink()
         code, _, rep = self.p.gate("p1")
