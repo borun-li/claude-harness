@@ -13,6 +13,12 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 7.2.3 — 2026-11-03 — read-only agents return their handoff entry
+
+Patch: `fe-review-experience`, `fe-review-accessibility` and `fe-review-integration` end their output
+block with a `handoff:` field naming the agent, as in backend 3.3.4 (a live direct call returned no
+entry).
+
 ## 7.2.2 — 2026-11-03 — agent files: one job, input, output, boundaries
 
 Patch: the 8 `fe-*` agents and the shared `be-analyst` follow the structure in backend 3.3.3

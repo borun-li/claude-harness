@@ -31,6 +31,8 @@ dropped: <n> — each listed in the report with counter-evidence
 rechecked: [FND-003: fixed | open — <evidence>]      # re-check
 noticed: [<one line each, not findings>]
 report: <the 06-review-report.md text, or the re-check table>
+handoff: |   # last, always: your entry, HANDOFF.md §4 format; <n> = your entries in that log + 1
+  ## be-reviewer #<n> · <phase or tier, or "direct call"> · round <r> · <date -u +%FT%TZ>
 ```
 
 ## Boundaries

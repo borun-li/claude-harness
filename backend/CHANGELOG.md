@@ -7,6 +7,15 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.4 — 2026-11-03 — read-only agents return their handoff entry
+
+Patch, found in the first live direct call (`be-review-security` on the ithaca admin handler): the
+return had no handoff entry. The read-only agents' output block ended at `verdict:` while the entry
+was asked for in prose above it, so the agent followed the block. `be-reviewer` and the three
+`be-review-*` (and the three `fe-review-*`) now end their block with a `handoff:` field that names
+the agent and says how to number the entry (`<n>` = its entries in that log + 1), since an agent
+cannot see its own frontmatter and a direct call has no run log to count from.
+
 ## 3.3.3 — 2026-11-03 — agent files: one job, input, output, boundaries
 
 Patch: all 16 agent files (shared with the Frontend team) rewritten to one structure, agreed with the user.

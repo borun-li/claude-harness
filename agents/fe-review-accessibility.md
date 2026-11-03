@@ -34,6 +34,8 @@ candidates:
     evidence: <capture file and field, or probe command and output>
     suggested_direction: <one line; no patch>
 verdict: clean | issues_found
+handoff: |   # last, always: your entry, HANDOFF.md §4 format; <n> = your entries in that log + 1
+  ## fe-review-accessibility #<n> · <phase or tier, or "direct call"> · round <r> · <date -u +%FT%TZ>
 ```
 
 ## Boundaries
