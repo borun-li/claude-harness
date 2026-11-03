@@ -451,9 +451,13 @@ def build(ctx):
         res.append(checks._command_check(ctx, name, "fe-engineer")[0])
     t, r = checks._tests(ctx, "fe-engineer", base)
     approved = (ctx.gdir / "observables-approved.json").exists()
+    one_stop = _state_json(ctx).get("design_stops") == 1
+    code = [p for p in changed if not ctx.is_doc(p) and not ctx.is_test(p)]
+    early = (bad("FE.observables", "One-stop run: no product code before the UI stop (Constitution §4.2; "
+                 "PLAYBOOK Phase 2)", "orchestrator", code) if one_stop and code
+             else na("FE.observables", "Before the UI stop: scaffold only", "fe-engineer"))
     res += [t, checks._test_file_drift(ctx, base, "fe-engineer", "FE3.test-drift"),
-            _observables(ctx, "fe-engineer") if approved
-            else na("FE.observables", "Before the UI stop: scaffold only", "fe-engineer"),
+            _observables(ctx, "fe-engineer") if approved else early,
             registry.regression(ctx, r, "fe-engineer")]
     return res, {"writer_changed": changed, "counts": r["counts"] if r else None}
 

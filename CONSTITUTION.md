@@ -27,8 +27,9 @@ needs human approval.
 5. **Raise contradictions.** When two sources disagree, quote both and stop that item. Never
    resolve it by editing whichever is easier to change.
 6. **Disclose your own mistakes** immediately, in your return value.
-7. **Show it running before investing in detail.** The user sees a rough, runnable version and
-   confirms it before detailed design starts. A requirements document is not a substitute.
+7. **Show it before investing in detail.** The user sees a rough version and confirms it before
+   detailed design starts: a runnable version, or, when the deliverable is a visual interface, a
+   visual design of its screens. A requirements document is not a substitute.
 8. **A description is not the thing.** Comments, docstrings, declarations, exit codes and prior
    reports are not evidence. Check the artefact itself, and ask "if this were wrong, what would
    turn red?"
@@ -41,7 +42,7 @@ roster, these boundaries hold:
 
 1. **Orchestrators** classify, dispatch, enforce gates, keep state and report. They write no
    code, requirements or designs.
-2. **Reviewers and critics** are read-only.
+2. **Reviewers** never change what they review; at most they write their own review report.
 3. **Engineers** write only their side of the project's written frontend/backend line.
 4. **Testers** write tests and test reports only; a failing test is a defect report, never a
    reason to touch production code.
@@ -71,11 +72,14 @@ batched, each with a recommendation, at the tier's next fixed stop.
 
 **Stop and wait for the user only when:**
 1. **Scope or priorities would change:** a requirement is added, dropped or reinterpreted, the
-   user's own words would be changed, or a higher priority (§1) would be traded for a lower one.
+   user's own words would be changed, a result the user confirmed they will see or get would
+   change (an approved expected output, an approved observable, a confirmed flow or screen), or a
+   higher priority (§1) would be traded for a lower one.
 2. **The action is irreversible or outward-facing:** deleting others' work, migrating real data,
    publishing, changing global config.
 3. **The tier reaches a fixed stop** where the user signs off.
 4. **The work is stuck:** the same step has failed twice, or a loop cap is hit.
+5. **A budget the user set** (calls, cost, time) would be exceeded.
 
 Silence is never approval.
 
@@ -92,7 +96,9 @@ Work is **done** only if every answer that applies to its tier is yes. Otherwise
 6. The report says what the user must do to make it live.
 7. The user accepted it, seeing it run, recorded with date.
 
-A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4 or 7.
+A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4 or 7. A tier whose
+deliverable is a design, not running software, replaces 4 and 7 with: the user reviewed the design
+itself and accepted it, recorded with date.
 
 ## 7. Run Tiers
 

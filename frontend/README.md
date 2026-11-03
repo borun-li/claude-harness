@@ -41,7 +41,8 @@ flowchart LR
   Backend team's requirements are the input), 1 UX, 2 UI ∥ scaffold then feasibility and queue,
   3 build, 4 verify ∥ review, acceptance, 5 after launch.
 - **Scaffold**: while UI draws, the engineer builds what does not depend on visuals (data
-  fetching, state handling, routing).
+  fetching, state handling, routing) — in two-stop runs, where the confirmed UX is the approved
+  design. In one-stop runs it waits until after the UI stop.
 - **Dotted arrows**: work flows back. Any role may raise a design-feedback item (DFB); its owner
   (UX for flows, pages and states, UI for looks) decides it; a change to something you confirmed
   comes back to you. Fix rounds take only blockers, majors and rows not done; a fresh tester and

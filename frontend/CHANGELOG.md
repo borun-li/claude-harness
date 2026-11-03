@@ -53,6 +53,20 @@ practices, OneRedOak's design-review agent and ux-agent.
   run the UI stop is the backend's Prototype stop. `/route` asks the frontend kickoff questions in
   its one question; a visual Prototype tier is the frontend run up to the UI stop.
 - 6.x runs are not resumed by 7.0 (PLAYBOOK §1.3).
+- **Constitution amended (2026-11-02, by the user), shared with backend 3.3.0.** §2.7: the
+  rough version may be a visual design when the deliverable is a visual interface. §3.2: reviewers
+  never change what they review and may write their own report (`fe-reviewer`). §5.1: a result the
+  user confirmed they will see or get (approved expected output or observable, confirmed flow or
+  screen) changing is a stop — internal design details are not. §5.5 (new): a budget the user set
+  would be exceeded. §6: a tier whose deliverable is a design replaces 6.4 and 6.7 with the user's
+  review of the design. Why: the frontend prototype is a Figma design, the coordinator writes its
+  report, and DFB and Figma-budget stops need a constitutional basis; worded so backend stops are
+  unchanged.
+- `ORCHESTRATOR.md`: start is recon then one question; stops `UX`, `UI`, `Budget` and
+  `--figma-calls` in the log commands; more than 4 questions → a second call right after.
+- Kickoff asks design stops and the Figma budget as one question (4 in all); surface, named user
+  and gate profile, when unset, in a second call. One-stop runs scaffold only after the UI stop
+  (Constitution §4.2); `fe-build` fails product code before it (`FE.observables`).
 
 ## 6.1.0 — 2026-10-31 — context discipline; constitution made stable
 

@@ -98,10 +98,13 @@ risk evidence, the expected pages and the Figma budget it implies. Then ask:
 - **Model plan** — the `roles` mapping `(Recommended)`; "Other" patches it.
 - **Risk** — `high` if the product is public, handles money, personal data or auth, or a legal
   accessibility duty applies; otherwise `normal`. Recommend one, citing the evidence.
-- **Design stops** — two (UX, then UI) when the round has 2 or more pages or a new flow; one (UX
-  and UI together) for a single page or component (`design_stops` in config). Recommend one.
-- **Figma budget** for this run, and, only when null, the delivery surface and the named user.
-- **Gate profile** — only while `.claude/gates.json` is unconfirmed.
+- **Design stops and Figma budget**, one question — two stops (UX, then UI) when the round has 2
+  or more pages or a new flow, one (UX and UI together) for a single page or component
+  (`design_stops` in config), each option naming the budget it implies (§1E). Recommend one.
+
+Only when needed, in a second call right after (the tool takes at most 4 questions;
+`ORCHESTRATOR.md`, Decisions): the delivery surface and the named user when unset, and the gate
+profile while `.claude/gates.json` is unconfirmed.
 
 Taste choices the `design-taste` skill lists (§1: product class, brand colours, motion, copy tone)
 are asked here only if `project-context.md` lacks them; record the answers there.
@@ -131,9 +134,11 @@ and an ASCII wireframe per page. Gate `fe-ux`. Its `missing_requirements` go bac
 
 **Phase 2 — UI, scaffold, feasibility, queue.**
 1. `baseline --team frontend`.
-2. In one message: `fe-ui` (design plan, self-check, tokens, components, frames in the Figma file
-   you name) and `fe-engineer` **scaffold** (what does not depend on visuals; files listed in
-   `03-queue.md` § Scaffold). Gate `fe-ui` when `fe-ui` returns; `fe-build` when the scaffold returns.
+2. `fe-ui` (design plan, self-check, tokens, components, frames in the Figma file you name). In
+   two-stop runs, in the same message, `fe-engineer` **scaffold** (what does not depend on visuals;
+   files listed in `03-queue.md` § Scaffold): the confirmed UX is its approved design (Constitution
+   §4.2). In one-stop runs nothing is approved yet, so the scaffold waits until after the UI stop
+   (the first Phase 3 dispatch). Gate `fe-ui` when `fe-ui` returns; `fe-build` when the scaffold returns.
 3. Design feedback raised by `fe-ui` against UX is routed per §3A before step 4.
 4. `fe-engineer` **feasibility and queue**: reads the frames, raises DFBs for what is costly or does
    not fit, and writes `03-queue.md` and its Dependencies table. DFBs to UI or UX go to a fresh

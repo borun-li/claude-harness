@@ -377,6 +377,8 @@ class Approval(FrontBase):
         rep = self.fe("fe-build")[2]
         self.assertEqual(self.st(rep, "FE.observables"), "unavailable")
         self.assertEqual(self.st(rep, "ROLE.unplanned"), "pass")
+        self.set_state(design_stops=1)  # nothing approved yet: no product code before the UI stop
+        self.assertIn("web/api.js", self.details(self.fe("fe-build")[2], "FE.observables"))
 
 
 class BuildVerifyAccept(FrontBase):

@@ -17,6 +17,11 @@ Shared with frontend 7.0.0 (see `~/.claude/frontend/CHANGELOG.md`).
   `fe-product`, which reuses `p1`).
 - Gates: role checks ignore the other team's run dir and, for `fe-*` roles, the fixtures dirs;
   `_trail_common` shared by both teams' trail checks.
+- Constitution amended (2026-11-02, by the user): §2.7, §3.2, §5.1, §5.5, §6 — see frontend 7.0.0
+  for the text and reasons. Backend behaviour is unchanged: §5.1 covers results the user confirmed
+  (approved fixture answers already need `--reapprove`), not internal design amendments, which stay
+  logged decisions unless they change scope (PLAYBOOK Phase 4); the backend kickoff stays at 4
+  questions; no backend budget is set.
 
 ## 3.2.0 — 2026-11-02 — one design phase, review panel with a coordinator, depth by risk
 

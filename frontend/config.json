@@ -56,6 +56,7 @@
   "viewports": [1440, 768, 375],
   "parallelism": {
     "ui_and_scaffold_in_parallel": true,
+    "_scaffold_comment": "two-stop runs only; one-stop runs scaffold after the UI stop (Constitution §4.2)",
     "review_panel": ["fe-review-experience", "fe-review-accessibility", "fe-review-integration"],
     "review_coordinator": "fe-reviewer",
     "verify_and_review_in_parallel": true

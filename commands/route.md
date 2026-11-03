@@ -23,9 +23,9 @@ Do §1 and §2 first (read-only, about 30 s), so one question can carry what the
   what runs and roughly what it costs. Never infer the tier from the request.
 - **Backend or cross-stack class:** in the same call, the rest of backend PLAYBOOK §2.3 (model plan,
   risk, gate profile when unconfirmed), used only if the answer is Full development.
-- **Frontend class:** in the same call, the rest of frontend PLAYBOOK §2.3 (model plan, risk, design
-  stops, the Figma budget, and the surface and named user when unset), used only if the answer is
-  Prototype or Full development.
+- **Frontend class:** in the same call, the rest of frontend PLAYBOOK §2.3 (model plan, risk, and
+  design stops with the Figma budget), used only if the answer is Prototype or Full development; the
+  surface, named user and gate profile, when unset, in a second call right after.
 
 Record the answers; every team reads them instead of asking again.
 

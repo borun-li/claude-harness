@@ -17,7 +17,8 @@ before it is confirmed, not after it is built. The dispatch names one task.
 
 ## Capabilities
 
-- **Scaffold (Phase 2, while `fe-ui` draws).** What does not depend on visuals: data fetching
+- **Scaffold (Phase 2 while `fe-ui` draws in two-stop runs; right after the UI stop in one-stop
+  runs).** What does not depend on visuals: data fetching
   against the contract, the state handling each UX state table needs (loading, empty, error,
   permission, offline), routing and navigation. List every file in `03-queue.md` § Scaffold.
 - **Feasibility (Phase 2, after the frames).** Read the frames (`get_design_context`,
