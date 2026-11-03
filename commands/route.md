@@ -55,9 +55,10 @@ Record the answers; every team reads them instead of asking again.
   `verified` with its source (`file:line`) and date, or `new`.
 - Tell the user the tier, the class, the evidence (`file:line`), and what you are starting:
   - **Small change** → §4 below; no team PLAYBOOK.
-  - **Prototype** → a visual interface (web, native, desktop, game UI): the Frontend PLAYBOOK with
-    `tier: "prototype"`, which ends at its UI stop (designed in Figma, not coded). Otherwise
-    `~/.claude/route/PROTOTYPE.md`; no team PLAYBOOK.
+  - **Prototype** → an interface people operate (web, native, desktop, game UI, terminal): the
+    Frontend PLAYBOOK with `tier: "prototype"`, which ends at its UI stop (designed in Figma, or as
+    text mockups for a terminal; not coded). Otherwise `~/.claude/route/PROTOTYPE.md`; no team
+    PLAYBOOK.
   - **Full development** → read that team's PLAYBOOK and run its flow as its orchestrator, with
     `tier: "full"` in its `state.json`.
 

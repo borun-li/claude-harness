@@ -13,6 +13,11 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 7.2.1 — 2026-11-03 — terminal prototypes stay in this PLAYBOOK
+
+Patch, with backend 3.3.2: a terminal surface is prototyped here as text mockups up to the UI stop,
+never through `route/PROTOTYPE.md`; §7 drops `prototype/` (no frontend code prototype remains).
+
 ## 7.2.0 — 2026-11-03 — `/frontend-status`; commands follow Claude Code's guidance
 
 Minor (a new command), from the same comparison as backend 3.3.1.

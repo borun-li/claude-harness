@@ -25,8 +25,9 @@ flowchart LR
 - **Solid arrows**: the order of work — Phase 1 requirements, 1b prototype, 2 design (ending at
   Plan), 4 build ∥ test plan, 5 verification, 6 review, 7 acceptance (Phase 3 was merged into 2).
 - **Prototype**: a rough, runnable version (`route/PROTOTYPE.md`), skipped when you already
-  confirmed one. When the round touches a visual interface, the Frontend team's UX and Figma UI
-  stops are the prototype instead (`route/FRONTEND_BACKEND_LINE.md` §4).
+  confirmed one. When the round touches an interface people operate, the Frontend team's UX and UI
+  stops (Figma, or text mockups for a terminal) are the prototype instead
+  (`route/FRONTEND_BACKEND_LINE.md` §4).
 - **Frontend team**: `side: frontend` items are designed and built by the Frontend team once their
   seam's backend half exists, and verified by its tester and review panel; one Acceptance covers both.
 - **Risk**: `high` (money, personal data, auth, irreversible operations, schema, new dependencies,
