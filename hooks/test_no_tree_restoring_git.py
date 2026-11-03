@@ -48,6 +48,10 @@ CASES: list[tuple[str, bool]] = [
     ("git worktree remove /tmp/base", False),
     ("git worktree remove --force /tmp/base", True),
     ("git checkout -b feature/x", False),
+    ("git checkout -q -b feature/x origin/main", False),  # 曾被误拦（2026-11-03）
+    ("git checkout --quiet -b feature/x", False),
+    ("git checkout -q -- review/views.py", True),
+    ("git checkout -B feature/x", True),
     ("git add -A && git commit -m x", False),
     # —— 假阳性：命令里出现的是字符串，不是命令 ——
     ("grep -rn 'git checkout' docs/", False),

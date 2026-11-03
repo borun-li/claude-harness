@@ -5,7 +5,7 @@
 ## Verdicts
 | Row | Verdict | Evidence (file · state · size) | Note |
 |---|---|---|---|
-| Q-001 | done | `Q-001-dup@desktop.dom.html` · duplicate · 1280 px | text and href match the stored file id 17 |
+| Q-001 | done | `Q-001-dup@1440.dom.html` · duplicate · 1440 px | text and href match the stored file id 17 |
 
 ## Assertions added
 | Test | Red when | Green when |

@@ -18,6 +18,11 @@
 ## 2. Non-goals
 - Changing the duplicate rule itself (backend, shipped).
 
-## 3. Open questions
+## 3. Assumptions
+| # | Assumption | Status | If wrong |
+|---|---|---|---|
+| A1 | The backend's 409 answer carries the original file's id | [unverified] | the link has no target: `fe-engineer` marks the capability `new` in the contract |
+
+## 4. Open questions
 | # | Question | Default | Blocks |
 |---|---|---|---|

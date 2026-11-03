@@ -149,7 +149,8 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
 - Each finding has severity, `Where` (a run-dir file or `path:line` that exists), the UX or
   contract reference, and a scenario. `[FE4.findings]`
 - Only blockers and majors go to a fix round; minors are listed in § Deferred.
-- The panel run matches PLAYBOOK §6 for the risk and the diff, and the report says why. `[FE4.panel]`
+- The panel includes at least what PLAYBOOK §6 requires for the risk `[FE4.panel]`; the panelists
+  added for the diff are the orchestrator's call, and the report says why.
 
 ### Re-check
 

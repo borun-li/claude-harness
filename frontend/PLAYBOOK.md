@@ -22,7 +22,7 @@ real surface with real data. Work flows forward, and feedback flows back (§3A).
 | `be-analyst` | Product features (`REQ-###`) in a frontend-only run; in a cross-stack run the Backend team's Phase 1 provides them | `00-requirements.md` |
 | `fe-ux` | Flows, page structure, navigation, per-page state tables, ASCII wireframes; post-launch insights | `01-ux.md`, `06-feedback.md` |
 | `fe-ui` | Design plan and self-check, tokens, components and their states, Figma frames | `02-ui.md`, the Figma file |
-| `fe-engineer` | Scaffold, feasibility check, the queue, then one row at a time on the frontend side of the line; fixes | `03-queue.md`, frontend code |
+| `fe-engineer` | Scaffold, feasibility check, contract draft, the queue, then one row at a time on the frontend side of the line; fixes | `03-queue.md`, the contract draft, frontend code |
 | `fe-tester` | One verdict per row against its frame and state rows; assertions that can fail | `04-verification.md`, test files |
 | `fe-review-experience` · `fe-review-accessibility` · `fe-review-integration` | Review panel (§6): candidates in their lens | Nothing; you file their returns |
 | `fe-reviewer` | Coordinator: merges, disproves with counter-evidence only, ranks `FND-###`; re-checks fixed FNDs | `05-review.md` |
@@ -36,8 +36,7 @@ real surface with real data. Work flows forward, and feedback flows back (§3A).
 
 ## 1. Configuration
 
-1. **Models.** Tier names live in the shared registry `~/.claude/backend/config.json`; this team
-   maps its roles one by one in `config.json` `roles`. Judgement → `opus`; carrying out a decided
+1. **Models.** This team maps its roles one by one in `config.json` `roles`. Judgement → `opus`; carrying out a decided
    conclusion → `sonnet`. Reviewers and `fe-ux` never drop below `opus`.
 2. Read `~/.claude/frontend/config.json`; shallow-merge `<project>/.claude/frontend.json` and say so.
 3. **Earlier versions.** A `state.json` with `harness_version` below 7.0 is not resumed by this
@@ -80,7 +79,7 @@ A picture alone is never evidence.
 
 ---
 
-## 2. Phase 0 — Kickoff (always runs)
+## 2. Kickoff (always runs)
 
 **2.1 Understand the ask** in the user's words and its simplest useful version: that is the round.
 Everything unnamed goes below the cut line.

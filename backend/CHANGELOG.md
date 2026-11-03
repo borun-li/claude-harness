@@ -7,6 +7,19 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.7 — 2026-11-03 — stale wording and examples
+
+Patch, class C of the 3.3.5 audit (no runtime effect, except the Chrome lookup):
+- README: sixteen agents (not twelve); the single-page design stop; `CLAUDE_HOME` is for test
+  installs only, since the docs and hooks assume `~/.claude`.
+- `07-acceptance.md` gains § Frontend items (the Phase 7 bar asks for them) and a Prototype
+  sign-off line.
+- The detailed-design example lists the dedupe script its build order names (following the
+  example used to fail `ROLE.unplanned`).
+- `HANDOFF.md` §6: roles without Write put long output in a scratch file outside the tree.
+- Gate: `capture` finds Chrome or Chromium on PATH when the macOS app is absent (`install.sh`
+  already accepted `google-chrome`). Test added.
+
 ## 3.3.6 — 2026-11-03 — one reading for each ambiguous rule
 
 Patch, class B of the 3.3.5 audit; each ruling is the user's:

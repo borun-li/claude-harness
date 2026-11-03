@@ -8,6 +8,7 @@
 | `app/uploads/service.py` | Upload flow with the hash check | changed |
 | `app/uploads/hash_index.py` | Hash lookup and insert | new |
 | `migrations/0042_file_hash.sql` | `file_hash` table and unique index | new |
+| `scripts/dedupe_hashes.py` | One-off: report existing duplicates before the unique index | new |
 
 ## 2. Modules
 ### DES-001 — `app/uploads/hash_index.py`

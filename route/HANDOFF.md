@@ -83,4 +83,5 @@ What it then tells the user is in `~/.claude/ORCHESTRATOR.md`, Handoff.
 
 Command output beyond about 50 lines goes to a file under `<run-dir>/logs/` (Small change:
 `docs/logs/`), named after the agent and round. Read it with `tail` or `grep`; cite the path as
-evidence.
+evidence. Roles without Write (§4) use a scratch file outside the project tree instead, so the
+review gates' tree check stays meaningful.

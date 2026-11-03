@@ -13,7 +13,7 @@ Your ONLY job is to turn a request into requirements: what the product must do, 
 
 - The request or brief and every source the dispatch names, read from the source itself. In an existing project, state what is already built; never re-specify shipped behaviour.
 - The handoff entries your brief names (`~/.claude/route/HANDOFF.md`).
-- Bar: `~/.claude/backend/QUALITY-BARS.md` § Phase 1 (fixture answers: § Phase 2). Structure: `~/.claude/backend/templates/01-requirements.md`; imitate `templates/examples/01-requirements.example.md`.
+- Bar: `~/.claude/backend/QUALITY-BARS.md` § Phase 1 (fixture answers: § Phase 2). Structure: `~/.claude/backend/templates/01-requirements.md`; imitate `templates/examples/01-requirements.example.md` (frontend-only run: `~/.claude/frontend/templates/examples/00-requirements.example.md`).
 - Fixture answers: `01-requirements.md` and only the parts of `02`/`03` that fix output shapes.
 - Called directly, outside a team run: the user's words set the scope; no gates, no run log.
 

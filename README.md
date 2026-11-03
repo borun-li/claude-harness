@@ -1,7 +1,7 @@
 # Claude Harness
 
 The shared Claude Code agent team for our web_dev group: a Backend team and a Frontend team with automatic gates between steps.
-The orchestrator is your own Claude Code session: once `/route` (or a team command) loads `ORCHESTRATOR.md`, it dispatches the twelve agents, holds the human stops and keeps the run on disk.
+The orchestrator is your own Claude Code session: once `/route` (or a team command) loads `ORCHESTRATOR.md`, it dispatches the sixteen agents, holds the human stops and keeps the run on disk.
 It lives in `~/.claude`, so it works in every project you open with Claude Code.
 
 ## Install
@@ -16,7 +16,7 @@ cd claude-harness
 ```
 
 What `install.sh` does:
-- copies `CONSTITUTION.md ORCHESTRATOR.md agents commands backend frontend route gates hooks skills/design-taste` into `~/.claude` (set `CLAUDE_HOME` to install somewhere else);
+- copies `CONSTITUTION.md ORCHESTRATOR.md agents commands backend frontend route gates hooks skills/design-taste` into `~/.claude` (`CLAUDE_HOME` installs elsewhere for testing only: the docs and hooks assume `~/.claude`);
 - backs up any existing copies of those folders first, to `~/.claude/backup-harness-<date>.tgz`;
 - adds two hooks to `~/.claude/settings.json`, leaving your other settings as they are:
   - one blocks git commands that throw away work (`git checkout -- .`, `git reset --hard`, …);
@@ -49,7 +49,7 @@ Every task starts with one question: which tier is it?
 | Prototype | A few questions about what you want, then a rough version for you to confirm: for an interface people operate, flows and screens designed in Figma (text mockups for a terminal); otherwise a rough, runnable version |
 | Full development | The whole team process. After requirements, you see and confirm a prototype before any detailed design or code — the design for an interface people operate, a rough running version otherwise (skipped if you already confirmed one in a Prototype run) |
 
-In Full development you also approve the plan (backend) or the UX and UI designs (frontend), and the final acceptance. Everything irreversible or outward-facing (deploys, pushes, deletes) waits for you. Other questions do not stop the run: the team takes a recommended default, marks it, and shows it to you at the next stop.
+In Full development you also approve the plan (backend) or the UX and UI designs (frontend; one combined confirmation for a single page or component), and the final acceptance. Everything irreversible or outward-facing (deploys, pushes, deletes) waits for you. Other questions do not stop the run: the team takes a recommended default, marks it, and shows it to you at the next stop.
 
 **Long runs.** Every round is done by a fresh agent with a short brief; what it learned goes into the run's `handoff.md`. At each stop the orchestrator writes its own entry and suggests `/clear`, then `/backend-resume` or `/frontend-resume`, so the session's context stays small.
 
@@ -67,7 +67,7 @@ In Full development you also approve the plan (backend) or the UX and UI designs
 | `hooks/` | The git safety hook, the agent-continuation hook, and their tests |
 | `skills/design-taste/` | The user's design taste, for `fe-ux`, `fe-ui` and `fe-review-experience` |
 
-Harness version: backend 3.3.6, frontend 7.2.5 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
+Harness version: backend 3.3.7, frontend 7.2.6 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
 
 ## Changing the harness
 
