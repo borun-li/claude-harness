@@ -9,7 +9,7 @@
 
 ## 2. Findings
 `Where` is a file under the run dir (`evidence/…`) or `path:line` in the project; the `fe-review`
-gate checks it exists. `Ref` is the UX or contract item (`FLOW-002`, `PAGE-003 error`, `C-04`, WCAG).
+gate checks it exists. `Ref` is the UX or contract item (`FLOW-002`, `PAGE-003 error`, `C-004`, WCAG).
 
 | ID | Severity | Panelist | Where | Ref | Claim |
 |---|---|---|---|---|---|

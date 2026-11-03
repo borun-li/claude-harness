@@ -4,7 +4,8 @@
 - One row per independently buildable, observable piece. See `examples/03-queue.example.md`.
 
 ## Scaffold
-Files changed while `fe-ui` drew (no visuals): data fetching, state handling, routing.
+Files that need no visuals: data fetching, state handling, routing (two-stop runs: built while
+`fe-ui` draws; one-stop runs: after the UI stop).
 
 | File | What it does |
 |---|---|

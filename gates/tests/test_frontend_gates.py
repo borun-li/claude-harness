@@ -2,6 +2,7 @@
 """Regression matrix for the frontend gates (fe-*, 7.0): red on each defect, green on innocent work.
 Run: python3 tests/test_frontend_gates.py"""
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -565,6 +566,23 @@ class RunDir(FrontBase):
         self.p.write(".claude/frontend.json", json.dumps({"artifacts": {"run_dir": "docs/ui2"}}))
         self.fe_log("decision", "--agent", "fe-ux", "--note", "x")
         self.assertTrue((self.p.root / "docs/ui2/run-log.jsonl").exists())
+
+
+class ChromeLookup(unittest.TestCase):
+    def test_linux_chrome_on_path(self):
+        # install.sh accepts google-chrome on PATH; capture must find it too
+        import importlib
+        from unittest import mock
+        sys.path.insert(0, str(GATE.parent))
+        capture = importlib.import_module("gatelib.capture")
+        with mock.patch.dict(os.environ, {}, clear=False) as env, \
+                mock.patch.object(capture, "CHROME", "/nonexistent/Google Chrome"), \
+                mock.patch.object(capture.shutil, "which",
+                                  lambda n: "/usr/bin/google-chrome" if n == "google-chrome" else None):
+            env.pop("CHROME_PATH", None)
+            self.assertEqual(capture.find_chrome(), "/usr/bin/google-chrome")
+            env["CHROME_PATH"] = "/opt/chrome"
+            self.assertEqual(capture.find_chrome(), "/opt/chrome")
 
 
 class Capture(FrontBase):

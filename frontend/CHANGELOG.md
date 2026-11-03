@@ -11,7 +11,22 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > `ux-lead` / `ux-researcher` / `ux-architect` / `ux-contract` / `ux-auditor` / `ux-reviewer`
 > 六个角色**今天已经不存在**，归档在 `~/.claude/archive/agents-v1/`，harness 里没有任何一处派工
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
-> 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
+> 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §0。**
+
+## 7.2.6 — 2026-11-03 — stale wording and examples
+
+Patch, class C of the 7.2.4 audit:
+- PLAYBOOK: `## 2. Kickoff` (Phase 0 now means only product features, as the `--step` values do);
+  §1.1 drops the pointer to the backend's tier registry; `fe-engineer` owns the contract draft.
+- Examples follow the bars: no colour in UX; one page means one design stop; system font stack and
+  dark token values for a tool product (design-taste); capture names `@1440`; the requirements
+  example has § Assumptions and `be-analyst` points to it.
+- Contract ids are `C-001`; the contract template no longer says `fe-ux` writes it; the queue
+  template's Scaffold covers one-stop runs; the UI template mentions the `Dark` column.
+- QUALITY-BARS: `FE4.panel` checks the risk's minimum panel; diff-based panelists are the
+  orchestrator's call.
+- `commands/frontend.md` names the agents' "Called directly" rules; the CHANGELOG header points
+  to PLAYBOOK §0.
 
 ## 7.2.5 — 2026-11-03 — one reading for each ambiguous rule
 

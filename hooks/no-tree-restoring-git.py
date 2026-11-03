@@ -21,7 +21,7 @@ import sys
 
 # 每条 = (正则, 你本来想做的事, 该用什么)
 RULES: list[tuple[str, str, str]] = [
-    (r"\bgit\s+(?:-[^\s]+\s+)*checkout\b(?!\s+-b\b)",
+    (r"\bgit\s+(?:-[^\s]+\s+)*checkout\b(?!(?:\s+(?:-q|--quiet))*\s+-b\b)",
      "把某个路径恢复成 git 里的样子",
      "git show HEAD:<路径> > <路径>   # 作用域就是你打出的那一个路径"),
     (r"\bgit\s+(?:-[^\s]+\s+)*restore\b",

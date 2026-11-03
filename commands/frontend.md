@@ -21,7 +21,7 @@ $ARGUMENTS
 
 `status` as the first token → say the report is now `/frontend-status` and stop; never start a
 run. An audit or a review of an existing interface alone is not a run: dispatch `fe-review-*`
-(and `fe-reviewer` to merge) directly, as their agent files' Direct call describes.
+(and `fe-reviewer` to merge) directly, as their agent files' "Called directly" rules describe.
 
 ## Then
 

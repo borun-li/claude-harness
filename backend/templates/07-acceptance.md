@@ -35,6 +35,13 @@ Dropped by the coordinator: {n} (`06-review-report.md` §3).
 | Phase | Agent | Model | Notes |
 |---|---|---|---|
 
-## 9. Human sign-off
+## 9. Frontend items
+| DES | Queue row | Built by | `fe-tester` verdict |
+|---|---|---|---|
+
+None when the round has no `side: frontend` items.
+
+## 10. Human sign-off
+- Prototype: {decision, date, or "reused <path>, confirmed <date>"}
 - Plan: {decision, date}
 - Acceptance: {pending}

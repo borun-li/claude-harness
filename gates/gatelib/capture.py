@@ -91,8 +91,21 @@ def run(ctx, round_no):
     return entries, out
 
 
+def find_chrome():
+    """CHROME_PATH, else the macOS app, else Chrome or Chromium on PATH (Linux)."""
+    if os.environ.get("CHROME_PATH"):
+        return os.environ["CHROME_PATH"]
+    if pathlib.Path(CHROME).exists():
+        return CHROME
+    for name in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
+        found = shutil.which(name)
+        if found:
+            return found
+    return CHROME
+
+
 def _web(plan, out):
-    chrome = os.environ.get("CHROME_PATH", CHROME)
+    chrome = find_chrome()
     script = HERE / "capture" / "capture_web.mjs"
     if not (HERE / "node_modules" / "playwright-core").exists():
         raise ConfigError("playwright-core is not installed in ~/.claude/gates (run `npm install` there)")

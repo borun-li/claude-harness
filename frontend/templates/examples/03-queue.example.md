@@ -1,6 +1,6 @@
 # Queue — Duplicate upload message
 
-- **Author:** fe-engineer · **Status:** approved at the UI stop 2026-11-04
+- **Author:** fe-engineer · **Status:** approved at the design stop 2026-11-04
 
 ## Scaffold
 | File | What it does |
