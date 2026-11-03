@@ -1,64 +1,74 @@
 {
-  "harness_version": "6.1.0",
+  "harness_version": "7.0.0",
   "_comment": "Frontend Agent Team defaults. A project may override any top-level key in <project>/.claude/frontend.json. Model tier names live in ~/.claude/backend/config.json; roles below map this team one by one.",
   "roles": {
-    "orchestrator": {
-      "model": "opus"
-    },
-    "fe-critic": {
+    "orchestrator": { "model": "opus" },
+    "be-analyst": { "model": "opus", "_comment": "product features in frontend-only runs (Phase 0)" },
+    "fe-ux": { "model": "opus", "floor": true },
+    "fe-ui": {
       "model": "opus",
-      "floor": true
-    },
-    "fe-designer": {
-      "model": "opus",
-      "down_to_sonnet_when": "carrying out a decided change: wording, sync, fill-in"
+      "down_to_sonnet_when": "carrying out a decided change: a revision the user specified, syncing frames"
     },
     "fe-engineer": {
       "model": "sonnet",
-      "up_to_opus_when": "cross-stack row, template data layer, or a written invariant is touched"
+      "up_to_opus_when": "feasibility and queue, cross-stack rows, client state or data layer, or a written invariant is touched"
     },
     "fe-tester": {
       "model": "sonnet",
       "up_to_opus_when": "writing a new assertion that must be shown to fail"
-    }
+    },
+    "fe-reviewer": { "model": "opus", "floor": true },
+    "fe-review-experience": { "model": "opus", "floor": true },
+    "fe-review-accessibility": { "model": "opus", "floor": true },
+    "fe-review-integration": { "model": "opus", "floor": true }
   },
   "model_tiering_rule": "Judgement -> opus; carrying out a decided conclusion -> sonnet. Say which and why at each dispatch.",
   "artifacts": {
     "run_dir": "docs/frontend",
     "contract": "contracts/FRONTEND_BACKEND_CONTRACT.md",
     "evidence_dir": "docs/frontend/evidence",
+    "design_exports": "docs/frontend/evidence/design",
     "template_dir": "~/.claude/frontend/templates"
   },
   "backend_team": {
     "harness": "~/.claude/backend",
     "run_dir": "docs/backend",
+    "requirements": "docs/backend/01-requirements.md",
     "contract": "contracts/FRONTEND_BACKEND_CONTRACT.md"
   },
   "gates": {
-    "_comment": "Human stops. Plan (and Acceptance in implement) are fixed; everything else stops only for a PLAYBOOK §3F case.",
-    "Plan": true,
+    "_comment": "Human stops (PLAYBOOK §3F). UX applies only when design_stops is 2.",
+    "UX": true,
+    "UI": true,
     "Acceptance": true
   },
+  "design_stops": {
+    "_comment": "Two stops (UX, then UI) when the round has at least min_pages_for_two pages or a new flow; otherwise one. Proposed at kickoff, confirmed by the user.",
+    "min_pages_for_two": 2,
+    "new_flow_means_two": true
+  },
+  "figma": {
+    "_comment": "PLAYBOOK §1E. Counts every Figma MCP call made by fe-ui and fe-engineer, logged on their returns.",
+    "monthly_budget": 300,
+    "per_run": { "base": 20, "per_page": 8 },
+    "warn_at": 0.8
+  },
+  "viewports": [1440, 768, 375],
   "parallelism": {
-    "audit_lenses": [
-      "task-completion",
-      "information-scent",
-      "state-coverage"
-    ],
-    "review_lenses": [
-      "ux-flow",
-      "design-system",
-      "accessibility-and-content",
-      "contract-and-feasibility"
-    ],
-    "final_critic_pass": true
+    "ui_and_scaffold_in_parallel": true,
+    "_scaffold_comment": "two-stop runs only; one-stop runs scaffold after the UI stop (Constitution §4.2)",
+    "review_panel": ["fe-review-experience", "fe-review-accessibility", "fe-review-integration"],
+    "review_coordinator": "fe-reviewer",
+    "verify_and_review_in_parallel": true
   },
   "loops": {
-    "max_interview_rounds_before_gate": 2,
-    "max_revision_rounds_after_review": 2,
-    "max_rework_rounds_after_verification": 2
+    "max_fix_rounds": 2
+  },
+  "language": {
+    "default_docs": "user",
+    "confirm_at_kickoff": false
   },
   "delivery_surface": null,
   "primary_user_role": null,
-  "frontend_backend_boundary": "Declared by the project, with who ruled it and a date, in <project>/.claude/project-context.md. The harness presets nothing; an unwritten line stops the queue."
+  "frontend_backend_boundary": "Declared by the project, with who ruled it and a date, in <project>/.claude/project-context.md (default: ~/.claude/route/FRONTEND_BACKEND_LINE.md). The harness presets nothing; an unwritten line stops the queue."
 }

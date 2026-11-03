@@ -65,7 +65,7 @@ def promote(ctx, by, exclude, rows_fn):
         n += 1
         oid = f"OBS-{n:03d}"
         entry = {"id": oid, "source": f"{ctx.run_rel}#{q}", "observable": docs.field(block, "Observable"),
-                 "pages": sorted(docs.ids_in(docs.field(block, "Spec") or "", "PAGE")),
+                 "pages": sorted(docs.ids_in(docs.field(block, "Page") or docs.field(block, "Spec") or "", "PAGE")),
                  "approved_by": by, "date": utc_now()[:10], **guard}
         entry["hash"] = _digest(entry)
         reg["entries"][oid] = entry
@@ -117,7 +117,7 @@ def conflicts(ctx, rows):
     """{OBS: [Q…]} for approved observables on pages this round's rows touch."""
     out = {}
     for oid, e in active(load(ctx)).items():
-        hit = [q for q, b in rows.items() if set(e["pages"]) & docs.ids_in(docs.field(b, "Spec") or "", "PAGE")]
+        hit = [q for q, b in rows.items() if set(e["pages"]) & docs.ids_in(docs.field(b, "Page") or docs.field(b, "Spec") or "", "PAGE")]
         if hit:
             out[oid] = hit
     return out

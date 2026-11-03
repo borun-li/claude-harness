@@ -7,6 +7,22 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.0 — 2026-11-02 — shared line file; be-analyst as the product role
+
+Shared with frontend 7.0.0 (see `~/.claude/frontend/CHANGELOG.md`).
+- §3C moved to `~/.claude/route/FRONTEND_BACKEND_LINE.md`, cited as §3C.n; it adds who designs the
+  frontend side (`fe-ux`, `fe-ui`), the cross-stack table (§4: the frontend UI stop is the Phase 1b
+  Prototype stop when the round touches a visual interface) and finer fix routing.
+- `be-analyst` also writes product features in frontend-only runs (`00-requirements.md`, gate
+  `fe-product`, which reuses `p1`).
+- Gates: role checks ignore the other team's run dir and, for `fe-*` roles, the fixtures dirs;
+  `_trail_common` shared by both teams' trail checks.
+- Constitution amended (2026-11-02, by the user): §2.7, §3.2, §5.1, §5.5, §6 — see frontend 7.0.0
+  for the text and reasons. Backend behaviour is unchanged: §5.1 covers results the user confirmed
+  (approved fixture answers already need `--reapprove`), not internal design amendments, which stay
+  logged decisions unless they change scope (PLAYBOOK Phase 4); the backend kickoff stays at 4
+  questions; no backend budget is set.
+
 ## 3.2.0 — 2026-11-02 — one design phase, review panel with a coordinator, depth by risk
 
 Source: the Ithaca Local Guide MVP run log (harness 2.7.4): about 931 agent-minutes, of which Phase 6 took 570 (61%) over 39 dispatches (17 reviewer, 9 developer, 7 architect) for 71 findings (3 blocker, 24 major, 44 minor); Phase 3 took 161 minutes and `p3` ran 17 times, one dispatch spending 114 minutes to bring one DES under the word limit. Review design after Block's `block/review` (three fixed lenses; a coordinator that merges and tries to disprove) and the user's AGNT Con notes (precision over recall; deep review only for high-risk changes).

@@ -13,9 +13,10 @@
     gate.py timeline                     write <run-dir>/run-log.md and print it
 
 Frontend team (run dir docs/frontend; pass --team frontend to baseline, mark, log, timeline):
-    gate.py fe-brief | fe-structure | fe-spec | fe-findings | fe-queue | fe-plan
-    gate.py fe-approve --by <who>        lock the queue's observables the user approved at Plan
-    gate.py fe-build | fe-capture-plan | fe-verify | fe-accept
+    gate.py fe-product | fe-ux | fe-ui | fe-queue | fe-plan
+    gate.py fe-approve --by <who>        lock the queue's observables and frame exports confirmed at the UI stop
+    gate.py fe-build | fe-capture-plan | fe-verify | fe-review | fe-accept
+    gate.py log return ... --figma-calls <n>   record the Figma calls an agent reported (PLAYBOOK §1E)
     gate.py fe-promote --by <who> [--exclude Q-…]   after Acceptance: register accepted rows as OBS-###
     gate.py fe-approve --by <who> [--retire OBS-…]  also retires registered observables the user drops
     gate.py capture --round <n>          capture evidence per docs/frontend/capture-plan.json
@@ -95,6 +96,7 @@ def main():
     ap.add_argument("event", nargs="?", help="log: dispatch | return | human | decision")
     for f in ("agent", "model", "step", "status", "stop", "decision", "note"):
         ap.add_argument(f"--{f}")
+    ap.add_argument("--figma-calls", type=int, help="log return: Figma MCP calls the agent made")
     ap.add_argument("--project", default=".")
     ap.add_argument("--run-dir")
     ap.add_argument("--role")
@@ -119,7 +121,8 @@ def main():
         if a.event in ("gate", "mark", "approve"):
             raise ConfigError(f"`{a.event}` events are written by the gates themselves")
         ev = runlog.append(log, a.event or "", agent=a.agent, model=a.model, phase=a.step, status=a.status,
-                           stop=a.stop, decision=a.decision, by=a.by, note=a.note)
+                           stop=a.stop, decision=a.decision, by=a.by, note=a.note,
+                           figma_calls=a.figma_calls if a.event == "return" else None)
         print(f"[gate] logged #{ev['seq']} {ev['event']}")
         return 0
     if a.phase == "timeline":

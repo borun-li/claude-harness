@@ -39,8 +39,8 @@ most 120 words outside code; no paragraph or bullet over 50. Imitate the files i
   taxonomy, state transitions, config and secrets, logging points. Follow the project's idiom.
 - Each `DES-###` has `**Serves:** REQ-…` and `**Side:** backend | frontend` (keywords in English).
 - A frontend DES specifies only the seam (name, type, nullable, who computes it, endpoint/field)
-  and records it in `contracts/FRONTEND_BACKEND_CONTRACT.md`. Layout and styling are
-  `fe-designer`'s. A two-sided item becomes two DES sharing one contract entry.
+  and records it in `contracts/FRONTEND_BACKEND_CONTRACT.md`. Flows and states are
+  `fe-ux`'s, layout and styling `fe-ui`'s. A two-sided item becomes two DES sharing one contract entry.
 - Name every file to change and every new dependency (template "Dependencies"); the `p4` gate
   rejects unnamed ones.
 

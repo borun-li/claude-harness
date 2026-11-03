@@ -146,8 +146,16 @@ def _load_mark(ctx, role):
 
 
 def _is_reviewer(role):
-    """be-reviewer and the be-review-* panelists are read-only: their mark guards the tree, not a writer."""
-    return role == "be-reviewer" or role.startswith("be-review-")
+    """Review coordinators and panelists: their mark guards the tree, not a writer."""
+    return role in ("be-reviewer", "fe-reviewer") or role.startswith(("be-review-", "fe-review-"))
+
+
+def _other_team(ctx, role):
+    """Paths another team may change in the same tree while `role` runs: never charged to `role`."""
+    pats = [f"{d}/**" for d in RUN_DIRS if d != ctx.run_rel]
+    if role.startswith("fe-"):
+        pats += [f"{_fx_dir(ctx)}/**", f"{_fx_cand(ctx)}/**"]
+    return pats
 
 
 def _latest_writer(ctx):
@@ -163,6 +171,8 @@ def role_checks(ctx):
     m = _latest_writer(ctx)
     role, before = m["role"], m["snapshot"]
     d = snap.diff(before, ctx.snapshot())
+    other = _other_team(ctx, role)
+    d = {k: [p for p in v if not glob_match(p, other)] if isinstance(v, list) else v for k, v in d.items()}
     ch = snap.changed(d)
     if role == "be-developer":
         fe = [p for p in ch if glob_match(p, ctx.cfg["frontend_globs"])]
@@ -182,24 +192,20 @@ def role_checks(ctx):
                 else ok("ROLE.tester-scope", "be-tester changed only tests and documents", role)], ch
     if role == "fe-engineer":
         tests = [p for p in d["modified"] + d["deleted"] if ctx.is_test(p)]
-        queue = ctx.doc("05-queue.md") or ""
+        queue = ctx.doc("03-queue.md") or ""
         unplanned = [p for p in ch if not ctx.is_test(p) and not ctx.is_doc(p) and not _mentioned(p, queue)]
         return [bad("ROLE.tests", "fe-engineer modified or deleted existing tests", role, tests) if tests
                 else ok("ROLE.tests", "No existing test changed by fe-engineer", role),
-                bad("ROLE.unplanned", "Changed files not named in any 05-queue.md row", role, unplanned)
+                bad("ROLE.unplanned", "Changed files not named in 03-queue.md (a row or § Scaffold)", role, unplanned)
                 if unplanned else ok("ROLE.unplanned", "Every changed file is named in a queue row", role)], ch
     if role == "fe-tester":
         outside = [p for p in ch if not ctx.is_test(p) and not ctx.is_doc(p)]
         return [bad("ROLE.tester-scope", "fe-tester changed non-test files", role, outside) if outside
                 else ok("ROLE.tester-scope", "fe-tester changed only tests and documents", role)], ch
-    if role == "fe-designer":
-        outside = [p for p in ch if not ctx.is_doc(p)]
-        return [bad("ROLE.designer-scope", "fe-designer changed files outside the artifact dirs", role, outside)
-                if outside else ok("ROLE.designer-scope", "fe-designer changed only design artifacts", role)], ch
-    if role == "fe-critic":
+    if role in ("fe-ux", "fe-ui"):
         outside = [p for p in ch if not glob_match(p, [f"{ctx.run_rel}/**"])]
-        return [bad("ROLE.read-only", "Files changed while fe-critic ran", role, outside) if outside
-                else ok("ROLE.read-only", "Tree unchanged while fe-critic ran", role)], ch
+        return [bad("ROLE.designer-scope", f"{role} changed files outside {ctx.run_rel}/", role, outside)
+                if outside else ok("ROLE.designer-scope", f"{role} changed only design documents", role)], ch
     return [na("ROLE.none", f"No role rules for {role}", role)], ch
 
 
@@ -226,14 +232,9 @@ def log_valid(ctx):
             else ok("LOG.valid", "Run log intact", "orchestrator"))
 
 
-def _log_trail(ctx, design_phases=("2", "3")):
-    """Every dispatch returned; every writer mark was followed by its dispatch; Plan approved before build.
-
-    design_phases: the phases that must follow the Prototype approval. Backend: Phase 2 (design) since
-    3.2.0, Phase 3 in older runs. Frontend passes ("3",): its Phase 2 is an audit that may precede 1b."""
-    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
-    owner, problems = "orchestrator", []
-    open_ = {}
+def _trail_common(events):
+    """Every dispatch returned; every writer mark was followed by its dispatch."""
+    problems, open_ = [], {}
     for ev in events:
         if ev["event"] == "dispatch":
             open_[ev["agent"]] = open_.get(ev["agent"], 0) + 1
@@ -248,6 +249,15 @@ def _log_trail(ctx, design_phases=("2", "3")):
             nxt = next((e for e in events[i + 1:] if e["event"] in ("dispatch", "mark", "gate")), None)
             if not nxt or nxt["event"] != "dispatch" or nxt["agent"] != ev["role"]:
                 problems.append(f"#{ev['seq']}: mark for {ev['role']} not followed by its dispatch")
+    return problems
+
+
+def _log_trail(ctx, design_phases=("2", "3")):
+    """Backend trail: the common checks, then the Plan approved before build and (full tier) the
+    Prototype approved before design. design_phases: Phase 2 since 3.2.0, Phase 3 in older runs.
+    The Frontend team has its own trail (frontend._trail)."""
+    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
+    owner, problems = "orchestrator", _trail_common(events)
     plan = next((e["seq"] for e in events if e["event"] == "human" and e["stop"] == "Plan"
                  and e["decision"] == "approved"), None)
     # Phase 1b prototype dispatches are throwaway work and may precede the Plan (route/PROTOTYPE.md).
@@ -286,10 +296,11 @@ def _length_check(ctx, cid, items, key, owner, what):
     return (bad(cid, f"{what} longer than {limit} words (code excluded)", owner, long) if long
             else ok(cid, f"Every {what} within {limit} words", owner))
 
-def phase1(ctx):
+def phase1(ctx, name="01-requirements.md"):
+    """Requirements. The Frontend team reuses it for 00-requirements.md (frontend-only runs)."""
     owner = "be-analyst"
-    text = ctx.doc("01-requirements.md")
-    res = [state(ctx), upstream(ctx, ["01-requirements.md"], owner)]
+    text = ctx.doc(name)
+    res = [state(ctx), upstream(ctx, [name], owner)]
     if res[-1]["status"] == FAIL:
         return res, {}
     reqs = docs.requirements(text)
