@@ -23,8 +23,8 @@ state. The orchestrator reads it at kickoff and on resume. Version: `harness_ver
 | `be-reviewer` | Review Coordinator | merged `06-review-report.md` (returned, read-only) | No |
 | Orchestrator | Project Manager | `state.json`, `07-acceptance.md`, filing read-only roles' text | No |
 
-Interface work is built by the Frontend team (`fe-designer`, `fe-critic`, `fe-engineer`,
-`fe-tester`), dispatched by you under §3C.
+Interface work is designed and built by the Frontend team (`fe-ux`, `fe-ui`, `fe-engineer`,
+`fe-tester`, its review panel), dispatched by you under §3C.
 
 ---
 
@@ -91,6 +91,8 @@ inputs (§3E.1). You ask its blocking questions together with the Phase 1b inten
 `be-analyst` amends what the answers change.
 
 **Phase 1b — Prototype** (`~/.claude/route/PROTOTYPE.md`; skipped when `prototype: "reused"`).
+When the round touches a visual interface, the Frontend team's Phases 1–2 and its UI stop are the
+prototype (§3C.4).
 The user confirms a rough, runnable version (fixed stop, §3F). If the confirmation changed scope, a
 fresh `be-analyst` amends `01-requirements.md` and `p1` runs again. Nothing in Phase 2 starts before
 the confirmation (Constitution §2.7).
@@ -120,8 +122,8 @@ the confirmation (Constitution §2.7).
   never improvises.
 
 **Phase 5 — Verification** → `be-tester` runs every `TC-###` and records real output; frontend
-items are verified by `fe-tester` (§3C.5). Failures go to the owning engineer (§3C.6) through the
-`p5` loop (§3D): each round a fresh engineer naming only the failing TCs, then a fresh `be-tester`.
+items are verified by `fe-tester` and the frontend review panel (§3C.4–5). Failures go to the
+owning engineer (§3C.6) through the `p5` loop (§3D): each round a fresh engineer naming only the failing TCs, then a fresh `be-tester`.
 Never relax a test.
 
 **Phase 6 — Review** (panel trimmed by §6):
@@ -165,37 +167,9 @@ The run in flight is never restarted. The change becomes increment `n` and joins
 
 ## 3C. The frontend/backend line
 
-`be-developer` writes backend code only, whether or not the Frontend team was dispatched.
-
-**3C.1 Default line** (a line the project wrote, named and dated, in
-`<project>/.claude/project-context.md` or `team/frontend-team-config.md`, overrides it):
-
-| Side | Covers | Built by |
-|---|---|---|
-| backend | schema and migrations, business logic, APIs, queries, CLI args, script entry points, jobs | `be-developer` |
-| frontend | human-operated GUI/TUI: templates, styles, client scripts, display-only fields | `fe-engineer` (design `fe-designer`) |
-
-**3C.2 When the line must be written.** Only if the round touches the interface. Then, if
-unwritten, ask at the next fixed stop (§3F) and have the user sign one; offer 3C.1 as the draft.
-
-**3C.3 Design.** Every `DES-###` has `side: backend | frontend`. A frontend item specifies only
-the seam (name, type, nullable, who computes, endpoint/field) in
-`contracts/FRONTEND_BACKEND_CONTRACT.md`. Two-sided items split into two `DES` sharing one entry.
-
-**3C.4 Build.** Run `~/.claude/frontend/PLAYBOOK.md` §1C and Phases 6–8 with its QUALITY-BARS;
-`fe-*` models come from `~/.claude/frontend/config.json` `roles`. The rows' `observable`s are shown
-at the Plan stop. Frontend artifacts stay in the Frontend dirs; record in `state.json` which `DES`
-went to the Frontend team.
-
-**3C.5 Verify.** You capture evidence on the running surface; `fe-tester` judges it.
-`be-tester` tests each seam from the backend side.
-
-**3C.6 Fix routing.** A defect goes to the side where it is: data → `be-developer`, screen →
-`fe-engineer`, design → `be-architect` / `fe-designer`. Never route interface work to
-`be-developer` for speed.
-
-**3C.7** Every item in `be-developer`'s `frontend_items` gets a `DES` and a queue row, or is moved
-to `NN-deferred.md`.
+Shared with the Frontend team: `~/.claude/route/FRONTEND_BACKEND_LINE.md`; its §n is cited here as
+§3C.n (default line, when it must be written, the seam, cross-stack runs, verify, fix routing,
+`frontend_items`). `fe-*` models come from `~/.claude/frontend/config.json` `roles`.
 
 ## 3D. Computational gates
 

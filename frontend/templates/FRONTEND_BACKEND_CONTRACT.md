@@ -1,6 +1,6 @@
 # Frontend / Backend Contract
 
-- Owner: fe-designer drafts, the Backend team confirms · The single shared truth between the teams.
+- Owner: fe-engineer drafts (scaffold, feasibility), fe-ux supplies each state's words, the Backend team confirms · The single shared truth between the teams.
 - Nothing is invented: every capability is `verified` (with source), `unverified` or `new`.
 
 ## 1. Capabilities
@@ -9,7 +9,7 @@
 | C-01 | | verified \| unverified \| new | `docs/backend/…` / `file:line` / human, date | PAGE-001 | DES-### |
 
 ## 2. Per page and action
-### PAGE-001 · {action}
+### PAGE-001 · {action}  (states and words from `01-ux.md`)
 | Field | Meaning (business terms) | Capability | Required | Empty / absent shape |
 |---|---|---|---|---|
 

@@ -13,6 +13,61 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 7.0.0 — 2026-11-02 — product, UX, UI, engineering; Figma; review panel
+
+Major: changed roles, phase flow and every artifact contract. Built from a review of the ithaca run
+(harness 5.5.0, mode `new` plus implement: 41 dispatches, 239 agent-minutes — Phase 7 build 135,
+Phase 8 verify 37, Phase 5 document review 35 — 10 human events, 20 rows, verification round 4;
+two of the human events were `ROLE.designer-scope` waivers for fixture files the Backend team wrote
+while `fe-designer` was the latest mark), and from Anthropic's `frontend-design` skill and best
+practices, OneRedOak's design-review agent and ux-agent.
+
+- **Roles follow real frontend work.** `fe-designer` is split into `fe-ux` (flows, page structure,
+  per-page state tables, ASCII wireframes, post-launch insights) and `fe-ui` (design plan with a
+  self-check against generic defaults, tokens, components, Figma frames). `fe-critic` is removed:
+  `be-analyst` writes product features in frontend-only runs (Phase 0); the document review is gone.
+  `fe-engineer` also scaffolds while UI draws, checks feasibility, drafts the contract and writes the
+  queue (no longer the orchestrator).
+- **Flow.** Kickoff (one question: tier, models, risk, design stops, Figma budget) → 0 features →
+  1 UX → UX stop (2+ pages or a new flow) → 2 UI ‖ scaffold → feasibility and queue → UI stop
+  (Figma frames and the queue's observables; frames exported and locked) → 3 build → 4 verify ‖
+  review panel → coordinator → fix blockers and majors only → Acceptance → 5 after launch. Modes
+  `new`, `redesign`, `audit`, `review`, `implement` are retired; audits and reviews are direct calls.
+- **Design feedback (§3A).** Any role raises a `DFB-###`; its owner decides; changes to anything the
+  user confirmed need the user. Register in `06-feedback.md`; `fe-queue` and `fe-accept` check it.
+- **Figma (§1E).** UI is drawn and confirmed in Figma; a per-run call budget (20 + 8 per page, under
+  a monthly 300) is proposed at kickoff, calls are logged on returns (`--figma-calls`) and checked
+  (`FE.figma`); exceeding it needs the user (`--stop Budget`). Terminal surfaces use text mockups.
+- **Review panel (§6).** `fe-review-experience` (always), `fe-review-accessibility`,
+  `fe-review-integration` (by risk and what the diff touches), merged by `fe-reviewer`, which drops
+  a candidate only with counter-evidence and re-checks only fixed FNDs. Same rules as backend 3.2.0.
+- **Increments (§3B)** as in backend 3.2.0.
+- **Artifacts:** `00-requirements`, `01-ux`, `02-ui`, `03-queue`, `04-verification`, `05-review`,
+  `06-feedback`; `evidence/design/FRAME-###.png`.
+- **Gates:** `fe-product`, `fe-ux`, `fe-ui`, `fe-queue`, `fe-plan`, `fe-approve` (rows and frame
+  exports), `fe-build` (scaffold allowed before approval), `fe-capture-plan`, `fe-verify`,
+  `fe-review`, `fe-accept` (own trail: UX before UI, UI before Phase 3 build). Role checks no longer
+  charge one team's agent for the other team's run dir or fixtures (the ithaca waivers). Run-log
+  stops `UX`, `UI`, `Budget`.
+- **Shared:** the frontend/backend line moved to `route/FRONTEND_BACKEND_LINE.md`; in a cross-stack
+  run the UI stop is the backend's Prototype stop. `/route` asks the frontend kickoff questions in
+  its one question; a visual Prototype tier is the frontend run up to the UI stop.
+- 6.x runs are not resumed by 7.0 (PLAYBOOK §1.3).
+- **Constitution amended (2026-11-02, by the user), shared with backend 3.3.0.** §2.7: the
+  rough version may be a visual design when the deliverable is a visual interface. §3.2: reviewers
+  never change what they review and may write their own report (`fe-reviewer`). §5.1: a result the
+  user confirmed they will see or get (approved expected output or observable, confirmed flow or
+  screen) changing is a stop — internal design details are not. §5.5 (new): a budget the user set
+  would be exceeded. §6: a tier whose deliverable is a design replaces 6.4 and 6.7 with the user's
+  review of the design. Why: the frontend prototype is a Figma design, the coordinator writes its
+  report, and DFB and Figma-budget stops need a constitutional basis; worded so backend stops are
+  unchanged.
+- `ORCHESTRATOR.md`: start is recon then one question; stops `UX`, `UI`, `Budget` and
+  `--figma-calls` in the log commands; more than 4 questions → a second call right after.
+- Kickoff asks design stops and the Figma budget as one question (4 in all); surface, named user
+  and gate profile, when unset, in a second call. One-stop runs scaffold only after the UI stop
+  (Constitution §4.2); `fe-build` fails product code before it (`FE.observables`).
+
 ## 6.1.0 — 2026-10-31 — context discipline; constitution made stable
 
 Shared with backend 3.1.0 (see `~/.claude/backend/CHANGELOG.md`): Constitution §8 context discipline and the stable, roster-free Constitution; `route/HANDOFF.md`. PLAYBOOK §4.3 no longer resumes a dead agent — the orchestrator writes its handoff entry from the disk and dispatches a fresh one. Phase 8 rework: a fresh engineer per row and a fresh `fe-tester`. `/frontend-resume` starts from the last orchestrator handoff entry. Log: `docs/frontend/handoff.md`. New shared `ORCHESTRATOR.md`; this PLAYBOOK's §1A, §3G, §4, §5, §6 point to it. Constitution §5 simplified: Phase 1 questions carry defaults and are asked with the Phase 1b intent questions (or at the Plan stop); §3F no longer stops for domain facts, ties or unconfirmed capabilities. Hook `no-agent-continuation.py`.

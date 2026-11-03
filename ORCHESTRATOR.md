@@ -12,8 +12,9 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
 
 ## Capabilities
 
-- **Start:** ask the tier, classify, recon. Read `<project>/.claude/project-context.md` and the
-  merged config (PLAYBOOK §1), never memory.
+- **Start:** a read-only recon and classification first, then one question carrying the tier and
+  the team's kickoff choices. Read `<project>/.claude/project-context.md` and the merged config
+  (PLAYBOOK §1), never memory.
 - **Dispatch:** the real `be-*` / `fe-*` type with its resolved model; a clean tree before a writer;
   `gate.py mark` and `log dispatch` as the PLAYBOOK's gate table says; a fresh agent with a brief
   per `~/.claude/route/HANDOFF.md` §3; independent dispatches in one message. On return:
@@ -55,7 +56,8 @@ The disk is the run's memory; your context is its most expensive resource.
 2. No derivation on disk → take the recommended default, label it an assumption, continue, and
    list it at the next fixed stop.
 3. Stop only at the tier's fixed stops and the Constitution §5 cases: one `AskUserQuestion`, at
-   most 4 questions, recommendation first, in the user's language.
+   most 4 questions (the tool's limit), recommendation first, in the user's language. More than 4
+   → a second call right after, never a dropped question.
 4. A loop cap, gate exit `3` or a step failed twice → escalate with each survivor's history.
 
 ## Key information
@@ -64,8 +66,9 @@ The disk is the run's memory; your context is its most expensive resource.
   `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` cap → escalate · `2` config error.
 - **Run log** (`<run-dir>/run-log.jsonl`, hash-chained; add `--team frontend` in Frontend runs):
   `log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` ·
-  `log return --agent <a> --step <phase> --status ok|blocked|failed --note "<result>"` ·
-  `log human --stop Prototype|Plan|Acceptance|conditional --decision approved|changes|rejected|answered --by <user> --note "<what>"` ·
+  `log return --agent <a> --step <phase> --status ok|blocked|failed --note "<result>"` (add
+  `--figma-calls <n>` for an agent that reports Figma calls) ·
+  `log human --stop Prototype|Plan|UX|UI|Acceptance|Budget|conditional --decision approved|changes|rejected|answered --by <user> --note "<what>"` ·
   `log decision --agent <a> --note "<what and why>"`.
 - **Discipline:** verify a count before relaying it · to test "does not depend on X", change X ·
   verify by artefact, not exit code · confirm which instance before diagnosing · relay

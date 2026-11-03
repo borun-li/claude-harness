@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression matrix for the frontend gates (fe-*): red on each defect, green on innocent work.
+"""Regression matrix for the frontend gates (fe-*, 7.0): red on each defect, green on innocent work.
 Run: python3 tests/test_frontend_gates.py"""
 import json
 import pathlib
@@ -10,69 +10,105 @@ import unittest
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 from test_gates import GATE, PY, Base, sh  # noqa: E402
 
-BRIEF = """# Brief — Duplicate upload message
+FILL = "\n".join(["filler"] * 8) + "\n"
+
+REQS = """# Requirements — Duplicate upload message
 
 ## 0. Understanding
 - **Asked:** "tell them it is a duplicate"
 - **Means:** a duplicate upload shows why and links to the original
 - **Ambiguities:** none
 
-## 1. User and surface
-- **Named user:** office admin uploading contracts daily
-- **Surface:** browser
+## 1. Requirements
+### REQ-001 — Duplicate notice [interface]
+- **Cut:** above
+- **Behaviour:** a duplicate upload shows a notice with a link to the original
+- **Accept:** Given file X stored, When X is uploaded, Then the user reads it already exists and can open it
+- **Source:** "tell them it is a duplicate"
+- **Fixtures:** n/a — frontend run
 
-## 2. Tasks
-| Task | What the user does | Success looks like | Frequency | Source |
-|---|---|---|---|---|
-| T-001 | Uploads an existing file | opens the original in one click | weekly | "tell them it is a duplicate" |
-
-## 3. Scope
-- **Cut line (above):** T-001
-- **Non-goals:** merging duplicates
+## 2. Non-goals
+- merging duplicates
 """
 
-STRUCTURE = """# Structure
+UX = """# UX — Duplicate upload message
+
+- **Named user:** office admin uploading contracts daily
+- **Surface:** web
 
 ## 1. Pages
-| Page | Job | Serves | Form | Why |
-|---|---|---|---|---|
-| PAGE-001 | Upload one file | T-001 | form | one decision |
+| Page | Job | Serves | Form — why |
+|---|---|---|---|
+| PAGE-001 | Upload one file | REQ-001 | form — one decision |
 
 ## 3. Flows
 ### FLOW-001 — Upload a duplicate
-- **Serves:** T-001
-- **Success:** 1. Choose 2. Upload 3. See notice
+- **Serves:** REQ-001
+- **Steps:** 1. Choose 2. Upload 3. See notice
+- **Success:** the original opens
 - **Failure:** network error, Retry
 - **Cancel:** back to empty form
 - **Recovery:** Retry keeps the file
 - **Boundary:** over 20 MB rejected first
+
+## 4. Page details
+### PAGE-001 — Upload
+| State | User sees | Words | Can do next |
+|---|---|---|---|
+| loading | bar | Uploading | Cancel |
+| empty | picker | Choose a file | choose |
+| success | notice | Uploaded | open |
+| error | amber notice | Already uploaded | open original |
+| permission | n/a — every admin can upload | | |
+
+```text
+[ picker ] [ Upload ]
+[ notice ]
+```
 """
 
-SPEC = """# Specification
+UI = """# UI — Duplicate upload message
 
-## 1. Tokens
-| Semantic token | Primitive | Value | Use |
-|---|---|---|---|
-| `color-status-warning` | `amber-700` | #B45309 | notice |
+- **Figma file:** https://www.figma.com/design/AbCdEfGhIjKlMnOpQrStUv/Upload
 
-## 2. Components
-### CMP-001 — Result notice
-- **States:** default · focus · empty
-- **Sizes and limits:** 60 chars then truncate
-
-## 3. Pages
-### PAGE-001 — Upload
-- **Goal:** upload one file · **Serves:** T-001
-
-| State | What renders | Copy |
+## 1. Design plan
+### Palette
+| Name | Hex | Role |
 |---|---|---|
-| loading | bar | Uploading |
-| empty | picker | — |
-| success | notice | Uploaded |
-| error | notice | Failed |
-| permission-denied | notice | Ask an admin |
+| Ink | #1F2328 | text |
+| Paper | #FFFFFF | surface |
+| Line | #D0D7DE | borders |
+| Caution | #9A6700 | notice |
 
-- **Accept:** AC-001 — a duplicate shows the notice and a link
+### Type
+| Role | Typeface | Size |
+|---|---|---|
+| Body | Inter | 14 |
+
+### Layout
+- one column
+
+### Principles
+- answer where the action was
+
+## 2. Self-check
+| Read like a default | Replaced by | Why |
+|---|---|---|
+| corner toast | inline notice | the eye is on the picker |
+
+## 3. Tokens
+| Token | Layer | Value | Use |
+|---|---|---|---|
+| color.notice | semantic | #9A6700 | notice |
+
+## 4. Components
+### CMP-001 — Notice
+- **States:** default, focus
+
+## 5. Frames
+| Frame | Page | State | Size | Figma |
+|---|---|---|---|---|
+| FRAME-001 | PAGE-001 | error | 1440 | https://www.figma.com/design/AbCdEfGhIjKlMnOpQrStUv/Upload?node-id=1-2 |
 """
 
 CONTRACT = """# Contract
@@ -82,32 +118,33 @@ CONTRACT = """# Contract
 | C-01 | duplicate detection | verified | docs/backend/03-detailed-design.md DES-002 | PAGE-001 | DES-002 |
 """
 
-FINDINGS = """# Findings
-
-## Captured / not captured
-- **Not captured:** narrow screen
-
-## Findings
-### F-001 — Raw 409 shown
-- **Priority:** P1
-- **Side:** frontend
-- **Task damaged:** T-001 — admin re-uploads
-- **Evidence:** `evidence/audit/dup.dom.html` (observed)
-- **Recommendation:** map 409 to the notice
-- **Owner:** fe-engineer · **Status:** open
-"""
-
 QUEUE = """# Queue
 
+## Scaffold
+| File | What it does |
+|---|---|
+| `web/api.js` | maps 409 to duplicate |
+
 ### Q-001 — Duplicate notice
-- **Spec:** 03-spec.md PAGE-001 AC-001
+- **Page:** PAGE-001
+- **Frame:** FRAME-001
+- **States:** loading, empty, success, error
+- **REQ:** REQ-001
 - **Files:** `web/notice.html`
 - **Observable:** an amber notice reads "Already uploaded" with a link to the original
+- **Acceptance:** notice text and link match at 1440 and 375
 - **Priority:** P1
 - **Side:** frontend
-- **Acceptance:** AC-001
 - **Depends on:** none
 - **Status:** queued
+"""
+
+FEEDBACK = """# Feedback
+
+## Design feedback
+| DFB | Raised by | To | Item | Reason and evidence | Decision | Decided by | Needs user | User decision |
+|---|---|---|---|---|---|---|---|---|
+| DFB-001 | fe-engineer | fe-ui | FRAME-001 | too wide at 375 | accepted — link on its own line | fe-ui #2 | no | — |
 """
 
 VERIFY = """# Verification
@@ -120,11 +157,27 @@ VERIFY = """# Verification
 | Q-001 | done | `Q-001-dup@80x24.stdout` · duplicate · 80x24 | matches |
 """
 
+REVIEW = """# Review
+
+- Panelists run: fe-review-experience — accessibility and integration not needed (PLAYBOOK §6)
+
+## 2. Findings
+| ID | Severity | Panelist | Where | Ref | Claim |
+|---|---|---|---|---|---|
+| FND-001 | minor | experience | web/notice.html:1 | PAGE-001 error | icon 1px off |
+
+### FND-001 — icon 1px off
+- **Scenario:** the admin sees a slightly misaligned icon
+- **Status:** deferred
+"""
+
 TERMINAL_PLAN = {"surface": "terminal", "captures": [
     {"id": "Q-001-dup", "row": "Q-001", "state": "duplicate", "command": "cat web/notice.html"}]}
 
-FE_STATE = {"harness_version": "5.1.0", "mode": "new", "feature": "dup", "status": "in_progress",
-            "current_phase": 1, "phases": [], "models": {}}
+FE_STATE = {"harness_version": "7.0.0", "feature": "dup", "status": "in_progress", "tier": "full",
+            "risk": "normal", "design_stops": 2, "current_phase": 1, "phases": [], "models": {}}
+
+DOCS = (("00-requirements.md", REQS), ("01-ux.md", UX), ("02-ui.md", UI), ("06-feedback.md", FEEDBACK))
 
 
 class FrontBase(Base):
@@ -133,13 +186,11 @@ class FrontBase(Base):
         p = self.p
         p.fe = p.root / "docs" / "frontend"
         p.write("docs/frontend/state.json", json.dumps(FE_STATE))
-        for n, t in (("01-brief.md", BRIEF), ("02-structure.md", STRUCTURE), ("03-spec.md", SPEC),
-                     ("04-findings.md", FINDINGS)):
-            p.write(f"docs/frontend/{n}", t + "\n".join(["filler"] * 8) + "\n")
-        p.write("docs/frontend/evidence/audit/dup.dom.html", "<p>409</p>")
+        for n, t in DOCS:
+            p.write(f"docs/frontend/{n}", t + FILL)
         p.write("contracts/FRONTEND_BACKEND_CONTRACT.md", CONTRACT)
-        self.fe_log("dispatch", "--agent", "fe-critic", "--model", "opus", "--step", "1", "--note", "brief")
-        self.fe_log("return", "--agent", "fe-critic", "--step", "1", "--status", "ok", "--note", "brief")
+        self.fe_log("dispatch", "--agent", "fe-ux", "--model", "opus", "--step", "1", "--note", "ux")
+        self.fe_log("return", "--agent", "fe-ux", "--step", "1", "--status", "ok", "--note", "ux")
 
     def fe(self, *args):
         r = subprocess.run([PY, str(GATE), *args, "--project", str(self.p.root)], capture_output=True, text=True)
@@ -155,149 +206,179 @@ class FrontBase(Base):
         return subprocess.run([PY, str(GATE), "log", *args, "--team", "frontend", "--project", str(self.p.root)],
                               capture_output=True, text=True).returncode
 
-    def fe_dispatch(self, role):
+    def fe_dispatch(self, role, step="x", figma=None):
         subprocess.run([PY, str(GATE), "mark", "--role", role, "--team", "frontend", "--project", str(self.p.root)],
                        capture_output=True, text=True)
-        self.fe_log("dispatch", "--agent", role, "--model", "opus", "--step", "x", "--note", "work")
-        self.fe_log("return", "--agent", role, "--step", "x", "--status", "ok", "--note", "done")
+        self.fe_log("dispatch", "--agent", role, "--model", "opus", "--step", step, "--note", "work")
+        extra = ["--figma-calls", str(figma)] if figma is not None else []
+        self.fe_log("return", "--agent", role, "--step", step, "--status", "ok", "--note", "done", *extra)
 
     def st(self, rep, cid):
         return self.p.status(rep, cid)
 
-    def to_build(self):
-        """Design gates green, queue approved at Plan, baseline, fe-engineer dispatched."""
+    def details(self, rep, cid):
+        return " ".join(next(c for c in rep["checks"] if c["id"] == cid)["details"])
+
+    def set_state(self, **kw):
         s = json.loads(self.p.read("docs/frontend/state.json"))
-        s["mode"] = "implement"
+        s.update(kw)
         self.p.write("docs/frontend/state.json", json.dumps(s))
-        self.p.write("docs/frontend/05-queue.md", QUEUE + "\n".join(["filler"] * 8) + "\n")
-        assert self.fe("fe-queue")[0] == 0, self.fe("fe-queue")[1]
-        assert self.fe("fe-plan")[0] == 0, self.fe("fe-plan")[1]
-        self.fe_log("human", "--stop", "Plan", "--decision", "approved", "--by", "user", "--note", "ok")
-        assert self.fe("fe-approve", "--by", "user")[0] == 0
+
+    def export_frames(self):
+        self.p.write("docs/frontend/evidence/design/FRAME-001.png", "PNG-bytes-of-the-confirmed-frame")
+
+    def to_build(self):
+        """Design gates green, UX and UI confirmed, frames exported, queue approved, baseline, build dispatched."""
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        for g in ("fe-product", "fe-ux", "fe-ui", "fe-queue", "fe-plan"):
+            code, out, _ = self.fe(g)
+            assert code == 0, f"{g}: {out}"
+        self.fe_log("human", "--stop", "UX", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.fe_log("human", "--stop", "UI", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.export_frames()
+        code, out, _ = self.fe("fe-approve", "--by", "user")
+        assert code == 0, out
         r = subprocess.run([PY, str(GATE), "baseline", "--team", "frontend", "--project", str(self.p.root)],
                            capture_output=True, text=True)
         assert r.returncode == 0, r.stdout + r.stderr
-        self.fe_dispatch("fe-engineer")
+        self.fe_dispatch("fe-engineer", step="3")
+
+    def review_ok(self, text=REVIEW):
+        subprocess.run([PY, str(GATE), "mark", "--role", "fe-reviewer", "--team", "frontend",
+                        "--project", str(self.p.root)], capture_output=True, text=True)
+        self.p.write("docs/frontend/05-review.md", text + FILL)
+        return self.fe("fe-review")
 
 
 class DesignGates(FrontBase):
     def test_all_design_gates_green(self):
-        for g in ("fe-brief", "fe-structure", "fe-spec", "fe-findings"):
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        for g in ("fe-product", "fe-ux", "fe-ui", "fe-queue", "fe-plan"):
             code, out, _ = self.fe(g)
             self.assertEqual(code, 0, f"{g}: {out}")
-
-    def test_brief_defects(self):
-        t = BRIEF.replace("office admin uploading contracts daily", "{one concrete role}")
-        t = t.replace("- **Surface:** browser", "- **Surface:** browser | native app").replace("T-001 |", "X |", 1)
-        self.p.write("docs/frontend/01-brief.md", t + "\n".join(["filler"] * 8))
-        rep = self.fe("fe-brief")[2]
-        for cid in ("FE1.user", "FE1.surface", "FE1.tasks"):
-            self.assertEqual(self.st(rep, cid), "fail", cid)
-
-    def test_structure_uncovered_task_and_incomplete_flow(self):
-        t = STRUCTURE.replace("| PAGE-001 | Upload one file | T-001 |", "| PAGE-001 | Upload one file | T-009 |")
-        t = t.replace("- **Recovery:** Retry keeps the file\n", "")
-        self.p.write("docs/frontend/02-structure.md", t + "\n".join(["filler"] * 8))
-        rep = self.fe("fe-structure")[2]
-        for cid in ("FE3.pages", "FE3.coverage", "FE3.flows"):
-            self.assertEqual(self.st(rep, cid), "fail", cid)
-
-    def test_spec_defects(self):
-        t = SPEC.replace("| permission-denied | notice | Ask an admin |\n", "").replace("default · focus · empty",
-                                                                                        "default · empty")
-        t = t.replace("- **Accept:** AC-001", "- **Accept:** see flow") + "\nUse #FF0000 for errors.\n"
-        self.p.write("docs/frontend/03-spec.md", t + "\n".join(["filler"] * 8))
-        self.p.write("contracts/FRONTEND_BACKEND_CONTRACT.md", CONTRACT.replace("| verified |", "| maybe |"))
-        rep = self.fe("fe-spec")[2]
-        for cid in ("FE4.states", "FE4.components", "FE4.tokens", "FE4.contract"):
-            self.assertEqual(self.st(rep, cid), "fail", cid)
-
-    def test_findings_defects(self):
-        t = FINDINGS.replace("- **Priority:** P1", "- **Priority:** high").replace("(observed)", "")
-        t = t.replace("dup.dom.html", "missing.html")
-        self.p.write("docs/frontend/04-findings.md", t + "\n".join(["filler"] * 8))
-        rep = self.fe("fe-findings")[2]
-        details = " ".join(next(c for c in rep["checks"] if c["id"] == "FE5.findings")["details"])
-        self.assertIn("priority 'high'", details)
-        self.assertIn("not labelled observed/inferred", details)
-
-    def test_findings_evidence_must_exist(self):
-        self.p.write("docs/frontend/04-findings.md",
-                     FINDINGS.replace("dup.dom.html", "missing.html") + "\n".join(["filler"] * 8))
-        rep = self.fe("fe-findings")[2]
-        self.assertIn("does not exist", " ".join(next(c for c in rep["checks"] if c["id"] == "FE5.findings")["details"]))
-
-    def test_critic_is_read_only(self):
-        self.fe_dispatch("fe-critic")
-        self.p.write("web/notice.html", "<p>edited by critic</p>")
-        self.assertEqual(self.st(self.fe("fe-findings")[2], "ROLE.read-only"), "fail")
-
-    def test_designer_scope(self):
-        self.fe_dispatch("fe-designer")
-        self.p.write("web/app.css", "body{}")
-        self.assertEqual(self.st(self.fe("fe-spec")[2], "ROLE.designer-scope"), "fail")
-
-    def test_designer_writing_docs_is_fine(self):
-        self.fe_dispatch("fe-designer")
-        self.p.write("docs/frontend/03-spec.md", SPEC + "\n".join(["filler"] * 9))
-        self.assertEqual(self.st(self.fe("fe-spec")[2], "ROLE.designer-scope"), "pass")
-
-class Baseline(FrontBase):
-    def test_other_teams_run_dir_is_not_user_work(self):
-        self.p.write("docs/backend/01-requirements.md", "backend run in progress")
-        r = subprocess.run([PY, str(GATE), "baseline", "--team", "frontend", "--project", str(self.p.root)],
-                           capture_output=True, text=True)
-        self.assertNotIn("[FAIL] BASE.clean-tree", r.stdout)
-
-    def test_user_code_is_still_protected(self):
-        self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# user wip\n")
-        r = subprocess.run([PY, str(GATE), "baseline", "--team", "frontend", "--project", str(self.p.root)],
-                           capture_output=True, text=True)
-        self.assertIn("[FAIL] BASE.clean-tree", r.stdout)
-
-
-class Parity(FrontBase):
-    """Checks the backend already had: task source, item length, dependencies, traceability."""
-
-    def test_task_without_source(self):
-        self.p.write("docs/frontend/01-brief.md", BRIEF.replace('| "tell them it is a duplicate" |', "| {user's words} |")
-                     + "\n".join(["filler"] * 8))
-        self.assertEqual(self.st(self.fe("fe-brief")[2], "FE1.source"), "fail")
-
-    def test_long_page_flow_and_finding(self):
-        long = " ".join(["word"] * 210)
-        self.p.write("docs/frontend/03-spec.md", SPEC.replace("- **Goal:** upload one file", f"- **Goal:** {long}")
-                     + "\n".join(["filler"] * 8))
-        self.assertEqual(self.st(self.fe("fe-spec")[2], "FE4.page-length"), "fail")
-        self.p.write("docs/frontend/02-structure.md", STRUCTURE.replace("- **Cancel:** back to empty form",
-                     "- **Cancel:** " + " ".join(["w"] * 90)) + "\n".join(["filler"] * 8))
-        self.assertEqual(self.st(self.fe("fe-structure")[2], "FE3.flow-length"), "fail")
-        self.p.write("docs/frontend/04-findings.md", FINDINGS.replace("- **Recommendation:** map 409 to the notice",
-                     "- **Recommendation:** " + " ".join(["w"] * 90)) + "\n".join(["filler"] * 8))
-        self.assertEqual(self.st(self.fe("fe-findings")[2], "FE5.finding-length"), "fail")
-
-
-class QueueAndPlan(FrontBase):
-    def test_queue_defects(self):
-        t = QUEUE.replace("- **Priority:** P1\n", "").replace("PAGE-001 AC-001", "PAGE-009").replace(
-            "- **Acceptance:** AC-001", "- **Acceptance:** AC-777")
-        self.p.write("docs/frontend/05-queue.md", t + "\n".join(["filler"] * 8))
-        rep = self.fe("fe-queue")[2]
-        details = " ".join(next(c for c in rep["checks"] if c["id"] == "FE6.rows")["details"])
-        for needle in ("ungraded", "names no known PAGE", "names no known AC"):
-            self.assertIn(needle, details)
-
-    def test_plan_sheet_and_approval(self):
-        self.to_build()
         sheet = (self.p.fe / "gates" / "plan-review.md").read_text()
-        self.assertIn("| Q-001 | P1 | an amber notice", sheet)
-        self.assertIn("Named user", sheet)
-        approved = json.loads((self.p.fe / "gates" / "observables-approved.json").read_text())
-        self.assertEqual((approved["approved_by"], sorted(approved["rows"])), ("user", ["Q-001"]))
+        for needle in ("| Q-001 | P1 | FRAME-001 | an amber notice", "| DFB-001 | accepted", "node-id=1-2"):
+            self.assertIn(needle, sheet)
 
+    def test_product_needs_an_active_req(self):
+        self.p.write("docs/frontend/00-requirements.md", REQS.replace("- **Cut:** above", "- **Cut:** below") + FILL)
+        self.assertEqual(self.st(self.fe("fe-product")[2], "FE0.interface"), "fail")
+
+    def test_ux_defects(self):
+        t = UX.replace("office admin uploading contracts daily", "{one concrete user}")
+        t = t.replace("| PAGE-001 | Upload one file | REQ-001 |", "| PAGE-001 | Upload one file | REQ-009 |")
+        t = t.replace("- **Steps:** 1. Choose 2. Upload 3. See notice\n", "")
+        t = t.replace("| permission | n/a — every admin can upload | | |\n", "").replace("```text", "").replace("```", "")
+        self.p.write("docs/frontend/01-ux.md", t + FILL)
+        rep = self.fe("fe-ux")[2]
+        for cid in ("FE1.user", "FE1.pages", "FE1.coverage", "FE1.flows", "FE1.states", "FE1.wireframes"):
+            self.assertEqual(self.st(rep, cid), "fail", cid)
+
+    def test_ux_long_flow(self):
+        self.p.write("docs/frontend/01-ux.md", UX.replace("- **Cancel:** back to empty form",
+                     "- **Cancel:** " + " ".join(["w"] * 90)) + FILL)
+        self.assertEqual(self.st(self.fe("fe-ux")[2], "FE1.flow-length"), "fail")
+
+    def test_ui_defects(self):
+        t = UI.replace("| Caution | #9A6700 | notice |\n", "").replace("| corner toast | inline notice | the eye is on the picker |\n", "")
+        t = t.replace("- **States:** default, focus", "- **States:** default") + "\nUse #FF0000 for errors.\n"
+        t = t.replace("?node-id=1-2", "")
+        self.p.write("docs/frontend/02-ui.md", t + FILL)
+        rep = self.fe("fe-ui")[2]
+        for cid in ("FE2.plan", "FE2.self-check", "FE2.tokens", "FE2.components", "FE2.frames"):
+            self.assertEqual(self.st(rep, cid), "fail", cid)
+
+    def test_every_page_needs_a_frame(self):
+        self.p.write("docs/frontend/01-ux.md", UX.replace("| PAGE-001 | Upload one file | REQ-001 | form — one decision |",
+                     "| PAGE-001 | Upload one file | REQ-001 | form — one decision |\n| PAGE-002 | History | REQ-001 | list — scan |") + FILL)
+        self.assertIn("PAGE-002: no frame", self.details(self.fe("fe-ui")[2], "FE2.frames"))
+
+    def test_terminal_surface_uses_mockups(self):
+        self.p.write("docs/frontend/01-ux.md", UX.replace("- **Surface:** web", "- **Surface:** terminal") + FILL)
+        ui = UI.replace("https://www.figma.com/design/AbCdEfGhIjKlMnOpQrStUv/Upload?node-id=1-2", "mockup §6")
+        self.p.write("docs/frontend/02-ui.md", ui.replace("- **Figma file:** https://www.figma.com/design/AbCdEfGhIjKlMnOpQrStUv/Upload\n", "") + FILL)
+        self.assertEqual(self.st(self.fe("fe-ui")[2], "FE2.frames"), "pass")
+
+    def test_queue_defects(self):
+        t = QUEUE.replace("- **Priority:** P1\n", "").replace("- **Frame:** FRAME-001", "- **Frame:** FRAME-009")
+        t = t.replace("- **States:** loading, empty, success, error", "- **States:** success")
+        self.p.write("docs/frontend/03-queue.md", t + FILL)
+        self.p.write("contracts/FRONTEND_BACKEND_CONTRACT.md", CONTRACT.replace("| verified |", "| maybe |"))
+        self.p.write("docs/frontend/06-feedback.md", FEEDBACK.replace("accepted — link on its own line", "pending") + FILL)
+        rep = self.fe("fe-queue")[2]
+        rows = self.details(rep, "FE2.rows")
+        for needle in ("priority must be", "frame names no FRAME-nnn"):
+            self.assertIn(needle, rows)
+        cov = self.details(rep, "FE2.coverage")
+        self.assertIn("PAGE-001: states ['empty', 'error', 'loading']", cov)
+        self.assertIn("FRAME-001: no row builds it", cov)
+        for cid in ("FE2.contract", "FE2.feedback"):
+            self.assertEqual(self.st(rep, cid), "fail", cid)
+
+    def test_ux_writing_code_is_out_of_scope(self):
+        self.fe_dispatch("fe-ux", step="1")
+        self.p.write("web/app.css", "body{}")
+        self.assertEqual(self.st(self.fe("fe-ux")[2], "ROLE.designer-scope"), "fail")
+
+    def test_ui_writing_its_docs_is_fine(self):
+        self.fe_dispatch("fe-ui", step="2")
+        self.p.write("docs/frontend/02-ui.md", UI + FILL + "more\n")
+        self.assertEqual(self.st(self.fe("fe-ui")[2], "ROLE.designer-scope"), "pass")
+
+    def test_backend_fixtures_written_meanwhile_are_not_charged_to_ui(self):
+        """ithaca: be-analyst wrote fixtures while fe-designer was the latest mark (ROLE.designer-scope waivers)."""
+        self.fe_dispatch("fe-ui", step="2")
+        self.p.write("tests/fixtures/candidates/FX-001/input.json", "{}")
+        self.p.write("docs/backend/03-detailed-design.md", "backend design in progress")
+        self.assertEqual(self.st(self.fe("fe-ui")[2], "ROLE.designer-scope"), "pass")
+
+
+class FigmaBudget(FrontBase):
+    def test_calls_within_and_over_budget(self):
+        self.set_state(figma={"budget": 10})
+        self.fe_dispatch("fe-ui", step="2", figma=8)
+        rep = self.fe("fe-ui")[2]
+        self.assertEqual(self.st(rep, "FE.figma"), "pass")
+        self.assertIn("8 of 10", next(c for c in rep["checks"] if c["id"] == "FE.figma")["message"])
+        self.fe_dispatch("fe-ui", step="2", figma=5)
+        self.assertEqual(self.st(self.fe("fe-ui")[2], "FE.figma"), "fail")
+        self.fe_log("human", "--stop", "Budget", "--decision", "approved", "--by", "user", "--note", "raise to 20")
+        self.assertEqual(self.st(self.fe("fe-ui")[2], "FE.figma"), "pass")
+
+    def test_calls_without_a_budget(self):
+        self.fe_dispatch("fe-ui", step="2", figma=3)
+        self.assertEqual(self.st(self.fe("fe-ui")[2], "FE.figma"), "fail")
+
+
+class Approval(FrontBase):
     def test_approve_needs_green_plan(self):
-        self.p.write("docs/frontend/05-queue.md", QUEUE)
+        self.p.write("docs/frontend/03-queue.md", QUEUE)
         self.assertEqual(self.fe("fe-approve", "--by", "user")[0], 2)
+
+    def test_approve_needs_frame_exports(self):
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        for g in ("fe-product", "fe-ux", "fe-ui", "fe-queue", "fe-plan"):
+            self.fe(g)
+        code, out, _ = self.fe("fe-approve", "--by", "user")
+        self.assertEqual(code, 2)
+        self.assertIn("FRAME-001", out)
+        self.export_frames()
+        self.assertEqual(self.fe("fe-approve", "--by", "user")[0], 0)
+        approved = json.loads((self.p.fe / "gates" / "observables-approved.json").read_text())
+        self.assertEqual((sorted(approved["rows"]), sorted(approved["frames"])), (["Q-001"], ["FRAME-001"]))
+
+    def test_scaffold_build_before_approval(self):
+        r = subprocess.run([PY, str(GATE), "baseline", "--team", "frontend", "--project", str(self.p.root)],
+                           capture_output=True, text=True)
+        assert r.returncode == 0, r.stdout
+        self.p.write("docs/frontend/03-queue.md", "# Queue\n\n## Scaffold\n| File | What |\n|---|---|\n| `web/api.js` | maps 409 |\n" + FILL)
+        self.fe_dispatch("fe-engineer", step="2")
+        self.p.write("web/api.js", "export const dup = 409;\n")
+        rep = self.fe("fe-build")[2]
+        self.assertEqual(self.st(rep, "FE.observables"), "unavailable")
+        self.assertEqual(self.st(rep, "ROLE.unplanned"), "pass")
+        self.set_state(design_stops=1)  # nothing approved yet: no product code before the UI stop
+        self.assertIn("web/api.js", self.details(self.fe("fe-build")[2], "FE.observables"))
 
 
 class BuildVerifyAccept(FrontBase):
@@ -320,30 +401,85 @@ class BuildVerifyAccept(FrontBase):
         self.assertEqual(self.st(rep, "ROLE.unplanned"), "fail")
         self.assertEqual(self.st(rep, "ROLE.tests"), "fail")
 
-    def test_observable_changed_after_approval(self):
-        self.p.write("docs/frontend/05-queue.md",
-                     self.p.read("docs/frontend/05-queue.md").replace("Already uploaded", "Duplicate"))
+    def test_observable_or_frame_changed_after_approval(self):
+        self.p.write("docs/frontend/03-queue.md",
+                     self.p.read("docs/frontend/03-queue.md").replace("Already uploaded", "Duplicate"))
         self.build_notice()
         self.assertEqual(self.st(self.fe("fe-build")[2], "FE.observables"), "fail")
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        self.assertEqual(self.st(self.fe("fe-build")[2], "FE.observables"), "pass")
+        self.p.write("docs/frontend/evidence/design/FRAME-001.png", "redrawn after approval")
+        self.assertIn("FRAME-001", self.details(self.fe("fe-build")[2], "FE.observables"))
 
     def _verify_setup(self, verdict="done", manifest=True):
         self.build_notice()
         assert self.fe("fe-build")[0] == 0
-        self.p.write("docs/frontend/05-queue.md",
-                     self.p.read("docs/frontend/05-queue.md").replace("**Status:** queued", "**Status:** done"))
+        self.p.write("docs/frontend/03-queue.md",
+                     self.p.read("docs/frontend/03-queue.md").replace("**Status:** queued", "**Status:** done"))
         self.p.write("docs/frontend/capture-plan.json", json.dumps(TERMINAL_PLAN))
         if manifest:
             assert self.capture()[0] == 0
-        self.fe_dispatch("fe-tester")
-        self.p.write("docs/frontend/06-verification.md",
-                     VERIFY.replace("| Q-001 | done |", f"| Q-001 | {verdict} |") + "\n".join(["filler"] * 8))
+        self.fe_dispatch("fe-tester", step="4")
+        self.p.write("docs/frontend/04-verification.md",
+                     VERIFY.replace("| Q-001 | done |", f"| Q-001 | {verdict} |") + FILL)
 
-    def test_verify_green_and_accept(self):
+    def test_verify_review_and_accept(self):
         self._verify_setup()
         code, out, _ = self.fe("fe-verify")
         self.assertEqual(code, 0, out)
+        code, out, _ = self.review_ok()
+        self.assertEqual(code, 0, out)
         code, out, rep = self.fe("fe-accept")
         self.assertEqual(code, 0, out)
+        self.assertIn("| REQ-001 | FLOW-001 | PAGE-001 | Q-001 done | yes |",
+                      (self.p.fe / "gates" / "traceability.md").read_text())
+
+    def test_accept_needs_review(self):
+        self._verify_setup()
+        self.fe("fe-verify")
+        self.assertIn("fe-review: never run", self.details(self.fe("fe-accept")[2], "FEA.gates"))
+
+    def test_open_major_blocks_acceptance(self):
+        self._verify_setup()
+        self.fe("fe-verify")
+        self.review_ok(REVIEW.replace("| FND-001 | minor |", "| FND-001 | major |").replace("deferred", "open"))
+        self.assertEqual(self.st(self.fe("fe-accept")[2], "FEA.findings"), "fail")
+
+    def test_review_defects(self):
+        self._verify_setup()
+        self.set_state(risk="high")
+        bad = REVIEW.replace("web/notice.html:1", "web/nowhere.html:3").replace(
+            "- **Scenario:** the admin sees a slightly misaligned icon\n", "")
+        subprocess.run([PY, str(GATE), "mark", "--role", "fe-reviewer", "--team", "frontend",
+                        "--project", str(self.p.root)], capture_output=True, text=True)
+        self.p.write("web/notice.html", "<p>reviewer fix</p>")
+        self.p.write("docs/frontend/05-review.md", bad + FILL)
+        rep = self.fe("fe-review")[2]
+        for cid in ("FE4.tree-unchanged", "FE4.panel", "FE4.findings"):
+            self.assertEqual(self.st(rep, cid), "fail", cid)
+        f = self.details(rep, "FE4.findings")
+        self.assertIn("does not exist", f)
+        self.assertIn("no failure scenario", f)
+
+    def test_tester_writing_tests_beside_the_panel(self):
+        self._verify_setup()
+        subprocess.run([PY, str(GATE), "mark", "--role", "fe-reviewer", "--team", "frontend",
+                        "--project", str(self.p.root)], capture_output=True, text=True)
+        self.p.write("tests/test_rows.py", "def test_notice():\n    \"\"\"Q-001\"\"\"\n    assert True\n")
+        self.p.write("docs/frontend/05-review.md", REVIEW + FILL)
+        self.assertEqual(self.st(self.fe("fe-review")[2], "FE4.tree-unchanged"), "pass")
+
+    def test_review_where_can_be_evidence(self):
+        self._verify_setup()
+        code, out, rep = self.review_ok(REVIEW.replace("web/notice.html:1", "evidence/verify-1/Q-001-dup@80x24.stdout"))
+        self.assertEqual(self.st(rep, "FE4.findings"), "pass", out)
+
+    def test_needs_user_feedback_without_decision(self):
+        self._verify_setup()
+        self.fe("fe-verify")
+        self.review_ok()
+        self.p.write("docs/frontend/06-feedback.md", FEEDBACK.replace("| no | — |", "| yes | — |") + FILL)
+        self.assertEqual(self.st(self.fe("fe-accept")[2], "FEA.feedback"), "fail")
 
     def test_not_observable_is_not_done(self):
         self._verify_setup("not observable")
@@ -353,42 +489,74 @@ class BuildVerifyAccept(FrontBase):
     def test_bad_verdict_and_missing_manifest(self):
         self._verify_setup("looks fine", manifest=False)
         rep = self.fe("fe-verify")[2]
-        self.assertEqual(self.st(rep, "FE8.verdicts"), "fail")
-        self.assertEqual(self.st(rep, "FE8.evidence"), "fail")
+        self.assertEqual(self.st(rep, "FE4.verdicts"), "fail")
+        self.assertEqual(self.st(rep, "FE4.evidence"), "fail")
 
     def test_row_tagged_test_must_pass(self):
         self._verify_setup()
         self.p.write("tests/test_rows.py", "def test_notice():\n    \"\"\"Q-001\"\"\"\n    assert 1 == 2\n")
         rep = self.fe("fe-verify")[2]
-        self.assertEqual(self.st(rep, "FE8.row-tests"), "fail")
+        self.assertEqual(self.st(rep, "FE4.row-tests"), "fail")
         # different length: Python's bytecode cache keys on mtime + size, and both writes share a second
         self.p.write("tests/test_rows.py", "def test_notice():\n    \"\"\"Q-001\"\"\"\n    assert 1 == 1  # fixed\n")
-        self.assertEqual(self.st(self.fe("fe-verify")[2], "FE8.row-tests"), "pass")
+        self.assertEqual(self.st(self.fe("fe-verify")[2], "FE4.row-tests"), "pass")
 
-    def test_new_npm_dependency_needs_the_spec(self):
+    def test_new_npm_dependency_needs_the_queue(self):
         self.p.write("package.json", '{"dependencies": {"left-pad": "1.3.0"}}')
-        self.p.write("docs/frontend/05-queue.md", self.p.read("docs/frontend/05-queue.md").replace(
-            "`web/notice.html`", "`web/notice.html`, `package.json`"))
-        rep = self.fe("fe-build")[2]
-        self.assertEqual(self.st(rep, "FE7.dependencies"), "fail")
-        self.p.write("docs/frontend/03-spec.md", self.p.read("docs/frontend/03-spec.md") + "\n## 7. Dependencies\n| left-pad | 1.3.0 | padding |\n")
-        self.assertEqual(self.st(self.fe("fe-build")[2], "FE7.dependencies"), "pass")
+        q = self.p.read("docs/frontend/03-queue.md").replace("`web/notice.html`", "`web/notice.html`, `package.json`")
+        self.p.write("docs/frontend/03-queue.md", q)
+        self.assertEqual(self.st(self.fe("fe-build")[2], "FE3.dependencies"), "fail")
+        self.p.write("docs/frontend/03-queue.md", q.replace("## Scaffold", "## Dependencies\n| left-pad | 1.3.0 | padding |\n\n## Scaffold"))
+        self.assertEqual(self.st(self.fe("fe-build")[2], "FE3.dependencies"), "pass")
 
-    def test_matrix_written_and_gap_caught(self):
+    def test_matrix_gap_caught(self):
         self._verify_setup()
-        self.assertEqual(self.fe("fe-verify")[0], 0)
-        code, out, rep = self.fe("fe-accept")
-        self.assertEqual(self.st(rep, "FEA.matrix"), "pass", out)
-        self.assertIn("| T-001 | PAGE-001 | Q-001 done | yes |", (self.p.fe / "gates" / "traceability.md").read_text())
-        self.p.write("docs/frontend/01-brief.md", BRIEF.replace("| T-001 | Uploads", "| T-002 | Bulk upload | many | x | monthly | \"bulk\" |\n| T-001 | Uploads")
-                     .replace("- **Cut line (above):** T-001", "- **Cut line (above):** T-001, T-002") + "\n".join(["filler"] * 8))
-        rep = self.fe("fe-accept")[2]
-        self.assertIn("T-002", " ".join(next(c for c in rep["checks"] if c["id"] == "FEA.matrix")["details"]))
+        self.fe("fe-verify")
+        self.review_ok()
+        self.p.write("docs/frontend/00-requirements.md", REQS + """
+### REQ-002 — Bulk upload [interface]
+- **Cut:** above
+- **Behaviour:** many files at once
+- **Accept:** Given ten files, When uploaded, Then each shows its result
+- **Source:** "bulk"
+- **Fixtures:** n/a — frontend run
+""" + FILL)
+        self.assertIn("REQ-002", self.details(self.fe("fe-accept")[2], "FEA.matrix"))
 
     def test_tester_edits_production(self):
         self._verify_setup()
         self.p.write("web/notice.html", "<p>tester fix</p>")
         self.assertEqual(self.st(self.fe("fe-verify")[2], "ROLE.tester-scope"), "fail")
+
+
+class Trail(FrontBase):
+    def _accept_ready(self):
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        for g in ("fe-product", "fe-ux", "fe-ui", "fe-queue", "fe-plan"):
+            self.fe(g)
+
+    def test_build_before_ui_stop(self):
+        self._accept_ready()
+        self.fe_log("human", "--stop", "UX", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.fe_dispatch("fe-engineer", step="3")
+        self.fe_log("human", "--stop", "UI", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.assertIn("before the UI was approved", self.details(self.fe("fe-accept")[2], "LOG.trail"))
+
+    def test_ui_before_ux_stop_in_two_stop_runs(self):
+        self._accept_ready()
+        self.fe_dispatch("fe-ui", step="2")
+        self.fe_log("human", "--stop", "UX", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.fe_log("human", "--stop", "UI", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.assertIn("fe-ui dispatched", self.details(self.fe("fe-accept")[2], "LOG.trail"))
+        self.set_state(design_stops=1)
+        self.assertNotIn("fe-ui dispatched", self.details(self.fe("fe-accept")[2], "LOG.trail"))
+
+    def test_scaffold_may_precede_ui_stop(self):
+        self._accept_ready()
+        self.fe_log("human", "--stop", "UX", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.fe_dispatch("fe-engineer", step="2")
+        self.fe_log("human", "--stop", "UI", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.assertEqual(self.st(self.fe("fe-accept")[2], "LOG.trail"), "pass")
 
 
 class Capture(FrontBase):
@@ -399,11 +567,11 @@ class Capture(FrontBase):
         assert self.fe("fe-build")[0] == 0
 
     def test_plan_gate(self):
-        self.assertEqual(self.st(self.fe("fe-capture-plan")[2], "FE8.capture-plan"), "fail")  # no plan
+        self.assertEqual(self.st(self.fe("fe-capture-plan")[2], "FE4.capture-plan"), "fail")  # no plan
         self.p.write("docs/frontend/capture-plan.json", json.dumps({"surface": "web", "captures": [
             {"id": "c1", "row": "Q-009", "state": "dup", "url": "/"}]}))
         details = " ".join(next(c for c in self.fe("fe-capture-plan")[2]["checks"]
-                                if c["id"] == "FE8.capture-plan")["details"])
+                                if c["id"] == "FE4.capture-plan")["details"])
         for needle in ("base_url", "sizes", "Q-001: no capture planned"):
             self.assertIn(needle, details)
         self.p.write("docs/frontend/capture-plan.json", json.dumps(TERMINAL_PLAN))
@@ -425,12 +593,12 @@ class Capture(FrontBase):
         self.p.write("docs/frontend/capture-plan.json", json.dumps(TERMINAL_PLAN))
         self.capture()
         self.fe_dispatch("fe-tester")
-        self.p.write("docs/frontend/06-verification.md", VERIFY + "\n".join(["filler"] * 8))
-        self.assertEqual(self.st(self.fe("fe-verify")[2], "FE8.capture"), "pass")
+        self.p.write("docs/frontend/04-verification.md", VERIFY + "\n".join(["filler"] * 8))
+        self.assertEqual(self.st(self.fe("fe-verify")[2], "FE4.capture"), "pass")
         self.p.write("web/notice.html", '<p class="warn">Changed after capture</p>')
         rep = self.fe("fe-verify")[2]
         self.assertIn("source changed after capture",
-                      " ".join(next(c for c in rep["checks"] if c["id"] == "FE8.capture")["details"]))
+                      " ".join(next(c for c in rep["checks"] if c["id"] == "FE4.capture")["details"]))
 
     def test_capture_before_build_is_stale(self):
         self.p.write("docs/frontend/capture-plan.json", json.dumps(TERMINAL_PLAN))
@@ -439,8 +607,8 @@ class Capture(FrontBase):
         time.sleep(1.1)
         assert self.fe("fe-build")[0] == 0
         self.fe_dispatch("fe-tester")
-        self.p.write("docs/frontend/06-verification.md", VERIFY + "\n".join(["filler"] * 8))
-        details = " ".join(next(c for c in self.fe("fe-verify")[2]["checks"] if c["id"] == "FE8.capture")["details"])
+        self.p.write("docs/frontend/04-verification.md", VERIFY + "\n".join(["filler"] * 8))
+        details = " ".join(next(c for c in self.fe("fe-verify")[2]["checks"] if c["id"] == "FE4.capture")["details"])
         self.assertIn("before the last fe-build", details)
 
     def test_terminal_capture_with_no_output_fails(self):
@@ -448,8 +616,8 @@ class Capture(FrontBase):
             {"id": "q", "row": "Q-001", "state": "dup", "command": "true"}]}))
         self.capture()
         self.fe_dispatch("fe-tester")
-        self.p.write("docs/frontend/06-verification.md", VERIFY + "\n".join(["filler"] * 8))
-        details = " ".join(next(c for c in self.fe("fe-verify")[2]["checks"] if c["id"] == "FE8.capture")["details"])
+        self.p.write("docs/frontend/04-verification.md", VERIFY + "\n".join(["filler"] * 8))
+        details = " ".join(next(c for c in self.fe("fe-verify")[2]["checks"] if c["id"] == "FE4.capture")["details"])
         self.assertIn("no output on stdout or stderr", details)
 
     def test_manual_capture_missing_file(self):
@@ -506,16 +674,18 @@ class Registry(FrontBase):
         self.to_build()
         self.p.write("web/notice.html", '<p class="warn">Already uploaded</p>')
         assert self.fe("fe-build")[0] == 0
-        self.p.write("docs/frontend/05-queue.md",
-                     self.p.read("docs/frontend/05-queue.md").replace("**Status:** queued", "**Status:** done"))
+        self.p.write("docs/frontend/03-queue.md",
+                     self.p.read("docs/frontend/03-queue.md").replace("**Status:** queued", "**Status:** done"))
         self.p.write("docs/frontend/capture-plan.json", json.dumps(TERMINAL_PLAN))
         assert self.capture()[0] == 0
         self.fe_dispatch("fe-tester")
         self.p.write("tests/test_rows.py", self.ROW_TEST)
-        self.p.write("docs/frontend/06-verification.md", VERIFY + "\n".join(["filler"] * 8))
+        self.p.write("docs/frontend/04-verification.md", VERIFY + "\n".join(["filler"] * 8))
 
     def accept(self):
         code, out, _ = self.fe("fe-verify")
+        assert code == 0, out
+        code, out, _ = self.review_ok()
         assert code == 0, out
         code, out, _ = self.fe("fe-accept")
         assert code == 0, out
@@ -574,11 +744,11 @@ class Registry(FrontBase):
         self.assertEqual(self.promote()[0], 0)
         self.assertEqual(self.reg()["entries"]["OBS-001"]["kind"], "capture")
         details = " ".join(next(c for c in self.fe("fe-capture-plan")[2]["checks"]
-                                if c["id"] == "FE8.capture-plan")["details"])
+                                if c["id"] == "FE4.capture-plan")["details"])
         self.assertIn("OBS-001: no capture planned", details)
         rep = self.fe("fe-verify")[2]
         self.assertEqual(self.st(rep, "FE.regression-captures"), "fail")
-        self.p.write("docs/frontend/06-verification.md", self.p.read("docs/frontend/06-verification.md").replace(
+        self.p.write("docs/frontend/04-verification.md", self.p.read("docs/frontend/04-verification.md").replace(
             "| Q-001 | done |", "| OBS-001 | done | `Q-001-dup@80x24.stdout` · recheck | holds |\n| Q-001 | done |"))
         self.assertEqual(self.st(self.fe("fe-verify")[2], "FE.regression-captures"), "pass")
 
@@ -600,10 +770,9 @@ class FrontendExamples(FrontBase):
     def test_examples_pass_design_gates(self):
         if not self.EXAMPLES.is_dir():
             self.skipTest(f"{self.EXAMPLES} not installed next to the gates")
-        for n in ("01-brief", "02-structure", "03-spec", "04-findings"):
+        for n in ("00-requirements", "01-ux", "02-ui", "03-queue", "06-feedback"):
             self.p.write(f"docs/frontend/{n}.md", (self.EXAMPLES / f"{n}.example.md").read_text())
-        self.p.write("docs/frontend/evidence/verify-1/duplicate.dom.html", "<p>409</p>")
-        for g in ("fe-brief", "fe-structure", "fe-spec", "fe-findings"):
+        for g in ("fe-product", "fe-ux", "fe-ui", "fe-queue"):
             code, out, _ = self.fe(g)
             self.assertEqual(code, 0, f"{g}: {out}")
 

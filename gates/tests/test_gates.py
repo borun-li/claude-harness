@@ -815,20 +815,6 @@ class RunLog(Base):
                 self.assertEqual(r["status"], "fail")
                 self.assertIn("before the Prototype was approved", " ".join(r["details"]))
 
-    def test_frontend_audit_may_precede_prototype(self):
-        """Frontend redesign runs 1 → 2 (audit) → 1b: its Phase 2 is not design (frontend.py passes ("3",))."""
-        self._tier("full")
-        self.p.log("dispatch", "--agent", "fe-critic", "--model", "opus", "--step", "2", "--note", "audit")
-        self.p.log("return", "--agent", "fe-critic", "--step", "2", "--status", "ok", "--note", "findings")
-        self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
-        self.p.approve()
-        import importlib
-        sys.path.insert(0, str(GATE.parent))
-        checks = importlib.import_module("gatelib.checks")
-        ctx = checks.Ctx(self.p.root, "docs/backend", {"test_globs": [], "doc_globs": []})
-        self.assertEqual(checks._log_trail(ctx, design_phases=("3",))["status"], "pass")
-        self.assertEqual(checks._log_trail(ctx)["status"], "fail")  # the backend reading of the same log
-
     def test_reused_prototype_logged_at_kickoff_passes(self):
         self._tier("full")
         self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user",

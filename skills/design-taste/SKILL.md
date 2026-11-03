@@ -1,6 +1,6 @@
 ---
 name: design-taste
-description: The user's personal interface design taste — usability over looks, fewest steps, keyboard-first, in-place feedback, thin-border hierarchy, dark mode. Use when designing or reviewing any interface (fe-designer specs, fe-critic design-system lens), or when the user asks for UI in their style. A project's own brand or context overrides it where they conflict.
+description: The user's personal interface design taste — usability over looks, fewest steps, keyboard-first, in-place feedback, thin-border hierarchy, dark mode. Use when designing or reviewing any interface (fe-ux flows and states: §0–3; fe-ui visuals: §4–6; fe-review-experience: §7), or when the user asks for UI in their style. A project's own brand or context overrides it where they conflict.
 ---
 
 # Design taste
@@ -16,7 +16,7 @@ confuses the user's task is removed, however good it looks.
 ## 1. Product type decides four things
 
 **Confirmed with the user before any design.** These depend on the product, so the orchestrator
-asks at kickoff (frontend PLAYBOOK §2.4) and records the answers in the project's
+asks at kickoff (frontend PLAYBOOK §2.3) and records the answers in the project's
 `project-context.md`; later rounds reuse them. Never guess them:
 
 1. Product class: tool, or visual / showcase / few pages.
@@ -78,7 +78,7 @@ mature library already provides.
 - A vague error.
 - Anything beautiful that gets in the user's way.
 
-## 7. Review checklist (fe-critic, design-system lens)
+## 7. Review checklist (fe-review-experience)
 
 Each is yes/no; a "no" is a finding against the named user's task.
 
