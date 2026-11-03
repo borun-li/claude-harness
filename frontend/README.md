@@ -11,7 +11,7 @@ team. Usually entered through `/route`.
 |---|---|
 | `/route <ask>` | Ask the tier, classify the work, start the right team |
 | `/frontend <ask>` | Run the Frontend team directly |
-| `/frontend status` | Read-only status, gates, Figma budget and timeline |
+| `/frontend-status` | Read-only status, gates, Figma budget and timeline |
 | `/frontend-resume [phase]` | Continue an interrupted run |
 | `/frontend-config [change]` | Show or change models, review panel, design stops, Figma budget |
 

@@ -2,6 +2,7 @@
 description: Resume an in-flight backend run from its state.json, optionally from a specific phase.
 argument-hint: '[phase number to resume from, e.g. 4] [optional note]'
 model: opus
+disable-model-invocation: true
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

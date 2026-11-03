@@ -2,6 +2,7 @@
 description: Inspect or change the backend team's configuration — model tiers, human gates, review panels, loop caps, computational gate settings, quality bars — globally or for this project only.
 argument-hint: '[what to change, e.g. "reviewer to sonnet" | "prose limit 60 words" | "gate timeout 3600" | empty to just show]'
 model: opus
+disable-model-invocation: true
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

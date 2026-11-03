@@ -2,6 +2,7 @@
 description: Inspect or change the frontend team's configuration — role models, review panel, design stops, Figma budget, viewports, loop caps, delivery surface, named user, gate settings — globally or for this project only.
 argument-hint: '[what to change, e.g. "fe-ui to sonnet" | "Figma budget 400" | empty to just show]'
 model: opus
+disable-model-invocation: true
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

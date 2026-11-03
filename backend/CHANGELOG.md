@@ -7,6 +7,18 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.1 — 2026-11-03 — commands follow Claude Code's command guidance
+
+Patch, from a comparison with Claude Code's slash-command docs and Anthropic's official plugins
+(`feature-dev`, `commit-commands`).
+
+- `/backend-config` and `/backend-resume` set `disable-model-invocation: true`: they change files or
+  continue a run, so only the user starts them.
+- `/backend-status` is read-only by tool, not only by text (`disallowed-tools: Write, Edit,
+  NotebookEdit, Agent`), and loads `state.json` and the last 15 timeline events before it starts
+  (`!` injection, pre-approved in `allowed-tools`; `|| true`, since `timeline` exits 2 without
+  `gates.json`). Its stop list adds Prototype (PLAYBOOK §3B).
+
 ## 3.3.0 — 2026-11-02 — shared line file; be-analyst as the product role
 
 Shared with frontend 7.0.0 (see `~/.claude/frontend/CHANGELOG.md`).
