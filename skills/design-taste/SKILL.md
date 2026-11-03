@@ -16,7 +16,7 @@ confuses the user's task is removed, however good it looks.
 ## 1. Product type decides four things
 
 **Confirmed with the user before any design.** These depend on the product, so the orchestrator
-asks at kickoff (frontend PLAYBOOK §2.4) and records the answers in the project's
+asks at kickoff (frontend PLAYBOOK §2.3) and records the answers in the project's
 `project-context.md`; later rounds reuse them. Never guess them:
 
 1. Product class: tool, or visual / showcase / few pages.

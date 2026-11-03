@@ -22,31 +22,44 @@ An audit or review of an existing interface alone is not a run: name `fe-review-
 
 ```mermaid
 flowchart LR
-    S(["/frontend"]) --> P[be-analyst<br/>features] --> UX[fe-ux<br/>flows, pages, states] --> UI[fe-ui<br/>Figma]
-    UI --> Q[fe-engineer<br/>feasibility, queue] --> B[fe-engineer<br/>build] --> V[fe-tester ‖ review panel<br/>→ fe-reviewer] --> E([accepted])
+    S(["/frontend"]) --> K{{kickoff ■}} --> P[be-analyst<br/>features] --> UX[fe-ux<br/>flows, pages, states] --> US{{UX ■<br/>2+ pages or new flow}}
+    US --> UI[fe-ui<br/>design plan, Figma frames] & SC[fe-engineer<br/>scaffold]
+    UI & SC --> Q[fe-engineer<br/>feasibility, queue] --> IS{{UI ■<br/>Figma + queue}}
+    IS --> B[fe-engineer<br/>build, row by row] --> V[fe-tester ∥ review panel<br/>experience · accessibility · integration] --> CO[fe-reviewer<br/>coordinator] --> AC{{Acceptance ■}}
+    AC --> L[fe-ux<br/>after launch] -. "next round" .-> UX
     UI -. "flow feels wrong" .-> UX
     Q -. "too costly, does not fit" .-> UI
-    V -. "not done, blocker, major" .-> B
-    V -. "design defect" .-> UI
-    E -. "after launch: feedback" .-> UX
+    CO -. "not done, blocker, major" .-> B
+    CO -. "design defect (UI or UX)" .-> UI
 ```
 
-- **Solid arrows**: the order of work. In a cross-stack run the features come from the Backend
-  team's requirements.
-- **Dotted arrows**: feedback flows back. Any role may raise a design-feedback item (DFB); its
-  owner decides it; a change to something you confirmed comes back to you.
-- **While UI draws**, the engineer already builds what does not depend on visuals (data fetching,
-  state handling, routing).
-- **Figma**: UI is drawn in Figma and confirmed there before anything is built. Each run has a call
-  budget proposed at kickoff (20 + 8 per page by default, under a 300-a-month cap).
-- **Your sign-off**: Kickoff (one question), **UX** (flows and states; only for 2+ pages or a new
-  flow), **UI** (the Figma frames and the queue of expected results), and **Acceptance**.
-- **Review**: a panel of up to three reviewers on the running interface — experience (always),
-  accessibility, data & runtime (by risk and what changed) — merged by a coordinator who drops a
-  finding only with counter-evidence. Only blockers and majors go to a fix round.
+- **■ Your sign-off**: the kickoff question (tier, models, risk, design stops, Figma budget),
+  **UX** (flows, pages and state tables; only for 2+ pages or a new flow — otherwise UX is shown
+  with the UI), **UI** (the frames in Figma and the queue of expected results; the frames are
+  then exported and locked) and **Acceptance**. A Prototype-tier run ends at the UI stop.
+- **Solid arrows**: the order of work — Phase 0 features (skipped in a cross-stack run, where the
+  Backend team's requirements are the input), 1 UX, 2 UI ∥ scaffold then feasibility and queue,
+  3 build, 4 verify ∥ review, acceptance, 5 after launch.
+- **Scaffold**: while UI draws, the engineer builds what does not depend on visuals (data
+  fetching, state handling, routing).
+- **Dotted arrows**: work flows back. Any role may raise a design-feedback item (DFB); its owner
+  (UX for flows, pages and states, UI for looks) decides it; a change to something you confirmed
+  comes back to you. Fix rounds take only blockers, majors and rows not done; a fresh tester and
+  coordinator re-check only those.
+- **Review panel**: experience always; accessibility when interactive components, forms or
+  navigation changed; data & runtime when API calls, data loading or client state changed; all
+  three at `risk: high`. The coordinator drops a candidate only with counter-evidence.
+- **After launch**: your feedback and your users' feedback become insights (`INS-###`); the ones
+  you pick start the next round as an increment.
+- **Figma**: each run has a call budget proposed at kickoff (20 + 8 per page by default, under a
+  300-a-month cap); you are told the calls used before each UI revision.
+- **Cross-stack**: the Backend team's run drives; the UI stop is also its Prototype stop, and one
+  Acceptance covers both (`route/FRONTEND_BACKEND_LINE.md` §4).
 - **Checks**: automatic gates after every phase (shared with the Backend team); results you accept
   are registered and re-checked in every later round. A tamper-evident run log records every
   dispatch, sign-off and Figma call count.
+- **Deliverables**: `<project>/docs/frontend/` (`00-requirements` … `06-feedback`, frame exports in
+  `evidence/design/`) and the shared `contracts/FRONTEND_BACKEND_CONTRACT.md`.
 
 ## Team
 
