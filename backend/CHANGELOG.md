@@ -7,6 +7,23 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.5 — 2026-11-03 — conflicting descriptions that broke runs
+
+Patch, from a read-only audit of every file against the gate code (no live run failed yet):
+- `--run-dir` is a path from the project root (`docs/backend/<slug>`), not the bare slug, as
+  `gate.py` uses it (ORCHESTRATOR, PLAYBOOK §3D).
+- Phase 4 marks `be-tester` first and `be-developer` last: `p4` applies role rules to the
+  last-marked writer, so the old order charged the developer's code to the tester.
+- Phase 6.4: the orchestrator files the re-check table in `06-review-report.md` §5 (new) and sets
+  each confirmed FND's `Status`; nobody did, so `p7` kept failing `P7.open-findings` after fixes.
+- `be-analyst`'s output comment said a non-empty `blocking_questions` meant it "stopped after §0"
+  (no §0 exists), against its own rule never to stop.
+- Gates: `log` and `timeline` no longer need a confirmed `.claude/gates.json` (the Prototype tier
+  logs before a profile exists); `timeline` writes `run-log.md` only if the run dir exists;
+  `baseline` ignores the throwaway `prototype/`; `be-developer`'s `ROLE.unplanned` also accepts
+  files named in the run dir's `03-queue.md` (a frontend run's `Side: backend` rows). Tests added.
+- `/backend-status` and `/backend-resume` find a second feature's `docs/backend/<slug>/`.
+
 ## 3.3.4 — 2026-11-03 — read-only agents return their handoff entry
 
 Patch, found in the first live direct call (`be-review-security` on the ithaca admin handler): the

@@ -111,9 +111,13 @@ motion, copy tone) are asked here only if `project-context.md` lacks them; recor
 
 **2.4 Init state.** Write `docs/frontend/state.json` (§8). If one is unfinished, stop and point to
 `/frontend-resume`. Record `requirements`: `docs/backend/01-requirements.md` in a cross-stack run,
-else `docs/frontend/00-requirements.md`. A reused design: log `log human --stop UX` and
-`--stop UI --decision approved --note "reused <paths>, confirmed <date>"`, and start at Phase 2,
-step 4 (feasibility and queue).
+else `docs/frontend/00-requirements.md`. A reused design:
+1. Log `log human --stop UI --decision approved --by <user> --note "reused <paths>, confirmed
+   <date>"`; in a two-stop run first the same with `--stop UX`.
+2. Phase 2 step 1 (`baseline`), then the gates on the reused documents (`fe-product` if there is a
+   `00-requirements.md`, `fe-ux`, `fe-ui`); `fe-plan` needs them green. Skip steps 2–3.
+3. Step 4 (feasibility and queue), then a short UI stop: the user confirms only the queue rows'
+   observables, not the frames again; on yes `fe-approve --by <user>`.
 
 ---
 
@@ -158,7 +162,7 @@ blocked / skipped, with the reason. A design problem found while building is a D
 silent deviation.
 
 **Phase 4 — Verify and review.**
-1. Write `capture-plan.json` (§3H) covering every row, every width in `viewports` and every state
+1. Write `capture-plan.json` (§3H) covering every row, every `sizes` entry and every state
    the rows deliver; `fe-capture-plan`, then `capture --round <n>`.
 2. `mark --role fe-reviewer`, then `mark --role fe-tester` (both `--team frontend`), then in one
    message: `fe-tester` (verdicts → `04-verification.md`) and the review panel §6 selects, each
@@ -168,8 +172,9 @@ silent deviation.
 4. **Fix only blockers and majors and not-done rows**: a fresh dispatch of the owning engineer
    names only those (`ORCHESTRATOR.md`, Handoff); a design defect goes to `fe-ui` or `fe-ux` and
    costs no rework round. Minors are deferred, listed in `05-review.md` § Deferred.
-5. Recapture into a new round; a fresh `fe-tester` judges only the reworked rows and a fresh
-   `fe-reviewer` **re-checks** only the fixed FNDs. Cap `loops.max_fix_rounds` (default 2), then
+5. Recapture into a new round (the whole plan); a fresh `fe-tester` judges only the reworked rows,
+   replacing their verdicts in place (one per row) and pointing `04-verification.md` at the new
+   manifest, and a fresh `fe-reviewer` **re-checks** only the fixed FNDs. Cap `loops.max_fix_rounds` (default 2), then
    escalate with each survivor's history.
 
 **Acceptance (human).** Show `04-verification.md`, `05-review.md` (findings, drops, deferred), the
@@ -265,7 +270,8 @@ dispatch; and the Figma calls stay within budget or carry the user's yes.
 Evidence is produced by a script, never assembled by hand.
 
 1. **Plan.** Write `docs/frontend/capture-plan.json` from the queue: `surface` (`web` · `terminal` ·
-   `manual`), for web `base_url` and every width in `viewports`, and per capture `id`, `row`,
+   `manual`), for web `base_url` and `sizes`, one `{"name": "<width>", "width": <w>, "height": <h>}` per width
+   in config `viewports` (height: `viewport_height`), and per capture `id`, `row`,
    `state`, then `url` + `steps` + `styles` (web), `command` + `columns`/`lines` (terminal), or
    `instrument` + `files` (manual). `fe-capture-plan` checks every row to verify is covered.
 2. **Capture.** Start the product in an isolated instance, then `gate.py capture --round <n>`.
@@ -328,6 +334,8 @@ docs/frontend/      (second round: docs/frontend/<slug>/…)
   observables.json  evidence/{design,verify-<n>}/  gates/  logs/
 contracts/          FRONTEND_BACKEND_CONTRACT.md
 ```
+
+A second round's gates take `--run-dir docs/frontend/<slug>`: a path from the project root, not the bare slug.
 
 ## 8. `frontend/state.json` schema
 

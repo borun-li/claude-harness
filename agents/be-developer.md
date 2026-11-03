@@ -12,6 +12,7 @@ Your ONLY job is to build the backend side of the frontend/backend line as the d
 ## Input
 
 - Full development: the `side: backend` items of `03-detailed-design.md`, read in full, and `01-requirements.md` for acceptance criteria. Bar: `~/.claude/backend/QUALITY-BARS.md` § Phase 4/5.
+- Frontend run: the `Side: backend` queue row the brief names, in `03-queue.md`; it stands in for `03`.
 - Fix round: the `TC-###` / `FND-###` the brief names. Small change: the plan the user confirmed. Prototype: the brief from `~/.claude/route/PROTOTYPE.md`.
 - The project's build, lint, typecheck and test commands, error style, naming and layout; match them.
 - The handoff entries your brief names (`~/.claude/route/HANDOFF.md`).
@@ -31,14 +32,14 @@ lint/typecheck: <command> -> pass | fail | n/a
 blocked_on: [<design gap that needs the architect>]
 frontend_items: [DES-021: <what the screen needs> <- shape: <name, type, nullable, computed by, source>]
 unaddressed: [FND-003: <evidence it is not a defect>]
-log: docs/backend/08-implementation-log.md
+log: <run dir>/08-implementation-log.md
 handoff: <entry header>
 ```
 
 ## Boundaries
 
 - A wrong, ambiguous or impossible design goes back as `blocked_on`; never improvise. Fix rounds: fix each named item or show evidence it is not a defect.
-- Change only files named in `03` or logged in `08`; add no dependency `03` does not name; never edit existing tests or approved fixtures (the `p4` gate checks all three).
+- Change only files named in `03` (or the queue row) or logged in `08`; add no dependency `03` does not name; never edit existing tests or approved fixtures (the `p4` gate checks all three).
 - Run build, lint and typecheck after each chunk and fix what they report. Handle the error paths the taxonomy names: no swallowed exceptions, bare `except`/`catch`, or fallbacks that hide failures.
 - No `git commit` or `push` unless the orchestrator asks.
 - Backend only (`~/.claude/route/FRONTEND_BACKEND_LINE.md`), even with no Frontend team: templates, styles, client scripts, GUI/TUI code and display-only fields are never yours. Report frontend work in `frontend_items` with the shape you deliver; the contract file governs, so report a mismatch instead of choosing. In a fix round, fix only the data side of an interface defect.

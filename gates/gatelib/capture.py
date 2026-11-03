@@ -49,6 +49,10 @@ def plan_problems(plan, rows):
             probs.append("web plan needs base_url")
         if not plan.get("sizes"):
             probs.append("web plan needs sizes (every size the spec commits to)")
+        for s in plan.get("sizes") or []:
+            if not (isinstance(s, dict) and s.get("name") and isinstance(s.get("width"), int)
+                    and isinstance(s.get("height"), int)):
+                probs.append(f"size {s!r} must be {{\"name\": ..., \"width\": <int>, \"height\": <int>}}")
     ids = [c.get("id") for c in caps]
     probs += [f"duplicate capture id {i}" for i in sorted({i for i in ids if ids.count(i) > 1})]
     for c in caps:

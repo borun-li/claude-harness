@@ -177,14 +177,16 @@ def role_checks(ctx):
     if role == "be-developer":
         fe = [p for p in ch if glob_match(p, ctx.cfg["frontend_globs"])]
         tests = [p for p in d["modified"] + d["deleted"] if ctx.is_test(p)]
-        plan = (ctx.doc("03-detailed-design.md") or "") + (ctx.doc("08-implementation-log.md") or "")
+        # A frontend run's backend-side queue rows name their files in 03-queue.md.
+        plan = "".join(ctx.doc(n) or "" for n in ("03-detailed-design.md", "08-implementation-log.md",
+                                                  "03-queue.md"))
         unplanned = [p for p in ch if not ctx.is_test(p) and not ctx.is_doc(p) and not _mentioned(p, plan)]
         return [bad("ROLE.frontend", "be-developer changed frontend files (PLAYBOOK §3C)", role, fe) if fe
                 else ok("ROLE.frontend", "No frontend file changed by be-developer", role),
                 bad("ROLE.tests", "be-developer modified or deleted existing tests", role, tests) if tests
                 else ok("ROLE.tests", "No existing test changed by be-developer", role),
-                bad("ROLE.unplanned", "Changed files named in neither 03-detailed-design.md nor "
-                    "08-implementation-log.md (log the deviation or get a design amendment)", role, unplanned)
+                bad("ROLE.unplanned", "Changed files named in none of 03-detailed-design.md, "
+                    "08-implementation-log.md, 03-queue.md (log the deviation or get a design amendment)", role, unplanned)
                 if unplanned else ok("ROLE.unplanned", "Every changed file is planned or logged", role)], ch
     if role == "be-tester":
         outside = [p for p in ch if not ctx.is_test(p) and not ctx.is_doc(p)]
@@ -401,7 +403,7 @@ def baseline(ctx):
     if ctx.git:
         dirty = [p for p in snap.dirty_paths(ctx.project)
                  if not glob_match(p, [f"{ctx.run_rel}/**", *(f"{d}/**" for d in RUN_DIRS), ".claude/**",
-                                       "contracts/**", f"{_fx_dir(ctx)}/**", f"{_fx_cand(ctx)}/**"])]
+                                       "contracts/**", "prototype/**", f"{_fx_dir(ctx)}/**", f"{_fx_cand(ctx)}/**"])]
         res.append(bad("BASE.clean-tree", "Uncommitted work outside the run dir; commit it or get the "
                        "user's explicit acceptance before any writer is dispatched", "user", dirty[:50])
                    if dirty else ok("BASE.clean-tree", "Tree clean", "orchestrator"))

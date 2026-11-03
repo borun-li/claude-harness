@@ -38,10 +38,14 @@ from gatelib.common import ConfigError, FAIL, PASS, UNAVAILABLE, WAIVED, read_js
 HARNESS = pathlib.Path.home() / ".claude" / "backend" / "config.json"
 
 
-def load_cfg(project):
+def load_cfg(project, need_profile=True):
+    """Harness gate config merged with the project's confirmed profile. `log` and `timeline` run no
+    check, so they pass need_profile=False and work before a profile exists (route/PROTOTYPE.md)."""
     cfg = read_json(HERE / "config.json")
     cfg.pop("_comment", None)
     proj = read_json(project / ".claude" / "gates.json")
+    if not need_profile and (proj is None or not proj.get("confirmed")):
+        return cfg
     if proj is None:
         raise ConfigError("no .claude/gates.json — run `gate.py profile` and have the user confirm it")
     if not proj.get("confirmed"):
@@ -115,7 +119,8 @@ def main():
         return 0
 
     team = "frontend" if a.phase.startswith("fe-") or a.phase == "capture" else a.team
-    ctx = checks.Ctx(project, resolve_run_dir(project, a.run_dir, team), load_cfg(project))
+    ctx = checks.Ctx(project, resolve_run_dir(project, a.run_dir, team),
+                     load_cfg(project, need_profile=a.phase not in ("log", "timeline")))
     log = ctx.run / "run-log.jsonl"
     if a.phase == "log":
         if a.event in ("gate", "mark", "approve"):
@@ -127,7 +132,8 @@ def main():
         return 0
     if a.phase == "timeline":
         md = runlog.timeline(log)
-        (ctx.run / "run-log.md").write_text(md, encoding="utf-8")
+        if ctx.run.is_dir():
+            (ctx.run / "run-log.md").write_text(md, encoding="utf-8")
         print(md)
         return 0
     if a.phase == "mark":

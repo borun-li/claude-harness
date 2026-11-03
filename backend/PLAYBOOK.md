@@ -113,7 +113,9 @@ the confirmation (Constitution §2.7).
    approval; on yes run `fixtures-approve --by <user>` if there are fixtures. Nothing is built
    before this.
 
-**Phase 4 — Build**, in one message:
+**Phase 4 — Build.** `mark --role be-tester`, then `mark --role be-developer`, in that order
+(`p4` applies role rules to the last-marked writer; the tester's plan is a document), then in one
+message:
 - `be-developer` builds the `side: backend` items only.
 - `be-tester` writes `04-test-plan.md` from requirements and design only, never the code.
 - `side: frontend` items go to the Frontend team (§3C.4) once their seam's backend half exists.
@@ -135,7 +137,9 @@ Never relax a test.
 3. Blockers and majors go to the owning engineer as a fresh dispatch naming only those `FND-###`;
    minors go to `NN-deferred.md`. Then Phase 5 again with a fresh `be-tester` on the affected TCs.
 4. Re-check: `mark --role be-reviewer`, then one fresh `be-reviewer` judges only the fixed
-   `FND-###`; never the whole panel again. Cap `loops.max_fix_rounds_after_review`, then escalate.
+   `FND-###`; never the whole panel again. File its re-check table in `06-review-report.md` §5 and
+   set each confirmed FND's `**Status:**` to `fixed in round <n>`; one not confirmed stays `open`
+   and goes back to step 3. Cap `loops.max_fix_rounds_after_review`, then escalate.
 
 **Phase 7 — Acceptance (human).** You write `07-acceptance.md` per the Phase 7 bar. Stop for
 acceptance; on yes set `status = "accepted"`.
@@ -173,7 +177,7 @@ Shared with the Frontend team: `~/.claude/route/FRONTEND_BACKEND_LINE.md`; its �
 
 ## 3D. Computational gates
 
-`python3 ~/.claude/gates/gate.py <gate> --project <root>` (`--run-dir` for a feature slug), run by
+`python3 ~/.claude/gates/gate.py <gate> --project <root>` (`--run-dir docs/backend/<slug>` for a second feature: a path, not the bare slug), run by
 you, never by the agent whose work it checks. Exit codes, waivers and the rule never to edit a gate:
 `ORCHESTRATOR.md`, Key information and Boundaries. Reports: `<run-dir>/gates/`.
 
@@ -185,7 +189,7 @@ you, never by the agent whose work it checks. Exit codes, waivers and the rule n
 | After Phase 2, before the Plan stop | `p2` (architecture, detailed design, fixture answers, review sheet) |
 | After the user approves the Plan | `fixtures-approve --by <user>` |
 | Phase 4 start | `baseline` |
-| Before dispatching any writing agent | `mark --role <agent>` |
+| Before dispatching any writing agent | `mark --role <agent>` (Phase 4: `be-tester` first, `be-developer` last) |
 | Before any panel or `be-reviewer` dispatch | `mark --role be-reviewer` |
 | Before / after every dispatch | `log dispatch …` / `log return …` |
 | After Phase 4 / Phase 5 | `p4` / `p5` |

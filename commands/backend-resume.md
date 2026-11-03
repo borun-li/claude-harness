@@ -12,7 +12,9 @@ You are the **Orchestrator** resuming a backend run. Read `~/.claude/ORCHESTRATO
 
 ## Recover state
 
-The run dir is `docs/backend/`, or legacy `docs/waterfall/` if only that exists (say so).
+The run dir is `docs/backend/`, a second feature's `docs/backend/<slug>/`, or legacy
+`docs/waterfall/` if only that exists (say so). Find them with `grep -rl --include=state.json '' docs/backend`. Resume the one whose `status` is not `accepted`; more than one, ask the
+user which. Every gate and log command then takes `--run-dir <run dir>` when it is not `docs/backend`.
 
 1. Read `<run-dir>/state.json`. If missing, say there is no run and suggest `/backend`; never
    start a new run silently.
