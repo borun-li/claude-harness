@@ -11,7 +11,9 @@ def _exists(p, *names):
 def _python(p):
     py = ".venv/bin/python" if (p / ".venv/bin/python").exists() else "python3"
     pyproject = (p / "pyproject.toml").read_text(errors="replace") if (p / "pyproject.toml").exists() else ""
-    cmds = {"build": f"{py} -m compileall -q -x '(\\.venv|venv|node_modules|\\.git)' .",
+    # -f: without it compileall trusts a .pyc whose recorded source mtime matches to the second,
+    # so code edited within the same second (or restored with its old mtime) passes unbuilt.
+    cmds = {"build": f"{py} -m compileall -f -q -x '(\\.venv|venv|node_modules|\\.git)' .",
             "lint": None, "typecheck": None, "test": None}
     if "[tool.ruff" in pyproject or _exists(p, "ruff.toml", ".ruff.toml"):
         cmds["lint"] = "ruff check ."

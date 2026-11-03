@@ -152,7 +152,7 @@ class Project:
         self.write("requirements.txt", "requests==2.0\n")
         self.write(".gitignore", "__pycache__/\n.pytest_cache/\n")
         self.write(".claude/gates.json", json.dumps({
-            "commands": {"build": f"{PY} -m compileall -q calc", "lint": None, "typecheck": None,
+            "commands": {"build": f"{PY} -m compileall -f -q calc", "lint": None, "typecheck": None,
                          "test": f"{PY} -m pytest -q -p no:cacheprovider"},
             "confirmed": True, "confirmed_on": "2026-09-23"}))
         self.write("docs/backend/state.json", json.dumps(STATE))
@@ -407,7 +407,13 @@ class BuildGate(Base):
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "CMD.test"), "fail")
 
     def test_build_failure(self):
+        # Broken code with the same mtime second as the compiled original: compileall without -f
+        # skipped it and p4 went green about half the time (the old flaky failure). Pin the mtime
+        # so the test is deterministic.
+        core = self.p.root / "calc" / "core.py"
+        st = core.stat()
         self.p.write("calc/core.py", "def add(a, b)\n    return a\n")
+        os.utime(core, (st.st_atime, st.st_mtime))
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "CMD.build"), "fail")
 
     def test_plan_defects(self):
@@ -963,6 +969,7 @@ class Profile(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stderr)
             cfg = json.loads((d / ".claude/gates.json").read_text())
             self.assertEqual(cfg["commands"]["lint"], "ruff check .")
+            self.assertIn("compileall -f ", cfg["commands"]["build"])  # see test_build_failure
             self.assertIn("mypy", cfg["commands"]["typecheck"])
             self.assertIn("pytest", cfg["commands"]["test"])
             self.assertFalse(cfg["confirmed"])

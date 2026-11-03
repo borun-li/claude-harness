@@ -7,6 +7,22 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.8 — 2026-11-03 — `compileall -f`: a false-green build
+
+Patch. `BuildGate.test_build_failure` failed about half the time, also on `main`. Cause: without
+`-f`, `compileall` decides a file is up to date by comparing only the `.pyc` header's source mtime,
+truncated to seconds (Python 3.13 `compileall.compile_file`); size and content are not checked. The
+test wrote broken code within the same second as the compiled original, so `CMD.build` passed on
+code that does not compile. Reproduced in isolation: same second → exit 0, next second → exit 1,
+same second with `-f` → exit 1.
+- `gate.py profile` now writes `compileall -f` for Python projects: an agent editing a file twice in
+  one second, or a restore that keeps the old mtime (`cp -p`, `rsync -a`, `tar`), could otherwise
+  pass `p4` unbuilt.
+- The test pins the broken file's mtime to the original's, so it fails every time without `-f`
+  (checked 5/5) and passes every time with it (5/5). The profile test asserts `-f`.
+- **Existing projects:** a confirmed `.claude/gates.json` is not rewritten. If its build command is
+  `compileall` without `-f`, add it (`/backend-config`).
+
 ## 3.3.7 — 2026-11-03 — stale wording and examples
 
 Patch, class C of the 3.3.5 audit (no runtime effect, except the Chrome lookup):
