@@ -13,6 +13,14 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 7.2.2 — 2026-11-03 — agent files: one job, input, output, boundaries
+
+Patch: the 8 `fe-*` agents and the shared `be-analyst` follow the structure in backend 3.3.3
+(frontmatter, Constitution line, `Your ONLY job is …`, Input, Output, Boundaries; at most 48 lines).
+Descriptions drop phase numbers and dispatch conditions (PLAYBOOK §6 keeps those) and name the
+neighbour that is not them. `fe-engineer`'s coded-prototype rule is removed: a Prototype-tier
+interface ends at the UI stop, not in code. `tools`, `skills` and `model` unchanged.
+
 ## 7.2.1 — 2026-11-03 — terminal prototypes stay in this PLAYBOOK
 
 Patch, with backend 3.3.2: a terminal surface is prototyped here as text mockups up to the UI stop,
