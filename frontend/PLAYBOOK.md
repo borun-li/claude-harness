@@ -327,7 +327,6 @@ docs/frontend/      (second round: docs/frontend/<slug>/…)
   05-review.md  06-feedback.md  state.json  run-log.jsonl  handoff.md  capture-plan.json
   observables.json  evidence/{design,verify-<n>}/  gates/  logs/
 contracts/          FRONTEND_BACKEND_CONTRACT.md
-prototype/          throwaway prototype (surfaces without a canvas)
 ```
 
 ## 8. `frontend/state.json` schema

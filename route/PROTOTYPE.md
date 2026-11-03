@@ -2,17 +2,18 @@
 
 The user sees something running and confirms it before any detailed design (Constitution §2.7).
 Used by the Prototype tier (the whole run) and by Full development (Phase 1b, after requirements
-and before detailed design). The orchestrator runs this procedure; one engineer builds.
+and before detailed design). The orchestrator runs this procedure; one engineer builds. The run
+dir is `docs/backend/`.
 
-**Visual interfaces** (web, native, desktop, game UI) are prototyped as designs, not code: the
-Frontend PLAYBOOK's Phases 1–2 up to its UI stop, drawn in Figma; in a cross-stack run that UI stop
-is the backend's Prototype stop (`~/.claude/route/FRONTEND_BACKEND_LINE.md` §4). This file covers
-the rest: terminal and CLI interfaces, and work with no interface.
+**Interfaces people operate** (web, native, desktop, game UI, terminal) are prototyped as designs,
+not code: the Frontend PLAYBOOK's Phases 1–2 up to its UI stop, drawn in Figma or, for a terminal,
+as text mockups; in a cross-stack run that UI stop is the backend's Prototype stop
+(`~/.claude/route/FRONTEND_BACKEND_LINE.md` §4). This file covers only work with no such interface:
+APIs, scripts and command-line arguments, jobs.
 
 ## 1. Understand the ask
 
-- **Full development:** the approved Phase 1 output (`01-requirements.md`, or `00-requirements.md`
-  in a frontend-only run).
+- **Full development:** the approved Phase 1 output (`01-requirements.md`).
 - **Prototype tier:** no requirements phase. Write down the ask in the user's words, then do
   recon (≈30 s, read-only: stack, existing code, what already runs).
 
@@ -22,27 +23,26 @@ Ask in one `AskUserQuestion`, in the user's language, at most 4 questions, each 
 answer drawn from step 1. Pick the questions whose answer would change what the prototype shows:
 
 - Who uses it, and in what situation?
-- What must they see or do first — the one screen or flow that matters most?
+- What must it do first — the one behaviour or flow that matters most?
 - What would make you say "yes, this is it" at this stage?
 - What is deliberately not in this round?
-- Any look, product or site you want it to feel like (or not like)?
+- Any existing tool or service you want it to work like (or not like)?
 
 Record the answers in the project's `.claude/project-context.md` under `## Intent` (dated), so
 later phases and runs read them.
 
 ## 3. Build the prototype — one engineer, one fresh dispatch
 
-- **Who:** `fe-engineer` if the work has any interface; `be-developer` only for work with no
-  interface (it then shows the behaviour through a runnable command with sample input and output).
-- **Where:** `prototype/` at the project root, and nowhere else. It may contain throwaway stubs
-  on either side of the frontend/backend line.
-- **Brief:** the intent answers, the must-see screen or flow, and the non-goals, in the format of
+- **Who:** `be-developer`. It shows the behaviour through a runnable command with sample input and
+  output.
+- **Where:** `prototype/` at the project root, and nowhere else. Stubs in it are throwaway.
+- **Brief:** the intent answers, the must-see behaviour or flow, and the non-goals, in the format of
   `~/.claude/route/HANDOFF.md` §3 (round 1). Paths, not pasted documents. The engineer appends
   its handoff entry to `<run-dir>/handoff.md`.
 - **Rules for the engineer:** rough is right. Hard-coded or fake data, no tests, no design
   documents, no ids, no polish beyond what makes the main idea readable. It must start with one
   command, written at the top of `prototype/README.md` along with "throwaway, not product code".
-- Log it: `gate.py log dispatch --agent <a> --model <m> --step 1b --note "prototype"` and its return.
+- Log it: `gate.py log dispatch --agent be-developer --model <m> --step 1b --note "prototype"` and its return.
   No `mark` and no gate run for this phase.
 
 ## 4. Show it and get confirmation
@@ -53,9 +53,9 @@ later phases and runs read them.
 4. **Change:** a new, fresh dispatch with a short brief listing only the changes, the next round
    number, and the pitfalls from the previous engineer's handoff entry. After 3 rounds,
    ask the user whether to continue.
-5. **Confirm:** log `gate.py log human --stop Prototype --decision approved --by <user> --note "<what was confirmed>"`
-   (cross-stack runs: in both teams' run logs). Write `<run-dir>/01b-prototype.md`: what the user
-   confirmed, what changed against step 1, how to run the prototype.
+5. **Confirm:** log `gate.py log human --stop Prototype --decision approved --by <user> --note "<what was confirmed>"`.
+   Write `<run-dir>/01b-prototype.md`: what the user confirmed, what changed against step 1, how to
+   run the prototype.
 
 ## 5. After confirmation
 

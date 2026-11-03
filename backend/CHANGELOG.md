@@ -7,6 +7,20 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.2 — 2026-11-03 — route docs agree on who prototypes what
+
+Patch: the `route/` docs contradicted each other on terminal prototypes, agreed with the user.
+
+- Every interface people operate, terminal included, is prototyped by the Frontend PLAYBOOK up to its
+  UI stop (Figma, or text mockups for a terminal). `route/PROTOTYPE.md` covers only work with no such
+  interface (APIs, scripts and command-line arguments, jobs): `be-developer` builds it, the run dir is
+  `docs/backend/`, and its intent questions ask about behaviour, not looks. Before, it claimed
+  terminal and CLI interfaces and dispatched `fe-engineer`, while the Frontend PLAYBOOK already drew
+  terminals as text mockups. `commands/route.md` §3, PLAYBOOK Phase 1b and the READMEs say the same.
+- `route/FRONTEND_BACKEND_LINE.md` §4: verification and review rows no longer both name the frontend
+  panel (frontend Phase 4 runs both; the two panels' findings make one fix list). §7: `frontend_items`
+  covers `be-architect`'s frontend `DES` and the work `be-developer` found.
+
 ## 3.3.1 — 2026-11-03 — commands follow Claude Code's command guidance
 
 Patch, from a comparison with Claude Code's slash-command docs and Anthropic's official plugins

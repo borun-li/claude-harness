@@ -46,8 +46,8 @@ Every task starts with one question: which tier is it?
 | Tier | What happens |
 |---|---|
 | Small change | Claude shows a short plan, you confirm, one engineer makes the change, you check it running |
-| Prototype | A few questions about what you want, then a rough version for you to confirm: for a visual interface, flows and screens designed in Figma; otherwise a rough, runnable version |
-| Full development | The whole team process. After requirements, you see and confirm a prototype before any detailed design or code — the Figma design for a visual interface, a rough running version otherwise (skipped if you already confirmed one in a Prototype run) |
+| Prototype | A few questions about what you want, then a rough version for you to confirm: for an interface people operate, flows and screens designed in Figma (text mockups for a terminal); otherwise a rough, runnable version |
+| Full development | The whole team process. After requirements, you see and confirm a prototype before any detailed design or code — the design for an interface people operate, a rough running version otherwise (skipped if you already confirmed one in a Prototype run) |
 
 In Full development you also approve the plan (backend) or the UX and UI designs (frontend), and the final acceptance. Everything irreversible or outward-facing (deploys, pushes, deletes) waits for you. Other questions do not stop the run: the team takes a recommended default, marks it, and shows it to you at the next stop.
 
@@ -67,7 +67,7 @@ In Full development you also approve the plan (backend) or the UX and UI designs
 | `hooks/` | The git safety hook, the agent-continuation hook, and their tests |
 | `skills/design-taste/` | The user's design taste, for `fe-ux`, `fe-ui` and `fe-review-experience` |
 
-Harness version: backend 3.3.1, frontend 7.2.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
+Harness version: backend 3.3.2, frontend 7.2.1 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
 
 ## Changing the harness
 

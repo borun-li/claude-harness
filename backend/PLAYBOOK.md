@@ -91,8 +91,8 @@ inputs (§3E.1). You ask its blocking questions together with the Phase 1b inten
 `be-analyst` amends what the answers change.
 
 **Phase 1b — Prototype** (`~/.claude/route/PROTOTYPE.md`; skipped when `prototype: "reused"`).
-When the round touches a visual interface, the Frontend team's Phases 1–2 and its UI stop are the
-prototype (§3C.4).
+When the round touches an interface people operate (including a terminal), the Frontend team's
+Phases 1–2 and its UI stop are the prototype (§3C.4).
 The user confirms a rough, runnable version (fixed stop, §3F). If the confirmation changed scope, a
 fresh `be-analyst` amends `01-requirements.md` and `p1` runs again. Nothing in Phase 2 starts before
 the confirmation (Constitution §2.7).
