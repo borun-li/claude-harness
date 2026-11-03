@@ -333,6 +333,12 @@ class Baseline(Base):
         code, out, _ = self.p.gate("baseline")
         self.assertEqual(code, 0, out)
 
+    def test_prototype_dir_is_fine(self):
+        # route/PROTOTYPE.md keeps the throwaway prototype in prototype/, often uncommitted
+        self.p.write("prototype/README.md", "throwaway, not product code")
+        code, out, _ = self.p.gate("baseline")
+        self.assertEqual(code, 0, out)
+
     def test_red_baseline_blocks(self):
         self.p.write("calc/core.py", "def add(a, b):\n    return 0\n\n\ndef sub(a, b):\n    return a - b\n")
         sh(self.p.root, "git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qam", "red")
@@ -368,6 +374,12 @@ class BuildGate(Base):
         self.p.write("calc/extra.py", "X = 1\n")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.unplanned"), "fail")
         self.p.write("docs/backend/08-implementation-log.md", "added calc/extra.py because ...")
+        self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.unplanned"), "pass")
+
+    def test_queue_row_counts_as_plan(self):
+        # a frontend run's Side: backend queue row names its files in 03-queue.md
+        self.p.write("calc/extra.py", "X = 1\n")
+        self.p.write("docs/backend/03-queue.md", "### Q-001\n- **Side:** backend\n- **Files:** calc/extra.py\n")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.unplanned"), "pass")
 
     def test_secret_and_personal_path(self):
@@ -754,6 +766,16 @@ class RunLog(Base):
         self.assertEqual(self.p.log("gate", "--note", "forged pass")[0], 2)
         self.assertEqual(self.p.log("human", "--stop", "Plan", "--decision", "approved", "--by", "user",
                                     "--note", "ok")[0], 0)
+
+    def test_log_and_timeline_need_no_profile(self):
+        # route/PROTOTYPE.md logs the Prototype tier before any gate profile exists
+        (self.p.root / ".claude" / "gates.json").unlink()
+        self.assertEqual(self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "1b",
+                                    "--note", "prototype")[0], 0)
+        r = subprocess.run([PY, str(GATE), "timeline", "--project", str(self.p.root)],
+                           capture_output=True, text=True)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.p.gate("p1")[0], 2)
 
     def test_timeline(self):
         self.p.gate("p1")

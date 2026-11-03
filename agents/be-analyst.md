@@ -24,7 +24,7 @@ Your ONLY job is to turn a request into requirements: what the product must do, 
 - Return this summary only, with the fields you used:
 
 ```
-blocking_questions: [<question> (recommended: <x>)]   # non-empty: stopped after §0
+blocking_questions: [<question> (recommended: <x>)]   # only the user can answer these; every REQ is still finished with its default
 requirements: <n> (REQ-001..REQ-0NN)   above_cut: <n>
 non_goals: <n>   assumptions_unverified: <n>
 interface_requirements: [REQ-...]

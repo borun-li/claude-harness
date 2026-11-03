@@ -62,8 +62,8 @@ The disk is the run's memory; your context is its most expensive resource.
 
 ## Key information
 
-- **Gates:** `python3 ~/.claude/gates/gate.py <gate> --project <root>` (`--run-dir <slug>`,
-  `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` cap → escalate · `2` config error.
+- **Gates:** `python3 ~/.claude/gates/gate.py <gate> --project <root>` (`--run-dir docs/<team>/<slug>`
+  for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` cap → escalate · `2` config error.
 - **Run log** (`<run-dir>/run-log.jsonl`, hash-chained; add `--team frontend` in Frontend runs):
   `log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` ·
   `log return --agent <a> --step <phase> --status ok|blocked|failed --note "<result>"` (add

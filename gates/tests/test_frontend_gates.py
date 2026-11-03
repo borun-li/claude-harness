@@ -574,6 +574,11 @@ class Capture(FrontBase):
                                 if c["id"] == "FE4.capture-plan")["details"])
         for needle in ("base_url", "sizes", "Q-001: no capture planned"):
             self.assertIn(needle, details)
+        # bare widths from config `viewports` are not sizes (PLAYBOOK §3H)
+        self.p.write("docs/frontend/capture-plan.json", json.dumps({"surface": "web", "base_url": "http://x",
+                     "sizes": [1440, 375], "captures": [{"id": "c1", "row": "Q-001", "state": "dup", "url": "/"}]}))
+        self.assertIn("must be", " ".join(next(c for c in self.fe("fe-capture-plan")[2]["checks"]
+                                               if c["id"] == "FE4.capture-plan")["details"]))
         self.p.write("docs/frontend/capture-plan.json", json.dumps(TERMINAL_PLAN))
         self.assertEqual(self.fe("fe-capture-plan")[0], 0)
 

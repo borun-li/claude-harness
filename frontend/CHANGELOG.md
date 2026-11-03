@@ -13,6 +13,22 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 7.2.4 — 2026-11-03 — conflicting descriptions that broke runs
+
+Patch, from the same audit as backend 3.3.5:
+- §3H: `capture-plan.json` `sizes` are `{name, width, height}` objects, one per config `viewports`
+  width (new `viewport_height`, 900); bare widths passed `fe-capture-plan` and then crashed
+  `capture`. `fe-capture-plan` now rejects them.
+- §2.4 reused design: the log commands carry `--decision` and `--by` (they exited 2); the run
+  starts at Phase 2 step 1 (`baseline`) and runs the `fe-ux`/`fe-ui` gates on the reused documents;
+  a short UI stop confirms only the new queue's observables, then `fe-approve`.
+- Phase 4.5 and `fe-tester`: a rework round replaces the reworked rows' verdicts in place and points
+  `04-verification.md` at the new manifest only (`fe-verify` accepts one verdict per row and reads
+  the first manifest path).
+- `be-developer` in a frontend run builds from its `Side: backend` queue row and logs deviations in
+  the run dir.
+- `/frontend-status` and `/frontend-resume` find a second round's `docs/frontend/<slug>/`.
+
 ## 7.2.3 — 2026-11-03 — read-only agents return their handoff entry
 
 Patch: `fe-review-experience`, `fe-review-accessibility` and `fe-review-integration` end their output

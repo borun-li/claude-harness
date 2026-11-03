@@ -1,5 +1,5 @@
 {
-  "harness_version": "7.2.3",
+  "harness_version": "7.2.4",
   "_comment": "Frontend Agent Team defaults. A project may override any top-level key in <project>/.claude/frontend.json. Model tier names live in ~/.claude/backend/config.json; roles below map this team one by one.",
   "roles": {
     "orchestrator": { "model": "opus" },
@@ -54,6 +54,7 @@
     "warn_at": 0.8
   },
   "viewports": [1440, 768, 375],
+  "viewport_height": 900,
   "parallelism": {
     "ui_and_scaffold_in_parallel": true,
     "_scaffold_comment": "two-stop runs only; one-stop runs scaffold after the UI stop (Constitution §4.2)",
