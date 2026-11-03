@@ -26,7 +26,7 @@ real surface with real data. Work flows forward, and feedback flows back (§3A).
 | `fe-tester` | One verdict per row against its frame and state rows; assertions that can fail | `04-verification.md`, test files |
 | `fe-review-experience` · `fe-review-accessibility` · `fe-review-integration` | Review panel (§6): candidates in their lens | Nothing; you file their returns |
 | `fe-reviewer` | Coordinator: merges, disproves with counter-evidence only, ranks `FND-###`; re-checks fixed FNDs | `05-review.md` |
-| Orchestrator | Interviews, evidence capture, frame exports, gates, state, run log | `state.json`, `evidence/` |
+| Orchestrator | Interviews, evidence capture, frame exports, gates, state, run log, filing raised DFBs | `state.json`, `evidence/`, raised rows in `06-feedback.md` |
 
 - Only you can ask the user. Any agent may raise a design-feedback item (§3A); you route it.
 - Queue rows on the other side of the line go to the Backend team's `be-developer`
@@ -69,7 +69,9 @@ A picture alone is never evidence.
 
 - `figma.monthly_budget` (default 300) is the user's own cap across runs; `figma.per_run` estimates
   each run as `base + per_page × pages` (default 20 + 8 per UX page). You propose the run's budget
-  at kickoff (from the expected page count) and re-propose it at the UX stop (from `01-ux.md`).
+  at kickoff (from the expected page count) and re-propose it at the UX stop (from `01-ux.md`). One-stop
+  runs recompute it once `fe-ux` is green: not above the kickoff budget, continue; above it, ask
+  before the first `fe-ui` dispatch (`--stop Budget`, Constitution §5.5).
 - Every brief to `fe-ui` or `fe-engineer` states the calls left; each returns `figma_calls`, which
   you log with `log return … --figma-calls <n>`. At `figma.warn_at` (80%) of the run budget, say so
   before the next Figma dispatch. Exceeding the budget needs the user's yes, recorded with
@@ -85,8 +87,8 @@ Everything unnamed goes below the cut line.
 
 **2.2 Recon (≈30 s, read-only).** Surface and stack; a backend run in `docs/backend/` (its
 `01-requirements.md` makes this a cross-stack run); existing frontend artifacts and design system;
-a confirmed design from a Prototype-tier run (`01-ux.md` and `02-ui.md` with UX and UI stops
-approved); the project's Figma file, if any.
+a confirmed design from a Prototype-tier run (`state.json` `prototype_confirmed`; `01-ux.md` and
+`02-ui.md` with UX and UI stops approved); the project's Figma file, if any.
 
 **2.3 Confirm the run — one `AskUserQuestion`, mandatory** (skip what `/route` already asked).
 First print a preview: the model table from `roles`, the document language (the user's), the
@@ -100,7 +102,7 @@ risk evidence, the expected pages and the Figma budget it implies. Then ask:
   accessibility duty applies; otherwise `normal`. Recommend one, citing the evidence.
 - **Design stops and Figma budget**, one question — two stops (UX, then UI) when the round has 2
   or more pages or a new flow, one (UX and UI together) for a single page or component
-  (`design_stops` in config), each option naming the budget it implies (§1E). Recommend one.
+  (`design_stop_rule` in config; `state.json` records `design_stops: 1 | 2`), each option naming the budget it implies (§1E). Recommend one.
 
 Only when needed, in a second call right after (the tool takes at most 4 questions;
 `ORCHESTRATOR.md`, Decisions): the delivery surface and the named user when unset, and the gate
@@ -109,8 +111,9 @@ profile while `.claude/gates.json` is unconfirmed.
 Taste choices the `design-taste` skill lists (§1: product class, brand (colours, typefaces),
 motion, copy tone) are asked here only if `project-context.md` lacks them; record the answers there.
 
-**2.4 Init state.** Write `docs/frontend/state.json` (§8). If one is unfinished, stop and point to
-`/frontend-resume`. Record `requirements`: `docs/backend/01-requirements.md` in a cross-stack run,
+**2.4 Init state.** Write `docs/frontend/state.json` (§8). If one is unfinished (`status` other
+than `accepted` or `prototype_confirmed`), stop and point to `/frontend-resume`. Full development
+reusing a confirmed prototype keeps its run dir and sets `tier: "full"`, `design: "reused"`. Record `requirements`: `docs/backend/01-requirements.md` in a cross-stack run,
 else `docs/frontend/00-requirements.md`. A reused design:
 1. Log `log human --stop UI --decision approved --by <user> --note "reused <paths>, confirmed
    <date>"`; in a two-stop run first the same with `--stop UX`.
@@ -127,7 +130,7 @@ Serial between phases; fan-outs in one message. **A phase ends only when its gat
 Phase numbers are the `--step` values in the run log.
 
 **Phase 0 — Product features.** Frontend-only run: `be-analyst` writes `00-requirements.md`
-(its "Frontend-only runs" section), gate `fe-product`. Cross-stack run: the Backend team's Phase 1
+(its "Frontend-only run" rule), gate `fe-product`. Cross-stack run: the Backend team's Phase 1
 REQs are the input; this phase is skipped. You ask the blocking questions it returns before Phase 1.
 
 **Phase 1 — UX** → `01-ux.md`. `fe-ux`, alone: flows, page inventory and navigation, a state table
@@ -191,7 +194,8 @@ increment (§3B) starting at Phase 1 (or Phase 0 if it needs a new feature).
 
 Any agent may raise a `DFB-###`: `fe-ui` against a flow; `fe-engineer` against a frame (motion too
 costly, a layout that does not fit the narrow size) or a flow; `fe-tester` and the panel as
-design defects. You append each to `06-feedback.md` § Design feedback and route it:
+design defects. The raiser returns it; you append each to `06-feedback.md` § Design feedback (the
+owner fills in only its decision) and route it:
 
 1. A fresh dispatch of the owner (`fe-ux` for flows, pages, states; `fe-ui` for visuals) decides
    accept or reject with the reason, amending its document if accepted.
@@ -249,7 +253,8 @@ fails `FE.observables` until the user re-approves; nobody edits an approved row 
 
 ## 3F. Human stops
 
-**Fixed:** Kickoff, UX (two-stop runs), UI, Acceptance. A Prototype-tier run ends at the UI stop.
+**Fixed:** Kickoff, UX (two-stop runs), UI, Acceptance. A Prototype-tier run ends at the UI stop
+with `status: "prototype_confirmed"`.
 In a cross-stack run the UI stop is also the Backend team's Prototype stop: log it in both run
 logs (`--stop Prototype` in `docs/backend/`).
 
@@ -306,7 +311,9 @@ The dispatch cycle, context, briefs and handoff are `ORCHESTRATOR.md`, Capabilit
 In this team also:
 
 1. No phase starts without its upstream artifact, present and non-trivial.
-2. The handoff log is `docs/frontend/handoff.md`; resume with `/frontend-resume`.
+2. The handoff log is `<run-dir>/handoff.md`; resume with `/frontend-resume`. In a cross-stack run
+   both teams append to the Backend run dir's log (`~/.claude/route/HANDOFF.md` §1), resumed with
+   `/backend-resume`.
 3. A role writes each artifact to disk as it finishes it, so a dead agent costs one file.
 4. Reviewers hold Bash: `fe-review` checks the tree is unchanged outside the run dir and test
    files (the tester's, checked by `fe-verify`) while the panel and coordinator ran. Role checks ignore the other team's run dir and fixtures (both teams
@@ -344,7 +351,7 @@ A second round's gates take `--run-dir docs/frontend/<slug>`: a path from the pr
   "harness_version": "x.y.z",
   "feature": "one line", "slug": "round-slug",
   "started_at": "ISO-8601 from `date -u +%FT%TZ`", "updated_at": "ISO-8601",
-  "status": "in_progress | blocked | design_confirmed | building | verifying | accepted | fix_capped",
+  "status": "in_progress | blocked | design_confirmed | building | verifying | accepted | fix_capped | prototype_confirmed",
   "tier": "prototype | full",
   "risk": "normal | high",
   "design_stops": 1,

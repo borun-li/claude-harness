@@ -832,10 +832,25 @@ class RunLog(Base):
                 self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", step, "--note", "design")
                 self.p.log("return", "--agent", "be-architect", "--step", step, "--status", "ok", "--note", "done")
                 self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "late")
-                self.p.approve()
+                # p2 now refuses this order (test_p2_catches_design_before_prototype); p7's trail stays the backstop
+                self.p.log("human", "--stop", "Plan", "--decision", "approved", "--by", "user", "--note", "plan ok")
                 r = self._trail()
                 self.assertEqual(r["status"], "fail")
                 self.assertIn("before the Prototype was approved", " ".join(r["details"]))
+
+    def test_p2_catches_design_before_prototype(self):
+        # caught at the end of Phase 2, not first at Acceptance (route/PROTOTYPE.md §5)
+        self._tier("full")
+        self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "2", "--note", "design")
+        self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "done")
+        self.assertEqual(self.p.status(self.p.gate("p2")[2], "P2.prototype-first"), "fail")
+        self.p.close()
+        self.p = Project()
+        self._tier("full")
+        self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
+        self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "2", "--note", "design")
+        self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "done")
+        self.assertEqual(self.p.status(self.p.gate("p2")[2], "P2.prototype-first"), "pass")
 
     def test_reused_prototype_logged_at_kickoff_passes(self):
         self._tier("full")

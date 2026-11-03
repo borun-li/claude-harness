@@ -27,7 +27,7 @@ gate (PLAYBOOK §3D): meet the bar anyway; the gate proves it.
 
 **Scope proportion**
 - The round implements the simplest common path of what the user asked. Variants, legacy data,
-  concurrency, migrations and edge cases go to `NN-deferred.md` (file:line + one-line scenario).
+  concurrency, migrations and edge cases go to `deferred.md` (file:line + one-line scenario).
 - An explicit MVP cut line; every `REQ` is above or below it; nothing below is built. `[P1.cut-line]`
 - Requirement count is proportional to the ask. Each `REQ` names, in one sentence, the user's
   words that require it; one that cannot goes below the line.

@@ -7,6 +7,25 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.6 — 2026-11-03 — one reading for each ambiguous rule
+
+Patch, class B of the 3.3.5 audit; each ruling is the user's:
+- Phase 5 runs only `fe-tester` for frontend items; the frontend panel joins the backend panel in
+  Phase 6 (one message, one fix list), as `FRONTEND_BACKEND_LINE.md` §4 says.
+- `mark --role be-reviewer` before each panel and each re-check, never again before the
+  coordinator (that hid the panel's changes from `P6.tree-unchanged`); no mark for Phase 1b.
+- `be-architect`'s `user_decisions` are shown at Plan with a default, never a mid-run stop (§3F).
+- `NN-deferred.md` → `deferred.md`, written by the orchestrator.
+- `be-tester` plans from the contract's seam entries too (each seam needs a TC).
+- Kickoff asks the frontend design stops and Figma budget when the round touches the interface;
+  `route.md` §0 likewise for cross-stack.
+- `config.json` `gates` lists Kickoff, Prototype, Plan, Acceptance for reference only; the unused
+  `G0_*` keys are gone.
+- `HANDOFF.md`: roles without Write (`be-review-*`, `be-reviewer`, `fe-review-*`) return their
+  entry; the brief template says so.
+- Gate: `p2` checks `P2.prototype-first`, so a design dispatched before the Prototype approval is
+  caught at the end of Phase 2, not first at Acceptance (`LOG.trail` in `p7` stays). Test added.
+
 ## 3.3.5 — 2026-11-03 — conflicting descriptions that broke runs
 
 Patch, from a read-only audit of every file against the gate code (no live run failed yet):

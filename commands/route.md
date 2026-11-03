@@ -22,7 +22,8 @@ Do §1 and §2 first (read-only, about 30 s), so one question can carry what the
 - **Tier:** Small change / Prototype / Full development (Constitution §7), each option describing
   what runs and roughly what it costs. Never infer the tier from the request.
 - **Backend or cross-stack class:** in the same call, the rest of backend PLAYBOOK §2.3 (model plan,
-  risk, gate profile when unconfirmed), used only if the answer is Full development.
+  risk, gate profile when unconfirmed; cross-stack also design stops with the Figma budget), used
+  only if the answer is Full development.
 - **Frontend class:** in the same call, the rest of frontend PLAYBOOK §2.3 (model plan, risk, and
   design stops with the Figma budget), used only if the answer is Prototype or Full development; the
   surface, named user and gate profile, when unset, in a second call right after.

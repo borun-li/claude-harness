@@ -254,6 +254,21 @@ def _trail_common(events):
     return problems
 
 
+def _prototype_first(ctx, events, design_phases):
+    """Full-development runs: the user confirms a prototype before design (Constitution §2.7)."""
+    if (read_json(ctx.run / "state.json") or {}).get("tier") != "full":
+        return []
+    proto = next((e["seq"] for e in events if e["event"] == "human" and e["stop"] == "Prototype"
+                  and e["decision"] == "approved"), None)
+    design = next((e["seq"] for e in events if e["event"] == "dispatch"
+                   and str(e["phase"]) in design_phases), None)
+    if proto is None:
+        return ["no approved Prototype stop in the log"]
+    if design is not None and design < proto:
+        return [f"design dispatched (#{design}) before the Prototype was approved (#{proto})"]
+    return []
+
+
 def _log_trail(ctx, design_phases=("2", "3")):
     """Backend trail: the common checks, then the Plan approved before build and (full tier) the
     Prototype approved before design. design_phases: Phase 2 since 3.2.0, Phase 3 in older runs.
@@ -269,16 +284,7 @@ def _log_trail(ctx, design_phases=("2", "3")):
         problems.append("no approved Plan stop in the log")
     elif build is not None and build < plan:
         problems.append(f"builder dispatched (#{build}) before the Plan was approved (#{plan})")
-    # Full-development runs: the user confirms a running prototype before design (Constitution §2.7).
-    if (read_json(ctx.run / "state.json") or {}).get("tier") == "full":
-        proto = next((e["seq"] for e in events if e["event"] == "human" and e["stop"] == "Prototype"
-                      and e["decision"] == "approved"), None)
-        design = next((e["seq"] for e in events if e["event"] == "dispatch"
-                       and str(e["phase"]) in design_phases), None)
-        if proto is None:
-            problems.append("no approved Prototype stop in the log")
-        elif design is not None and design < proto:
-            problems.append(f"design dispatched (#{design}) before the Prototype was approved (#{proto})")
+    problems += _prototype_first(ctx, events, design_phases)
     return (bad("LOG.trail", "Run log does not account for the run", owner, problems) if problems
             else ok("LOG.trail", f"{len(events)} events account for every dispatch and the Plan approval", owner))
 
@@ -389,6 +395,12 @@ def _detailed_design(ctx):
 def phase2(ctx):
     """Phase 2 — Design: architecture, detailed design and fixture answers; writes the Plan review sheet."""
     res, data = [], {}
+    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
+    early = _prototype_first(ctx, events, ("2", "3"))
+    res.append(bad("P2.prototype-first", "Design started without an approved Prototype (route/PROTOTYPE.md §5)",
+                   "orchestrator", early) if early else
+               ok("P2.prototype-first", "Prototype approved before design (or not a Full development run)",
+                  "orchestrator"))
     for part in (_architecture, _detailed_design, _fixtures_for_plan):
         r, d = part(ctx)
         res += [x for x in r if not (x["id"] == "ALL.state" and any(y["id"] == "ALL.state" for y in res))]

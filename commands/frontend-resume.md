@@ -14,13 +14,15 @@ You are the **Orchestrator** resuming a frontend run. Read `~/.claude/ORCHESTRAT
 
 The run dir is `docs/frontend/`, or a second round's `docs/frontend/<slug>/`: find them with
 `grep -rl --include=state.json '' docs/frontend`, resume the one whose `status` is
-not `accepted`, and ask the user which if there are several. Every gate and log command then takes
-`--run-dir <run dir>` when it is not `docs/frontend`. A `state.json` with `harness_version` below 7.0 is not resumed
+not `accepted` or `prototype_confirmed`, and ask the user which if there are several. Every gate
+and log command then takes `--run-dir <run dir>` when it is not `docs/frontend`. A `state.json`
+with `harness_version` below 7.0 is not resumed
 (PLAYBOOK §1.3): report it and offer a new round that reads its artifacts as input.
 
 1. Read `<run-dir>/state.json`. If missing, say there is no run and suggest `/frontend`.
-2. Read the last `orchestrator` entry in `<run-dir>/handoff.md` (`~/.claude/route/HANDOFF.md`
-   §5) and the entries after it. Then read the artifacts the next step depends on; skim the
+2. Read the last `orchestrator` entry in `<run-dir>/handoff.md` (`~/.claude/route/HANDOFF.md` §5)
+   and the entries after it; a cross-stack run keeps one log, in the Backend run dir: use
+   `/backend-resume`. Then read the artifacts the next step depends on; skim the
    others (headings, ids, status) (Constitution §8).
 3. Read `<run-dir>/gates/`: latest report per gate, `attempts.json`, `waivers.json`, `observables-approved.json`
    and the `snap-*.json` marks. **A mark newer than the latest gate report is unverified work: run

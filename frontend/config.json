@@ -1,5 +1,5 @@
 {
-  "harness_version": "7.2.4",
+  "harness_version": "7.2.5",
   "_comment": "Frontend Agent Team defaults. A project may override any top-level key in <project>/.claude/frontend.json. Model tier names live in ~/.claude/backend/config.json; roles below map this team one by one.",
   "roles": {
     "orchestrator": { "model": "opus" },
@@ -37,12 +37,12 @@
     "contract": "contracts/FRONTEND_BACKEND_CONTRACT.md"
   },
   "gates": {
-    "_comment": "Human stops (PLAYBOOK §3F). UX applies only when design_stops is 2.",
+    "_comment": "Human stops (PLAYBOOK §3F). UX applies only when state.json design_stops is 2.",
     "UX": true,
     "UI": true,
     "Acceptance": true
   },
-  "design_stops": {
+  "design_stop_rule": {
     "_comment": "Two stops (UX, then UI) when the round has at least min_pages_for_two pages or a new flow; otherwise one. Proposed at kickoff, confirmed by the user.",
     "min_pages_for_two": 2,
     "new_flow_means_two": true

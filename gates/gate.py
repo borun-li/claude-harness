@@ -68,7 +68,9 @@ def resolve_run_dir(project, arg, team):
     if arg:
         return arg
     if team == "frontend":
-        run = (read_json(project / ".claude" / "frontend.json") or {}).get("run_dir", "docs/frontend")
+        over = read_json(project / ".claude" / "frontend.json") or {}
+        # `artifacts.run_dir`, as in frontend/config.json; a top-level `run_dir` is the older form.
+        run = (over.get("artifacts") or {}).get("run_dir") or over.get("run_dir") or "docs/frontend"
         if not (project / run).exists():
             for legacy in ("docs/uiux", "uiux"):
                 if (project / legacy).exists():

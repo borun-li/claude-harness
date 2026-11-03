@@ -62,7 +62,7 @@ flowchart LR
 | `~/.claude/CONSTITUTION.md` | change rules every agent must follow (yours alone to amend) |
 | `backend/QUALITY-BARS.md` | raise the Definition of Done |
 | `backend/PLAYBOOK.md` | change phase flow, gates, delegation |
-| `backend/config.json` | change models, human gates, review panels, loop caps |
+| `backend/config.json` | change models, review panels, loop caps (human stops are fixed) |
 | `backend/templates/` | change the deliverable documents |
 | `route/FRONTEND_BACKEND_LINE.md` | change the line between the teams |
 | `gates/` | change computational checks (keep `gates/tests` green) |

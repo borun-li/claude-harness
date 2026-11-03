@@ -62,4 +62,4 @@ Never route interface work to `be-developer` for speed.
 
 Every entry in `frontend_items` — a `side: frontend` `DES` from `be-architect`, or frontend work
 `be-developer` found while building — gets a queue row (and a `DES` if it has none), or is moved
-to `NN-deferred.md`.
+to `deferred.md`.

@@ -37,7 +37,8 @@ Budget: <Figma calls left this run; omit for agents without Figma>
 Read: <paths>; handoff entries: <their headers>
 Known pitfalls / tried and failed: <≤3 lines, from earlier entries; "none" if none>
 Do not touch: <out-of-round files or items>
-Handoff: append your entry to <handoff path> before returning (~/.claude/route/HANDOFF.md §4).
+Handoff: append your entry to <handoff path> before returning (~/.claude/route/HANDOFF.md §4);
+         a role without Write puts it in its return instead.
 Return: your agent file's output contract, plus `handoff: <entry header>`.
 ```
 
@@ -60,7 +61,7 @@ Next agent must know:
 - Left open: <items not finished, and why>
 ```
 
-Read-only roles (reviewers, panelists) put the entry in their return; the orchestrator appends it
+Roles without Write (`be-review-*`, `be-reviewer`, `fe-review-*`) put the entry in their return; the orchestrator appends it
 unchanged. An agent that dies leaves no entry: the orchestrator writes one from the disk
 (`orchestrator for <agent> #<n>`), then dispatches a fresh agent.
 
