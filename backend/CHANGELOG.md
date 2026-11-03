@@ -7,6 +7,24 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.3.3 — 2026-11-03 — agent files: one job, input, output, boundaries
+
+Patch: all 16 agent files (shared with the Frontend team) rewritten to one structure, agreed with the user.
+
+- Each file is frontmatter, the Constitution line, `Your ONLY job is …`, `## Input`, `## Output`,
+  `## Boundaries`; 41–48 lines each, 1150 → about 710 in all. Rules already in `QUALITY-BARS.md`,
+  `PLAYBOOK.md`, the Constitution, `route/HANDOFF.md` or the templates are cited, not repeated; every
+  rule found only in an agent file is kept.
+- Descriptions say what the agent does, when to use it and which neighbour is not it; no phase
+  numbers or "invoked by the orchestrator", so a direct call can find them.
+- Direct calls (outside a team run) are one line in Input and Output: the user's words set the scope,
+  no gates, the handoff entry goes to `docs/handoff.md`. `be-tester` called without requirements or
+  design tests the module's current behaviour and says so.
+- Output contracts keep every field name; `handoff: <entry header>` now sits in the block.
+- `fe-engineer` no longer builds coded prototypes: an interface's prototype ends at the Frontend UI
+  stop (`commands/route.md` §3), and `route/PROTOTYPE.md` is `be-developer`'s.
+- `name`, `tools`, `model` and `skills` unchanged.
+
 ## 3.3.2 — 2026-11-03 — route docs agree on who prototypes what
 
 Patch: the `route/` docs contradicted each other on terminal prototypes, agreed with the user.
