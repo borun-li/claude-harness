@@ -38,7 +38,7 @@ In a project folder, start Claude Code and either describe the work in plain wor
 | `/route <what you want>` | Single entry point: decides frontend, backend or cross-stack and runs the right team |
 | `/backend <what to build>` | Backend team directly: requirements → prototype → design → build + tests → review panel (typed only) |
 | `/frontend <what to build>` | Frontend team directly: features → UX → UI in Figma → build → verify and review (typed only) |
-| `/backend-status`, `/backend-resume`, `/frontend-resume` | See or continue a run |
+| `/backend-status`, `/frontend-status`, `/backend-resume`, `/frontend-resume` | See or continue a run |
 | `/backend-config`, `/frontend-config` | Show or change models, gates, caps |
 
 Every task starts with one question: which tier is it?
@@ -67,7 +67,7 @@ In Full development you also approve the plan (backend) or the UX and UI designs
 | `hooks/` | The git safety hook, the agent-continuation hook, and their tests |
 | `skills/design-taste/` | The user's design taste, for `fe-ux`, `fe-ui` and `fe-review-experience` |
 
-Harness version: backend 3.3.0, frontend 7.1.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
+Harness version: backend 3.3.1, frontend 7.2.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
 
 ## Changing the harness
 

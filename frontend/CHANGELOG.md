@@ -13,6 +13,16 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 7.2.0 — 2026-11-03 — `/frontend-status`; commands follow Claude Code's guidance
+
+Minor (a new command), from the same comparison as backend 3.3.1.
+
+- New `/frontend-status`, replacing `/frontend status`: the same report, in line with
+  `/backend-status`, and callable by the model (`/frontend` is user-only). Read-only by tool
+  (`disallowed-tools`), with `state.json` and the timeline loaded before it starts. `/frontend
+  status` now points to it and starts nothing.
+- `/frontend-config` and `/frontend-resume` set `disable-model-invocation: true`.
+
 ## 7.1.0 — 2026-11-02 — design taste: type, spacing, icons, avoid-list
 
 Minor: new taste rules, agreed with the user after comparing `design-taste` with Anthropic's
