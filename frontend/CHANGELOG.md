@@ -30,8 +30,11 @@ and the community `taste-skill` and `design-memory`. Section numbers unchanged; 
 - **§6** adds a list of generic AI-design defaults to avoid. **§7** checklist split into 14
   single-question items. **§8** where the preferences come from; new ones are proposed by fe-ui and
   added only when the user confirms.
-- New `examples.md` (error, single-value edit, risky action). Description rewritten as what + when,
-  without section numbers. `PLAYBOOK.md` §2.3 and `fe-ui` say "brand (colours, typefaces)".
+- New `examples.md` (error, single-value edit, risky action, empty state, in-place feedback,
+  optimistic rollback, status not colour alone, a generic AI-design first screen): only rules that
+  need judgement or that models habitually break; more are added from real runs (§8). Description
+  rewritten as what + when, without section numbers. `PLAYBOOK.md` §2.3 and `fe-ui` say "brand
+  (colours, typefaces)".
 
 ## 7.0.0 — 2026-11-02 — product, UX, UI, engineering; Figma; review panel
 

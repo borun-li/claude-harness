@@ -19,3 +19,33 @@ Each pair shows a rule in `SKILL.md` done badly, then well.
 - **Bad:** "Are you sure?" with "OK" and "Cancel".
 - **Good:** "Delete 'Q3 report' and its 12 comments? This cannot be undone." with "Delete report"
   and "Keep it".
+
+## Empty state (§3: say what will appear, offer the first action)
+
+- **Bad:** a blank table area, or "No data".
+- **Good:** "Your uploaded files will appear here." with an "Upload your first file" button in the
+  empty area.
+
+## In-place feedback (§3: no toast for what the screen already shows)
+
+- **Bad:** after "Save", a toast in the top-right corner says "Saved successfully".
+- **Good:** the button briefly reads "Saved ✓" where it was clicked; a failure shows its reason
+  under the button.
+
+## Optimistic update and rollback (§3: optimistic, rolled back in place)
+
+- **Bad:** clicking "Like" shows a spinner until the server answers.
+- **Good:** the like shows at once; if the server rejects it, the like is undone and "Couldn't
+  like: you're offline. Try again." appears next to the button.
+
+## Status not colour alone (§4)
+
+- **Bad:** a red dot beside a job.
+- **Good:** a red dot with the word "Failed" (or an error icon), so it reads without colour.
+
+## Generic AI-design first screen (§6)
+
+- **Bad:** a gradient background, a big number with a small all-caps label above it, and three
+  identical rounded cards with trailing-arrow links.
+- **Good (tool class):** the first screen is the user's task list itself, with the frequent action
+  at hand; hierarchy from thin borders and type weight, no decoration.
