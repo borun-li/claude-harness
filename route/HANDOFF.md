@@ -32,6 +32,8 @@ Task: <one sentence: what is done when you return>
 Increment: <i — append only to the `## Increment <i>` section of your documents; omit if none>
 Only: <TC-014, FND-003, Q-5 … — the items of this round>
 Evidence: <report path#entry for each failing item>
+Feedback: <DFB-### to decide, or "raise a DFB for what you cannot build or draw as given"; omit if none>
+Budget: <Figma calls left this run; omit for agents without Figma>
 Read: <paths>; handoff entries: <their headers>
 Known pitfalls / tried and failed: <≤3 lines, from earlier entries; "none" if none>
 Do not touch: <out-of-round files or items>
@@ -50,6 +52,7 @@ Time from a real `date -u +%FT%TZ`. At most about 15 lines.
 ## <agent> #<n> · <phase or tier> · round <r>[ · increment <i>] · <ISO-8601 UTC>
 Task: <the brief's task line>
 Changed: <path (+a/-b) — what it does now>, or "nothing"
+Feedback: <DFB-### raised or decided, one line each>, or omit
 Result: <pass/fail counts, gate verdict or outcome> — evidence: <path>
 Next agent must know:
 - Pitfalls: <environment quirks, traps, order that matters>
@@ -57,7 +60,7 @@ Next agent must know:
 - Left open: <items not finished, and why>
 ```
 
-Read-only roles (reviewers, critics) put the entry in their return; the orchestrator appends it
+Read-only roles (reviewers, panelists) put the entry in their return; the orchestrator appends it
 unchanged. An agent that dies leaves no entry: the orchestrator writes one from the disk
 (`orchestrator for <agent> #<n>`), then dispatches a fresh agent.
 

@@ -4,9 +4,15 @@ The user sees something running and confirms it before any detailed design (Cons
 Used by the Prototype tier (the whole run) and by Full development (Phase 1b, after requirements
 and before detailed design). The orchestrator runs this procedure; one engineer builds.
 
+**Visual interfaces** (web, native, desktop, game UI) are prototyped as designs, not code: the
+Frontend PLAYBOOK's Phases 1–2 up to its UI stop, drawn in Figma; in a cross-stack run that UI stop
+is the backend's Prototype stop (`~/.claude/route/FRONTEND_BACKEND_LINE.md` §4). This file covers
+the rest: terminal and CLI interfaces, and work with no interface.
+
 ## 1. Understand the ask
 
-- **Full development:** the approved Phase 1 output (`01-requirements.md` or `01-brief.md`).
+- **Full development:** the approved Phase 1 output (`01-requirements.md`, or `00-requirements.md`
+  in a frontend-only run).
 - **Prototype tier:** no requirements phase. Write down the ask in the user's words, then do
   recon (≈30 s, read-only: stack, existing code, what already runs).
 
@@ -55,10 +61,9 @@ later phases and runs read them.
 
 - **Prototype tier:** report and stop. Offer Full development as the next step; the confirmed
   prototype and the intent answers become its input, and its Phase 1b is skipped.
-- **Full development:** if the confirmation changed scope, the Phase 1 owner (`be-analyst` or
-  `fe-critic`) amends the requirements or brief first. Then continue with the next phase. The gates
-  refuse a design dispatch (backend step `2`, frontend step `3`) before the Prototype approval
-  (`LOG.trail`).
+- **Full development:** if the confirmation changed scope, `be-analyst`
+  amends the requirements first. Then continue with the next phase. The gates refuse a backend
+  design dispatch (step `2`) before the Prototype approval (`LOG.trail`).
 - **A later Full development run** on the same ask may reuse a confirmed prototype instead of
   building another (backend PLAYBOOK §2.3).
 - The prototype stays in `prototype/` as a reference. Product code is written from the design,

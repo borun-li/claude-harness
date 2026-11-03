@@ -23,7 +23,9 @@ Do §1 and §2 first (read-only, about 30 s), so one question can carry what the
   what runs and roughly what it costs. Never infer the tier from the request.
 - **Backend or cross-stack class:** in the same call, the rest of backend PLAYBOOK §2.3 (model plan,
   risk, gate profile when unconfirmed), used only if the answer is Full development.
-- **Frontend class:** the tier alone; the Frontend PLAYBOOK asks its own kickoff questions.
+- **Frontend class:** in the same call, the rest of frontend PLAYBOOK §2.3 (model plan, risk, design
+  stops, the Figma budget, and the surface and named user when unset), used only if the answer is
+  Prototype or Full development.
 
 Record the answers; every team reads them instead of asking again.
 
@@ -53,7 +55,9 @@ Record the answers; every team reads them instead of asking again.
   `verified` with its source (`file:line`) and date, or `new`.
 - Tell the user the tier, the class, the evidence (`file:line`), and what you are starting:
   - **Small change** → §4 below; no team PLAYBOOK.
-  - **Prototype** → `~/.claude/route/PROTOTYPE.md`; no team PLAYBOOK.
+  - **Prototype** → a visual interface (web, native, desktop, game UI): the Frontend PLAYBOOK with
+    `tier: "prototype"`, which ends at its UI stop (designed in Figma, not coded). Otherwise
+    `~/.claude/route/PROTOTYPE.md`; no team PLAYBOOK.
   - **Full development** → read that team's PLAYBOOK and run its flow as its orchestrator, with
     `tier: "full"` in its `state.json`.
 

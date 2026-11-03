@@ -6,7 +6,7 @@ It lives in `~/.claude`, so it works in every project you open with Claude Code.
 
 ## Install
 
-Prerequisites: [Claude Code](https://claude.com/claude-code), Python 3, Node.js with npm, git, and Google Chrome (used for frontend screenshots). Plus whatever toolchain your own project needs.
+Prerequisites: [Claude Code](https://claude.com/claude-code), Python 3, Node.js with npm, git, and Google Chrome (used for frontend screenshots). For visual frontend design, the Figma plugin for Claude Code with a Full seat (writing to Figma files needs one). Plus whatever toolchain your own project needs.
 
 ```sh
 git clone https://github.com/borun-li/claude-harness.git
@@ -37,7 +37,7 @@ In a project folder, start Claude Code and either describe the work in plain wor
 |---|---|
 | `/route <what you want>` | Single entry point: decides frontend, backend or cross-stack and runs the right team |
 | `/backend <what to build>` | Backend team directly: requirements → prototype → design → build + tests → review panel (typed only) |
-| `/frontend <what to build>` | Frontend team directly: brief → structure → spec → queue → build → verify (typed only) |
+| `/frontend <what to build>` | Frontend team directly: features → UX → UI in Figma → build → verify and review (typed only) |
 | `/backend-status`, `/backend-resume`, `/frontend-resume` | See or continue a run |
 | `/backend-config`, `/frontend-config` | Show or change models, gates, caps |
 
@@ -60,14 +60,14 @@ In Full development you also approve the plan and the final acceptance. Everythi
 | `CONSTITUTION.md` | Rules that override every playbook |
 | `ORCHESTRATOR.md` | How the orchestrator (the main session) dispatches, decides, keeps context and uses gates in every team |
 | `commands/` | The slash commands above |
-| `agents/` | Twelve roles: `be-analyst`, `be-architect`, `be-developer`, `be-tester`, the review panel `be-review-behavior`, `be-review-reliability`, `be-review-security` with its coordinator `be-reviewer`, and `fe-critic`, `fe-designer`, `fe-engineer`, `fe-tester` |
+| `agents/` | Sixteen roles. Backend: `be-analyst` (also the product role for frontend-only runs), `be-architect`, `be-developer`, `be-tester`, the review panel `be-review-behavior`, `be-review-reliability`, `be-review-security` with its coordinator `be-reviewer`. Frontend: `fe-ux`, `fe-ui`, `fe-engineer`, `fe-tester`, the review panel `fe-review-experience`, `fe-review-accessibility`, `fe-review-integration` with its coordinator `fe-reviewer` |
 | `backend/`, `frontend/` | Playbooks, quality bars, document templates, changelogs |
-| `route/` | `PROTOTYPE.md` (the prototype procedure), `HANDOFF.md` (dispatch brief and handoff log) and the capability-table template |
+| `route/` | `PROTOTYPE.md` (the prototype procedure), `HANDOFF.md` (dispatch brief and handoff log), `FRONTEND_BACKEND_LINE.md` (the line between the teams) and the capability-table template |
 | `gates/` | `gate.py`: automatic checks between steps, run log, fixtures, waivers, screenshot capture (tests in `gates/tests`) |
 | `hooks/` | The git safety hook, the agent-continuation hook, and their tests |
-| `skills/design-taste/` | Design guidance for `fe-designer` |
+| `skills/design-taste/` | The user's design taste, for `fe-ux`, `fe-ui` and `fe-review-experience` |
 
-Harness version: backend 3.2.0, frontend 6.1.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
+Harness version: backend 3.3.0, frontend 7.0.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
 
 ## Changing the harness
 

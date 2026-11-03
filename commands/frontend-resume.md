@@ -11,7 +11,8 @@ You are the **Orchestrator** resuming a frontend run. Read `~/.claude/ORCHESTRAT
 
 ## Recover state
 
-The run dir is `docs/frontend/`, or legacy `docs/uiux/` / `uiux/` if only that exists (say so).
+The run dir is `docs/frontend/`. A `state.json` with `harness_version` below 7.0 is not resumed
+(PLAYBOOK §1.3): report it and offer a new round that reads its artifacts as input.
 
 1. Read `state.json`. If missing, say there is no run and suggest `/frontend`.
 2. Read the last `orchestrator` entry in `docs/frontend/handoff.md` (`~/.claude/route/HANDOFF.md`
@@ -25,8 +26,9 @@ The run dir is `docs/frontend/`, or legacy `docs/uiux/` / `uiux/` if only that e
 
 ## Confirm before continuing
 
-Show the mode, phases done, human stop decisions, gate results, loop counters, open questions and
-the phase you will resume at. Re-confirm the model plan with `AskUserQuestion`.
+Show the tier, phases done, human stop decisions, gate results, loop counters, open DFBs, Figma
+calls used against the budget, open questions and the phase you will resume at. Re-confirm the
+model plan with `AskUserQuestion`.
 
 ## Arguments
 

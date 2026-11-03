@@ -1,54 +1,65 @@
 # Frontend Agent Team
 
-A design-to-verified-interface team for Claude Code, installed globally. It designs the interface
-and builds its frontend side; backend work goes to the Backend team. Usually entered through `/route`.
+A frontend team for Claude Code, installed globally, organised like real frontend work: product
+decides what the product does, UX how the user gets through it, UI how it looks and feels, and the
+frontend engineer makes it run on the real surface with real data. Backend work goes to the Backend
+team. Usually entered through `/route`.
 
 ## Commands
 
 | Command | Does |
 |---|---|
-| `/frontend new <ask>` | Design something new, ending in a design you approve |
-| `/frontend redesign <ask>` | Audit what exists, then redesign it |
-| `/frontend audit` · `review` | Findings only, on the product or on existing designs |
-| `/frontend implement` | Build an approved design and verify it on the running interface |
-| `/frontend status` | Read-only status, gates and timeline |
+| `/route <ask>` | Ask the tier, classify the work, start the right team |
+| `/frontend <ask>` | Run the Frontend team directly |
+| `/frontend status` | Read-only status, gates, Figma budget and timeline |
 | `/frontend-resume [phase]` | Continue an interrupted run |
-| `/frontend-config [change]` | Show or change models, lenses, caps |
+| `/frontend-config [change]` | Show or change models, review panel, design stops, Figma budget |
+
+An audit or review of an existing interface alone is not a run: name `fe-review-experience`,
+`fe-review-accessibility` or `fe-review-integration` directly (and `fe-reviewer` to merge).
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    S(["/frontend"]) --> CR[fe-critic] --> DS[fe-designer] --> EN[fe-engineer] --> TE[fe-tester] --> E([delivered])
-    DS -. review .-> CR
-    TE -. "not done" .-> EN
-    TE -. "spec defect" .-> DS
+    S(["/frontend"]) --> P[be-analyst<br/>features] --> UX[fe-ux<br/>flows, pages, states] --> UI[fe-ui<br/>Figma]
+    UI --> Q[fe-engineer<br/>feasibility, queue] --> B[fe-engineer<br/>build] --> V[fe-tester ‖ review panel<br/>→ fe-reviewer] --> E([accepted])
+    UI -. "flow feels wrong" .-> UX
+    Q -. "too costly, does not fit" .-> UI
+    V -. "not done, blocker, major" .-> B
+    V -. "design defect" .-> UI
+    E -. "after launch: feedback" .-> UX
 ```
 
-- **Solid arrows**: the order of work. fe-critic writes the brief, fe-designer the structure and
-  spec, fe-engineer builds each queue row, fe-tester judges it on the running interface.
-- **Dotted arrows**: loops. Specs go back to fe-critic for review; rows that did not take effect
-  go back to fe-engineer; a spec the running interface contradicts goes back to fe-designer.
-- **Orchestrator**: interviews you, writes the queue, and captures evidence from the running interface
-  with a script (DOM, styles, accessibility tree, screenshots) at every committed screen size.
-- **Your sign-off**: **Plan** (the design, or the queue of expected results before building) and
-  **Acceptance** (after verification). You are asked in between only when an answer changes what
-  gets built.
-- **Priority**: every finding and row is P1–P3 against one named user; P1s first.
-- **Checks**: automatic gates after every phase (shared with the Backend team); failures go back to
-  their owner. Results you accept are registered and re-checked in every later round. A tamper-evident run log records every dispatch and sign-off.
-- **Deliverables**: `<project>/docs/frontend/01-brief.md` … `06-verification.md`, plus the shared
-  `contracts/FRONTEND_BACKEND_CONTRACT.md`.
+- **Solid arrows**: the order of work. In a cross-stack run the features come from the Backend
+  team's requirements.
+- **Dotted arrows**: feedback flows back. Any role may raise a design-feedback item (DFB); its
+  owner decides it; a change to something you confirmed comes back to you.
+- **While UI draws**, the engineer already builds what does not depend on visuals (data fetching,
+  state handling, routing).
+- **Figma**: UI is drawn in Figma and confirmed there before anything is built. Each run has a call
+  budget proposed at kickoff (20 + 8 per page by default, under a 300-a-month cap).
+- **Your sign-off**: Kickoff (one question), **UX** (flows and states; only for 2+ pages or a new
+  flow), **UI** (the Figma frames and the queue of expected results), and **Acceptance**.
+- **Review**: a panel of up to three reviewers on the running interface — experience (always),
+  accessibility, data & runtime (by risk and what changed) — merged by a coordinator who drops a
+  finding only with counter-evidence. Only blockers and majors go to a fix round.
+- **Checks**: automatic gates after every phase (shared with the Backend team); results you accept
+  are registered and re-checked in every later round. A tamper-evident run log records every
+  dispatch, sign-off and Figma call count.
 
 ## Team
 
 | Agent | Role | Writes |
 |---|---|---|
-| Orchestrator | Interviews, captures evidence, writes the queue, keeps state | `state.json`, `05-queue.md`, `evidence/` |
-| `fe-critic` | Brief, findings with side and priority, capability rulings (read-only) | text filed by the orchestrator |
-| `fe-designer` | Structure, then specification and the contract draft | `02-structure.md`, `03-spec.md`, contract |
-| `fe-engineer` | Builds one queue row at a time, frontend side only | frontend code |
-| `fe-tester` | Verdict per row from captured evidence; assertions that can fail | tests, `06-verification.md` |
+| `be-analyst` | Product features, in frontend-only runs | `00-requirements.md` |
+| `fe-ux` | Flows, page structure, state tables, ASCII wireframes; post-launch insights | `01-ux.md`, `06-feedback.md` |
+| `fe-ui` | Design plan and self-check, tokens, components, Figma frames | `02-ui.md`, Figma |
+| `fe-engineer` | Scaffold, feasibility, the queue, then one row at a time; fixes | `03-queue.md`, frontend code, contract draft |
+| `fe-tester` | One verdict per row against its frame and state rows | `04-verification.md`, tests |
+| `fe-review-experience` · `-accessibility` · `-integration` | Review panel, read-only | returned candidates |
+| `fe-reviewer` | Coordinator and re-checker | `05-review.md` |
+| Orchestrator | Interviews, evidence capture, frame exports, gates, state | `state.json`, `evidence/` |
 
 ## Files
 
@@ -56,12 +67,17 @@ flowchart LR
 |---|---|
 | `~/.claude/CONSTITUTION.md` | change rules every agent follows (yours alone) |
 | `frontend/QUALITY-BARS.md` | raise the Definition of Done |
-| `frontend/PLAYBOOK.md` | change modes, phases, stops |
-| `frontend/config.json` | change models, lenses, loop caps |
+| `frontend/PLAYBOOK.md` | change phases, stops, feedback routing |
+| `frontend/config.json` | change models, review panel, design stops, Figma budget, viewports, caps |
 | `frontend/templates/` | change the deliverables (examples in `templates/examples/`) |
+| `route/FRONTEND_BACKEND_LINE.md` | change the line between the teams |
 | `gates/` | change the automatic checks (keep `gates/tests` green) |
 | `agents/fe-*.md` | change one role |
 | `frontend/CHANGELOG.md` | record what changed and why |
 
-Per-project: `<project>/.claude/project-context.md` (surface, named user, frontend/backend line)
-and `<project>/.claude/frontend.json`.
+Per-project: `<project>/.claude/project-context.md` (surface, named user, frontend/backend line,
+taste choices) and `<project>/.claude/frontend.json`.
+
+The agents that use Figma (`fe-ui`, `fe-engineer`) list the tools of the Figma plugin's MCP server
+as `mcp__plugin_figma_figma__*`. If your Figma server is installed under another name, change that
+entry in their frontmatter.
