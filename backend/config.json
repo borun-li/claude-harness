@@ -1,5 +1,5 @@
 {
-  "harness_version": "3.3.5",
+  "harness_version": "3.3.6",
   "_comment": "Global defaults for the backend agent team. A project may override any key by creating .claude/backend.json in the project root (shallow merge, top-level keys).",
   "model_plan": {
     "_active_tier": "quality",
@@ -66,13 +66,11 @@
     "template_dir": "~/.claude/backend/templates"
   },
   "gates": {
-    "_comment": "Human stops. Plan and Acceptance are fixed; everything else stops only for a Constitution §5 case (PLAYBOOK §3F).",
+    "_comment": "Human stops, listed for reference: all are fixed and cannot be switched off (PLAYBOOK §3F, Constitution §2.7, §6.7); everything else stops only for a Constitution §5 case.",
+    "Kickoff": true,
+    "Prototype": true,
     "Plan": true,
-    "Acceptance": true,
-    "G0_detailed_design": false,
-    "G0_build": false,
-    "G0_verification": false,
-    "G0_review": false
+    "Acceptance": true
   },
   "parallelism": {
     "_comment": "Design review runs only when state.json risk is high (PLAYBOOK §3). The review panel is trimmed by risk (PLAYBOOK §6); the coordinator runs whenever a panelist ran.",

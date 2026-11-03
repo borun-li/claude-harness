@@ -13,6 +13,21 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 7.2.5 — 2026-11-03 — one reading for each ambiguous rule
+
+Patch, class B of the 7.2.4 audit; each ruling is the user's:
+- A cross-stack run keeps one handoff log, in the Backend run dir (`HANDOFF.md` §1).
+- A DFB's raiser returns it; the orchestrator files it in `06-feedback.md`; the owner fills in only
+  its decision (`fe-ui` no longer writes the rows it raises).
+- A Prototype-tier run includes Phase 0 in a frontend-only run (`route/PROTOTYPE.md`), and ends with
+  `status: "prototype_confirmed"`, which kickoff no longer treats as unfinished; Full development
+  reusing it keeps the run dir.
+- One-stop runs recompute the Figma budget once `fe-ux` is green and ask before `fe-ui` only if it
+  grew.
+- Config `design_stops` → `design_stop_rule`; `state.json` keeps `design_stops: 1 | 2`.
+- Gate: a project's `.claude/frontend.json` `artifacts.run_dir` sets the run dir (the top-level
+  `run_dir` still works). Test added.
+
 ## 7.2.4 — 2026-11-03 — conflicting descriptions that broke runs
 
 Patch, from the same audit as backend 3.3.5:

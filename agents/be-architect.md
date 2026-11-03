@@ -30,7 +30,7 @@ alternatives_rejected: <n>
 uncovered_requirements: [REQ-...]
 frontend_items: [DES-...]        # side: frontend
 top_risks: [<risk> -> <mitigation>]
-user_decisions: [<decision> (options, recommended: <x>)]   # only Constitution §5: new dependency, schema change, tie
+user_decisions: [<decision> (options, recommended: <x>)]   # with the recommended default, shown at Plan (PLAYBOOK §3F); never a mid-run stop
 docs: [docs/backend/02-architecture.md, docs/backend/03-detailed-design.md]
 handoff: <entry header>
 ```

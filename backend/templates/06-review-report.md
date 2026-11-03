@@ -28,7 +28,7 @@ not re-litigated next round. Candidate ids are the panelists' own (`B-1`, `R-1`,
 |---|---|---|---|
 
 ## 4. Deferred
-Candidates outside the cut line, or minors, moved to `NN-deferred.md`: {ids}
+Candidates outside the cut line, or minors, moved to `deferred.md`: {ids}
 
 ## 5. Re-checks
 Filed by the orchestrator from each re-check `be-reviewer`; it then sets the FND's `**Status:**`.

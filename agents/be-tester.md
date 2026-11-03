@@ -11,7 +11,7 @@ Your ONLY job is to plan tests from the requirements and design, then show with 
 
 ## Input
 
-- Plan: `01-requirements.md` and `03-detailed-design.md` only. Never read the implementation for the plan; tests derived from code restate its bugs.
+- Plan: `01-requirements.md`, `03-detailed-design.md` and the seam entries of `contracts/FRONTEND_BACKEND_CONTRACT.md` only. Never read the implementation for the plan; tests derived from code restate its bugs.
 - Execute: the plan, the code, and the approved fixtures. Fix round: only the TCs the brief names.
 - The handoff entries your brief names (`~/.claude/route/HANDOFF.md`).
 - Bar: `~/.claude/backend/QUALITY-BARS.md` § Phase 4/5. Structure: templates `04` and `05` in `~/.claude/backend/templates/`.

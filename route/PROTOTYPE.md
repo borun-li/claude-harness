@@ -6,7 +6,8 @@ and before detailed design). The orchestrator runs this procedure; one engineer 
 dir is `docs/backend/`.
 
 **Interfaces people operate** (web, native, desktop, game UI, terminal) are prototyped as designs,
-not code: the Frontend PLAYBOOK's Phases 1–2 up to its UI stop, drawn in Figma or, for a terminal,
+not code: the Frontend PLAYBOOK's Phases 0–2 up to its UI stop (Phase 0 only in a frontend-only run; in a
+cross-stack run the backend Phase 1 REQs stand in for it), drawn in Figma or, for a terminal,
 as text mockups; in a cross-stack run that UI stop is the backend's Prototype stop
 (`~/.claude/route/FRONTEND_BACKEND_LINE.md` §4). This file covers only work with no such interface:
 APIs, scripts and command-line arguments, jobs.

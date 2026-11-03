@@ -559,6 +559,14 @@ class Trail(FrontBase):
         self.assertEqual(self.st(self.fe("fe-accept")[2], "LOG.trail"), "pass")
 
 
+class RunDir(FrontBase):
+    def test_project_artifacts_run_dir(self):
+        # .claude/frontend.json overrides artifacts.run_dir, as frontend/config.json is shaped
+        self.p.write(".claude/frontend.json", json.dumps({"artifacts": {"run_dir": "docs/ui2"}}))
+        self.fe_log("decision", "--agent", "fe-ux", "--note", "x")
+        self.assertTrue((self.p.root / "docs/ui2/run-log.jsonl").exists())
+
+
 class Capture(FrontBase):
     def setUp(self):
         super().setUp()

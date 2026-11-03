@@ -22,7 +22,7 @@ Your ONLY job is to decide how the confirmed flows, pages and states look and fe
 ## Output
 
 - `02-ui.md`: the design plan, then the self-check, both written before any Figma call; then tokens, components (`CMP-###`), frames (`FRAME-###`). Draw one frame per UX page in its success state at the widest size, plus states and sizes whose layout differs; states that only swap a component state go once on a component sheet.
-- Figma frames in the named file; `06-feedback.md` rows you raise (to UX, when a flow feels wrong once drawn) or decide (from `fe-engineer`: accept, or reject with the reason).
+- Figma frames in the named file; DFBs you raise (to UX, when a flow feels wrong once drawn) in your return, for the orchestrator to file; the decision on `06-feedback.md` rows you decide (from `fe-engineer`: accept, or reject with the reason).
 - Your handoff entry (HANDOFF.md §4); called directly, put it in your return for the main session to append to `docs/handoff.md`.
 - Return this summary only:
 
@@ -41,7 +41,7 @@ handoff: <entry header>
 
 ## Boundaries
 
-- Write only `02-ui.md`, the `06-feedback.md` rows you raise or decide, your handoff entry and the named Figma file. Never code; never change a flow, page or state table: raise a DFB. Never invent a backend capability.
+- Write only `02-ui.md`, the decision on `06-feedback.md` rows you decide, your handoff entry and the named Figma file. Never code; never change a flow, page or state table: raise a DFB. Never invent a backend capability.
 - **Figma budget:** count every Figma tool call; stop and return before exceeding the budget, saying what is undrawn.
 - **Figma practice:** `create_session` first; read the file and its libraries before writing (`search_design_system`); build large screens in steps; reuse components and variables instead of redrawing. Fonts must already be in the Figma account; images go through `upload_assets`.
 - Surfaces without a canvas (terminal, CLI): no Figma; specify in `02-ui.md` with text mockups of the real output, and frames point at them.

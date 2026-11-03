@@ -21,7 +21,7 @@ state. The orchestrator reads it at kickoff and on resume. Version: `harness_ver
 | `be-review-reliability` | Panelist: Reliability & Operations | its findings (returned, read-only) | No |
 | `be-review-security` | Panelist: Security & Trust boundaries | its findings (returned, read-only) | No |
 | `be-reviewer` | Review Coordinator | merged `06-review-report.md` (returned, read-only) | No |
-| Orchestrator | Project Manager | `state.json`, `07-acceptance.md`, filing read-only roles' text | No |
+| Orchestrator | Project Manager | `state.json`, `07-acceptance.md`, `deferred.md`, filing read-only roles' text | No |
 
 Interface work is designed and built by the Frontend team (`fe-ux`, `fe-ui`, `fe-engineer`,
 `fe-tester`, its review panel), dispatched by you under §3C.
@@ -44,7 +44,7 @@ Interface work is designed and built by the Frontend team (`fe-ux`, `fe-ui`, `fe
 
 **2.1a Cut line.** Write the ask in the user's words, then its simplest useful version: that is
 the round. Everything unnamed (variants, legacy data, concurrency, migrations, non-functional axes)
-goes below the line into `NN-deferred.md`. Put the cut line in the analyst's dispatch.
+goes below the line into `deferred.md`. Put the cut line in the analyst's dispatch.
 
 **2.2 Recon (≈30 s, read-only).** Stack, build/test commands, git or not, prior run in
 `docs/backend/`, a confirmed prototype (`<run-dir>/01b-prototype.md`). If the product calls an LLM
@@ -64,6 +64,8 @@ evidence. Then ask:
 - **Risk** — `high` if the round touches money, personal data, auth or secrets, an irreversible
   operation or data migration, a schema change, a new external dependency or a public API;
   otherwise `normal`. Recommend one from the recon, citing the evidence.
+- **Design stops and Figma budget** — only when the round touches the interface: frontend
+  PLAYBOOK §2.3's question, in this call; the Frontend team's §2.4 records it in its `state.json`.
 - **Gate profile** — only while `.claude/gates.json` is unconfirmed: show the detected commands;
   on approval set `confirmed: true` and `confirmed_on`.
 
@@ -124,18 +126,20 @@ message:
   never improvises.
 
 **Phase 5 — Verification** → `be-tester` runs every `TC-###` and records real output; frontend
-items are verified by `fe-tester` and the frontend review panel (§3C.4–5). Failures go to the
+items are verified by `fe-tester` (§3C.4–5); the frontend panel runs in Phase 6. Failures go to the
 owning engineer (§3C.6) through the `p5` loop (§3D): each round a fresh engineer naming only the failing TCs, then a fresh `be-tester`.
 Never relax a test.
 
 **Phase 6 — Review** (panel trimmed by §6):
 1. `mark --role be-reviewer`, then the panelists in one message, each with the same scope (diff,
-   requirements, design). Each returns candidate findings; you keep them in `<run-dir>/logs/`.
+   requirements, design); with frontend items, the frontend panel (frontend PLAYBOOK §6) on the
+   frontend diff in the same message, its findings joining the one fix list (§3C.4). Each returns
+   candidate findings; you keep them in `<run-dir>/logs/`.
 2. A fresh `be-reviewer` coordinates: merges duplicates, tries to disprove every candidate against
    the code, drops one only with concrete counter-evidence, and ranks the rest. You file its text as
    `06-review-report.md`, then run `p6`.
 3. Blockers and majors go to the owning engineer as a fresh dispatch naming only those `FND-###`;
-   minors go to `NN-deferred.md`. Then Phase 5 again with a fresh `be-tester` on the affected TCs.
+   minors go to `deferred.md`. Then Phase 5 again with a fresh `be-tester` on the affected TCs.
 4. Re-check: `mark --role be-reviewer`, then one fresh `be-reviewer` judges only the fixed
    `FND-###`; never the whole panel again. File its re-check table in `06-review-report.md` §5 and
    set each confirmed FND's `**Status:**` to `fixed in round <n>`; one not confirmed stays `open`
@@ -189,8 +193,8 @@ you, never by the agent whose work it checks. Exit codes, waivers and the rule n
 | After Phase 2, before the Plan stop | `p2` (architecture, detailed design, fixture answers, review sheet) |
 | After the user approves the Plan | `fixtures-approve --by <user>` |
 | Phase 4 start | `baseline` |
-| Before dispatching any writing agent | `mark --role <agent>` (Phase 4: `be-tester` first, `be-developer` last) |
-| Before any panel or `be-reviewer` dispatch | `mark --role be-reviewer` |
+| Before dispatching any writing agent | `mark --role <agent>` (Phase 4: `be-tester` first, `be-developer` last; none for Phase 1b) |
+| Before a panel (Phase 2.2, 6.1) and before a re-check (6.4); not again before the coordinator | `mark --role be-reviewer` |
 | Before / after every dispatch | `log dispatch …` / `log return …` |
 | After Phase 4 / Phase 5 | `p4` / `p5` |
 | After filing `06-review-report.md` | `p6` |
@@ -243,7 +247,8 @@ the Plan approval to precede the first `be-developer` dispatch outside Phase 1b,
 2. The handoff log is `<run-dir>/handoff.md`; resume with `/backend-resume`.
 3. Traceability ids are mandatory; send an id-less document back once.
 4. Panelists and `be-reviewer` have no Write/Edit but have Bash, so `mark --role be-reviewer` comes
-   before every review dispatch; `p6` verifies the tree is unchanged. Mutations belong in a
+   before each panel and each re-check (never between panel and coordinator, which would hide the
+   panel's changes); `p6` verifies the tree is unchanged. Mutations belong in a
    throwaway tree.
 
 ## 6. Risk and cost
@@ -262,7 +267,7 @@ Say which panelists you dispatched and why. A change of risk mid-run is a Consti
 <project>/docs/backend/            (second feature: docs/backend/<slug>/…)
   state.json  01-requirements.md  01b-prototype.md  02-architecture.md  03-detailed-design.md
   04-test-plan.md  05-test-report.md  06-review-report.md  07-acceptance.md
-  08-implementation-log.md  NN-deferred.md  handoff.md  logs/
+  08-implementation-log.md  deferred.md  handoff.md  logs/
 <project>/prototype/               throwaway prototype from Phase 1b
 ```
 
