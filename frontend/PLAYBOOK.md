@@ -106,8 +106,8 @@ Only when needed, in a second call right after (the tool takes at most 4 questio
 `ORCHESTRATOR.md`, Decisions): the delivery surface and the named user when unset, and the gate
 profile while `.claude/gates.json` is unconfirmed.
 
-Taste choices the `design-taste` skill lists (§1: product class, brand colours, motion, copy tone)
-are asked here only if `project-context.md` lacks them; record the answers there.
+Taste choices the `design-taste` skill lists (§1: product class, brand (colours, typefaces),
+motion, copy tone) are asked here only if `project-context.md` lacks them; record the answers there.
 
 **2.4 Init state.** Write `docs/frontend/state.json` (§8). If one is unfinished, stop and point to
 `/frontend-resume`. Record `requirements`: `docs/backend/01-requirements.md` in a cross-stack run,

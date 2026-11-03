@@ -67,7 +67,7 @@ In Full development you also approve the plan (backend) or the UX and UI designs
 | `hooks/` | The git safety hook, the agent-continuation hook, and their tests |
 | `skills/design-taste/` | The user's design taste, for `fe-ux`, `fe-ui` and `fe-review-experience` |
 
-Harness version: backend 3.3.0, frontend 7.0.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
+Harness version: backend 3.3.0, frontend 7.1.0 (see `backend/CHANGELOG.md`, `frontend/CHANGELOG.md`).
 
 ## Changing the harness
 

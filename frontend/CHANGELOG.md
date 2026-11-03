@@ -13,6 +13,29 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §1B。**
 
+## 7.1.0 — 2026-11-02 — design taste: type, spacing, icons, avoid-list
+
+Minor: new taste rules, agreed with the user after comparing `design-taste` with Anthropic's
+`frontend-design` skill, the frontend-aesthetics cookbook prompt and skill-authoring best practices,
+and the community `taste-skill` and `design-memory`. Section numbers unchanged; §8 appended.
+
+- **§1 by class.** The brand question now covers typefaces as well as colours (still four
+  questions). The class table adds small screens, keyboard (command palette for tools only), dark
+  mode (required for tools; one mode for showcases unless the user asks), density (tools: 14 px
+  body, 36–40 px rows) and boldness (showcases: one signature moment). The kickoff procedure is left
+  to the PLAYBOOK.
+- **§3** adds empty states. **§4** adds type (follows the brand; with none, fe-ui proposes and uses
+  the system stack meanwhile), a 4 px spacing scale, 4–6 px radius, and icons (the library's own
+  set, else Lucide; one set, line style). **§5**: start Figma work from the library's kit.
+- **§6** adds a list of generic AI-design defaults to avoid. **§7** checklist split into 14
+  single-question items. **§8** where the preferences come from; new ones are proposed by fe-ui and
+  added only when the user confirms.
+- New `examples.md` (error, single-value edit, risky action, empty state, in-place feedback,
+  optimistic rollback, status not colour alone, a generic AI-design first screen): only rules that
+  need judgement or that models habitually break; more are added from real runs (§8). Description
+  rewritten as what + when, without section numbers. `PLAYBOOK.md` §2.3 and `fe-ui` say "brand
+  (colours, typefaces)".
+
 ## 7.0.0 — 2026-11-02 — product, UX, UI, engineering; Figma; review panel
 
 Major: changed roles, phase flow and every artifact contract. Built from a review of the ithaca run

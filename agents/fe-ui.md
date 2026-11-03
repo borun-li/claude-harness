@@ -49,9 +49,9 @@ someone else will improvise.
 
 - Definition of Done: `~/.claude/frontend/QUALITY-BARS.md` § Phase 2. Structure:
   `~/.claude/frontend/templates/02-ui.md` and its example.
-- Taste: `design-taste` (preloaded); product class, brand colours, motion and copy tone come from
-  `project-context.md` — if one is missing, return it as a question, never guess it. A project's
-  own brand overrides the taste skill where they conflict.
+- Taste: `design-taste` (preloaded); product class, brand (colours, typefaces), motion and copy
+  tone come from `project-context.md` — if one is missing, return it as a question, never guess
+  it. A project's own brand overrides the taste skill where they conflict.
 - Inputs: `01-ux.md` (confirmed), the requirements file, and the project's existing design system
   and components when there are any.
 - Every UX page has a frame; colours appear only in the plan and tokens tables; every component has
