@@ -16,7 +16,9 @@ harness 的原则（~/.claude/ORCHESTRATOR.md，Boundaries）：
 「作用域 = 你在命令行里亲手打出的那个路径」。
 """
 import json
+import os
 import re
+import subprocess
 import sys
 
 # 每条 = (正则, 你本来想做的事, 该用什么)
@@ -91,6 +93,52 @@ def strip_data(command: str) -> str:
     return text
 
 
+# —— 唯一的换分支例外：工作区完全干净时切回 main ——
+# 用户 2026-11-04 定下流程「开分支 → 提交 → 推送 → PR，由用户合并」，合并后要回到 main。
+# 干净的工作区里没有任何别人未提交的活，换分支丢不了东西，满足本文件的判据。
+# 只认字面的 main（可带 -q/--quiet、git -C <dir>），且必须在钩子运行时查得到「干净」：
+# `git status --porcelain` 为空（未跟踪文件也算脏）。目录查不清就不放行。
+_TO_MAIN = re.compile(
+    r"\bgit\s+(?:-C\s+(\S+)\s+)?(?:checkout|switch)(?:\s+(?:-q|--quiet))*\s+main(?=\s*(?:$|&&|;|\|\||\n))")
+_CD = re.compile(r"(?:^|[;&|\n]\s*)cd\s+(\S+)")
+
+
+def _target_dir(command: str, m: re.Match, cwd: str) -> str | None:
+    if m.group(1):
+        d = m.group(1)
+    else:
+        cds = [c for c in _CD.finditer(command) if c.end() <= m.start()]
+        d = cds[-1].group(1) if cds else cwd
+    if d in ("&&", ";", "||", "|"):
+        return None  # 原路径在引号里被剔掉了，查不清
+    d = os.path.expanduser(d)
+    if not os.path.isabs(d):
+        d = os.path.join(cwd, d)
+    return d if os.path.isdir(d) else None
+
+
+def _is_clean(d: str) -> bool:
+    try:
+        r = subprocess.run(["git", "-C", d, "status", "--porcelain"],
+                           capture_output=True, text=True, timeout=10)
+    except Exception:
+        return False
+    return r.returncode == 0 and r.stdout.strip() == ""
+
+
+def exempt_back_to_main(command: str, cwd: str) -> tuple[str, str | None]:
+    """把「干净工作区切回 main」从命令里抹掉；工作区脏时返回拒绝理由。"""
+    for m in reversed(list(_TO_MAIN.finditer(command))):
+        d = _target_dir(command, m, cwd)
+        if d is None:
+            continue  # 查不清就交给普通规则拦
+        if not _is_clean(d):
+            return command, (f"{d} 的工作区不干净（git status --porcelain 非空）。"
+                             "只有完全干净时才放行切回 main：先提交或处理掉这些改动。")
+        command = command[: m.start()] + " " * (m.end() - m.start()) + command[m.end():]
+    return command, None
+
+
 BANNER = (
     "这条命令的作用域是 git 认为的整棵树，不是你打出来的那个路径。\n"
     "两者之差 = 别人尚未提交的活。本仓已经因此丢过两次活（详见 "
@@ -106,6 +154,12 @@ def main() -> int:
     if payload.get("tool_name") != "Bash":
         return 0
     command = strip_data(str(payload.get("tool_input", {}).get("command", "")))
+    command, dirty = exempt_back_to_main(command, str(payload.get("cwd") or os.getcwd()))
+    if dirty:
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": dirty}}))
+        return 0
     for pattern, intent, instead in RULES:
         if re.search(pattern, command):
             reason = (

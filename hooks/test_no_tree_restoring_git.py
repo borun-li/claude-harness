@@ -11,9 +11,11 @@
 用例是同一等级的验收项，不是补充。
 """
 import json
+import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 HOOK = pathlib.Path(__file__).with_name("no-tree-restoring-git.py")
 
@@ -64,11 +66,13 @@ CASES: list[tuple[str, bool]] = [
 ]
 
 
-def denies(command: str) -> bool:
+def denies(command: str, cwd: str | None = None) -> bool:
+    payload = {"tool_name": "Bash", "tool_input": {"command": command}}
+    if cwd:
+        payload["cwd"] = cwd
     out = subprocess.run(
-        [sys.executable, str(HOOK)],
-        input=json.dumps({"tool_name": "Bash", "tool_input": {"command": command}}),
-        capture_output=True, text=True, check=True,
+        [sys.executable, str(HOOK)], input=json.dumps(payload),
+        capture_output=True, text=True, check=True, cwd=cwd or tempfile.gettempdir(),
     ).stdout.strip()
     if not out:
         return False
@@ -84,6 +88,38 @@ def main() -> int:
             print("FAIL want=%s got=%s  %r"
                   % ("DENY" if want_deny else "ALLOW",
                      "DENY" if got else "ALLOW", command))
+    # —— 唯一的换分支例外：干净工作区切回 main（2026-11-04 用户要求）——
+    with tempfile.TemporaryDirectory() as tmp:
+        clean, dirty, plain = (os.path.join(tmp, n) for n in ("clean", "dirty", "plain"))
+        os.mkdir(plain)
+        for d in (clean, dirty):
+            subprocess.run(["git", "init", "-q", "-b", "main", d], check=True)
+            subprocess.run(["git", "-C", d, "-c", "user.name=t", "-c", "user.email=t@t",
+                            "commit", "-q", "--allow-empty", "-m", "init"], check=True)
+        open(os.path.join(dirty, "new.txt"), "w").close()  # 未跟踪也算脏
+        cwd_cases = [
+            ("git checkout main", clean, False),
+            ("git switch main", clean, False),
+            ("git checkout -q main && git pull", clean, False),
+            ("git -C %s checkout main" % clean, plain, False),
+            ("cd %s && git checkout main && git pull --ff-only" % clean, plain, False),
+            ("git checkout main", dirty, True),
+            ("git switch main", dirty, True),
+            ("cd %s && git checkout main" % dirty, clean, True),
+            ("git checkout main", plain, True),                  # 不是仓库：查不清
+            ("git checkout develop", clean, True),               # 只认 main
+            ("git checkout main -- f.py", clean, True),          # 恢复路径，不是换分支
+            ("git checkout main f.py", clean, True),
+            ("git switch -c x", clean, True),
+            ("git checkout main && git reset --hard", clean, True),  # 其余规则照拦
+        ]
+        for command, cwd, want_deny in cwd_cases:
+            got = denies(command, cwd)
+            if got != want_deny:
+                failures += 1
+                print("FAIL want=%s got=%s  %r @ %s" % ("DENY" if want_deny else "ALLOW",
+                      "DENY" if got else "ALLOW", command, os.path.basename(cwd)))
+    failures_extra = len(cwd_cases)
     # 非 Bash 工具一律不管
     out = subprocess.run(
         [sys.executable, str(HOOK)],
@@ -92,7 +128,7 @@ def main() -> int:
     if out:
         failures += 1
         print("FAIL 非 Bash 工具被拦了")
-    print("%d cases, %d failures" % (len(CASES) + 1, failures))
+    print("%d cases, %d failures" % (len(CASES) + 1 + failures_extra, failures))
     return 1 if failures else 0
 
 
