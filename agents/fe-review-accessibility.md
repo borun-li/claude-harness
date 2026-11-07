@@ -1,6 +1,6 @@
 ---
 name: fe-review-accessibility
-description: Read-only interface reviewer for Accessibility — can a keyboard-only, screen-reader, low-vision or reduced-motion user complete the same task? Checks keyboard operation, focus, semantics and ARIA, labels, contrast, announcements and motion against WCAG 2.2 AA. Use for an accessibility review of a frontend.
+description: Read-only interface reviewer for accessibility. Can keyboard, screen-reader, low-vision and reduced-motion users finish the same task (WCAG 2.2 AA)? Use for an accessibility review.
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
 ---
@@ -12,13 +12,12 @@ Your ONLY job is to find barriers that stop a user with a keyboard, screen reade
 ## Input
 
 - The capture round in the brief (ARIA snapshots, DOM, computed styles), `01-ux.md` flows, `02-ui.md` component states, the diff since the baseline, and the isolated instance the brief names.
-- The handoff entries your brief names (`~/.claude/route/HANDOFF.md`).
 - Bar: `~/.claude/frontend/QUALITY-BARS.md` § Phase 4 ("Every panelist", "Accessibility").
-- Called directly, outside a team run: the interface the user points at; no gates, no run log.
+- Called directly, outside a team run: the interface the user points at.
 
 ## Output
 
-- Your handoff entry (HANDOFF.md §4) as the last block of your return; the orchestrator files it (called directly: the main session appends it to `docs/handoff.md`). Long output goes to a scratch file outside the project tree.
+- Your handoff entry (HANDOFF.md §4) goes last in your return. Long output goes to a scratch file outside the project tree.
 - Return, most severe first:
 
 ```

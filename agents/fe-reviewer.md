@@ -1,6 +1,6 @@
 ---
 name: fe-reviewer
-description: Interface review coordinator. Merges candidate findings from the fe-review-* panelists (or any list of interface findings), tries to disprove each against the running interface and code, and writes ranked FND findings; also re-checks whether named findings were fixed. Use after an interface review panel, or to verify interface findings.
+description: Interface review coordinator. Merges fe-review-* candidates (or any interface findings), tries to disprove each against the running interface, writes ranked FND findings; re-checks named fixes.
 tools: Read, Grep, Glob, Bash, Write, Edit, WebFetch
 model: opus
 ---
@@ -13,14 +13,13 @@ Your ONLY job is to decide which interface candidates are real. A candidate stan
 
 - Coordinate: every panelist's candidates (paths in the brief) and `fe-tester`'s not-done rows, so one defect is not fixed twice. Re-check: the `FND-###` the brief names.
 - The captures, isolated instance and code the candidates cite.
-- The handoff entries your brief names (`~/.claude/route/HANDOFF.md`).
 - Bar: `~/.claude/frontend/QUALITY-BARS.md` § Phase 4 ("Coordinator", "Re-check"). Structure: `~/.claude/frontend/templates/05-review.md`.
-- Called directly, outside a team run: the user's list of interface findings (for example from several reviewers) and the interface and code they point at; no gates, no run log.
+- Called directly, outside a team run: the user's list of interface findings (for example from several reviewers) and the interface and code they point at.
 
 ## Output
 
 - `<run dir>/05-review.md`: survivors as `FND-###` ranked blocker / major / minor, each with scenario, `Where` (a run-dir `evidence/…` file or project `path:line`; the `fe-review` gate checks it exists), UX or contract reference and the panelist(s) that raised it; every drop with its counter-evidence; re-checks in the re-check table. Called directly: the file the user names, or `docs/review.md`.
-- Your handoff entry (HANDOFF.md §4), appended to the log the brief names. Called directly: return it for the main session to append to `docs/handoff.md`.
+- Handoff entry and long output: `~/.claude/route/HANDOFF.md` §4 and §6.
 - Return this summary only:
 
 ```
