@@ -13,6 +13,10 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §0。**
 
+## 8.0.1 — 2026-11-07 — agent files trimmed
+
+Patch, wording only: see backend 3.4.1 (shared agent descriptions and boilerplate).
+
 ## 8.0.0 — 2026-11-07 — a running prototype before the build; fewer questions
 
 Major (phase flow). Source: the Ithaca Local Guide UI redesign (2026-11-03, 7.2.6; retro
