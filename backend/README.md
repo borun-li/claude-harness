@@ -19,14 +19,15 @@ flowchart LR
     CO -. "blocker / major" .-> DEV
 ```
 
-- **■ Your sign-off**: the kickoff question (tier, models, risk), the prototype, **Plan** (one page of
+- **■ Your sign-off**: the kickoff question (the tier; models, risk and gate commands are shown
+  with their defaults, change them if you like), the prototype, **Plan** (one page of
   requirements, decisions and fixture answers, before any code) and **Acceptance**. You are asked
   in between only when an answer would change what gets built.
 - **Solid arrows**: the order of work — Phase 1 requirements, 1b prototype, 2 design (ending at
   Plan), 4 build ∥ test plan, 5 verification, 6 review, 7 acceptance (Phase 3 was merged into 2).
 - **Prototype**: a rough, runnable version (`route/PROTOTYPE.md`), skipped when you already
-  confirmed one. When the round touches an interface people operate, the Frontend team's UX and UI
-  stops (Figma, or text mockups for a terminal) are the prototype instead
+  confirmed one. When the round touches an interface people operate, the Frontend team's run up to
+  its Prototype stop is the prototype instead: the design confirmed, then running on fake data
   (`route/FRONTEND_BACKEND_LINE.md` §4).
 - **Frontend team**: `side: frontend` items are designed and built by the Frontend team once their
   seam's backend half exists, and verified by its tester and review panel; one Acceptance covers both.

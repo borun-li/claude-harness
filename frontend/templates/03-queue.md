@@ -1,11 +1,11 @@
 # Queue — {feature}
 
-- **Author:** fe-engineer · **Status:** draft | approved at the UI stop {date}
+- **Author:** fe-engineer · **Status:** draft | approved at the Prototype stop {date}
 - One row per independently buildable, observable piece. See `examples/03-queue.example.md`.
 
 ## Scaffold
 Files that need no visuals: data fetching, state handling, routing (two-stop runs: built while
-`fe-ui` draws; one-stop runs: after the UI stop).
+`fe-ui` draws; otherwise part of the prototype).
 
 | File | What it does |
 |---|---|

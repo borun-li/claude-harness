@@ -27,9 +27,10 @@ needs human approval.
 5. **Raise contradictions.** When two sources disagree, quote both and stop that item. Never
    resolve it by editing whichever is easier to change.
 6. **Disclose your own mistakes** immediately, in your return value.
-7. **Show it before investing in detail.** The user sees a rough version and confirms it before
-   detailed design starts: a runnable version, or, when the deliverable is a visual interface, a
-   visual design of its screens. A requirements document is not a substitute.
+7. **Show it running before investing in detail.** The user sees a rough, runnable version and
+   confirms it before detailed design starts; fake data is allowed. When the deliverable is a
+   visual interface, the design of its screens is confirmed first, then a runnable version of
+   them. Neither a requirements document nor a design alone is a substitute.
 8. **A description is not the thing.** Comments, docstrings, declarations, exit codes and prior
    reports are not evidence. Check the artefact itself, and ask "if this were wrong, what would
    turn red?"
@@ -78,7 +79,9 @@ batched, each with a recommendation, at the tier's next fixed stop.
 2. **The action is irreversible or outward-facing:** deleting others' work, migrating real data,
    publishing, changing global config.
 3. **The tier reaches a fixed stop** where the user signs off.
-4. **The work is stuck:** the same step has failed twice, or a loop cap is hit.
+4. **The work is stuck:** the same step has failed twice, or a loop cap is hit while a blocker or
+   major finding, or an unmet in-scope requirement, is still open. Minor findings left at a cap
+   are deferred and listed at the next fixed stop.
 5. **A budget the user set** (calls, cost, time) would be exceeded.
 
 Silence is never approval.
@@ -96,9 +99,7 @@ Work is **done** only if every answer that applies to its tier is yes. Otherwise
 6. The report says what the user must do to make it live.
 7. The user accepted it, seeing it run, recorded with date.
 
-A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4 or 7. A tier whose
-deliverable is a design, not running software, replaces 4 and 7 with: the user reviewed the design
-itself and accepted it, recorded with date.
+A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4 or 7.
 
 ## 7. Run Tiers
 

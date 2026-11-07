@@ -14,15 +14,17 @@
 
 Frontend team (run dir docs/frontend; pass --team frontend to baseline, mark, log, timeline):
     gate.py fe-product | fe-ux | fe-ui | fe-queue | fe-plan
-    gate.py fe-approve --by <who>        lock the queue's observables and frame exports confirmed at the UI stop
+    gate.py fe-approve --by <who>        lock the queue's observables and frame exports confirmed at the Prototype stop
     gate.py fe-build | fe-capture-plan | fe-verify | fe-review | fe-accept
     gate.py log return ... --figma-calls <n>   record the Figma calls an agent reported (PLAYBOOK §1E)
+    gate.py log dispatch ... --figma-left <n>  calls left, required for fe-ui / fe-engineer when the run has a budget
     gate.py fe-promote --by <who> [--exclude Q-…]   after Acceptance: register accepted rows as OBS-###
     gate.py fe-approve --by <who> [--retire OBS-…]  also retires registered observables the user drops
     gate.py capture --round <n>          capture evidence per docs/frontend/capture-plan.json
 
 Exit: 0 pass · 1 fail (send failures to their owners, fix, re-run) · 3 loop cap reached
-(escalate to the user) · 2 usage or configuration error.
+(escalate to the user) · 2 usage or configuration error · 4 busy: the other team has a writer
+dispatched and not returned; `mark`, `capture` and every check gate wait for it (ORCHESTRATOR.md).
 Reports: <run-dir>/gates/<phase>-<utc>.json and <phase>-latest.json.
 """
 import argparse
@@ -81,6 +83,32 @@ def resolve_run_dir(project, arg, team):
     return "docs/backend"
 
 
+class Busy(Exception):
+    """The other team has a writer out: snapshots and checks taken now would mix its changes in."""
+
+
+SETTLED = ("accepted", "prototype_confirmed")
+
+
+def other_team_logs(project, team):
+    other = "backend" if team == "frontend" else "frontend"
+    base = project / resolve_run_dir(project, None, other)
+    out = []
+    for log in [base / "run-log.jsonl", *sorted(base.glob("*/run-log.jsonl"))]:
+        status = (read_json(log.parent / "state.json") or {}).get("status")
+        if log.exists() and status not in SETTLED:
+            out.append(log)
+    return out
+
+
+def ensure_not_busy(project, team):
+    out = checks.open_writers(other_team_logs(project, team))
+    if out:
+        names = "; ".join(f"{a} ×{n} in {p.relative_to(project)}" for p, a, n in out)
+        raise Busy(f"the other team has a writer out ({names}). Wait for its return and log it, "
+                   f"then re-run. A dead agent: log its return as failed (ORCHESTRATOR.md, Handoff).")
+
+
 def apply_waivers(results, gdir):
     waivers = {w["check"]: w for w in (read_json(gdir / "waivers.json") or [])
                if w.get("approved_by") and w.get("date")}
@@ -103,6 +131,7 @@ def main():
     for f in ("agent", "model", "step", "status", "stop", "decision", "note"):
         ap.add_argument(f"--{f}")
     ap.add_argument("--figma-calls", type=int, help="log return: Figma MCP calls the agent made")
+    ap.add_argument("--figma-left", type=int, help="log dispatch: Figma calls left for fe-ui / fe-engineer")
     ap.add_argument("--project", default=".")
     ap.add_argument("--run-dir")
     ap.add_argument("--role")
@@ -127,9 +156,15 @@ def main():
     if a.phase == "log":
         if a.event in ("gate", "mark", "approve"):
             raise ConfigError(f"`{a.event}` events are written by the gates themselves")
+        budget = ((read_json(ctx.run / "state.json") or {}).get("figma") or {}).get("budget")
+        if (a.event == "dispatch" and team == "frontend" and a.agent in ("fe-ui", "fe-engineer")
+                and budget is not None and a.figma_left is None):
+            raise ConfigError(f"dispatch of {a.agent}: add --figma-left <calls left of {budget}>, the number "
+                              "the brief's Budget line gives (PLAYBOOK §1E)")
         ev = runlog.append(log, a.event or "", agent=a.agent, model=a.model, phase=a.step, status=a.status,
                            stop=a.stop, decision=a.decision, by=a.by, note=a.note,
-                           figma_calls=a.figma_calls if a.event == "return" else None)
+                           figma_calls=a.figma_calls if a.event == "return" else None,
+                           figma_left=a.figma_left if a.event == "dispatch" else None)
         print(f"[gate] logged #{ev['seq']} {ev['event']}")
         return 0
     if a.phase == "timeline":
@@ -138,6 +173,8 @@ def main():
             (ctx.run / "run-log.md").write_text(md, encoding="utf-8")
         print(md)
         return 0
+    if a.phase in ("mark", "capture", *PHASES):
+        ensure_not_busy(project, team)
     if a.phase == "mark":
         if not a.role:
             raise ConfigError("mark needs --role")
@@ -225,3 +262,6 @@ if __name__ == "__main__":
     except ConfigError as e:
         print(f"[gate] ERROR: {e}", file=sys.stderr)
         sys.exit(2)
+    except Busy as e:
+        print(f"[gate] BUSY: {e}", file=sys.stderr)
+        sys.exit(4)

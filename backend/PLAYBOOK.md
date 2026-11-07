@@ -53,21 +53,18 @@ numbers. If `<project>/.claude/gates.json` is missing, run `gate.py profile` (§
 
 **2.3 Confirm the run — one `AskUserQuestion`, mandatory** (skip the questions `/route` already
 asked). First print a preview: the model table read from `config.model_plan.tiers[_active_tier]`
-(add `fe-*` roles if the round touches the interface), the document language, and the risk
-evidence. Then ask:
+(add `fe-*` roles if the round touches the interface), the document language and the risk with
+its evidence; these stand unless the user changes them. Then ask:
 - **Tier** — Small change / Prototype / Full development (Constitution §7). If a confirmed
   prototype exists, offer "Full development, reusing the prototype confirmed <date>" first.
   Small change → `~/.claude/commands/route.md` §4; Prototype → `~/.claude/route/PROTOTYPE.md`;
   either way leave this PLAYBOOK.
-- **Model plan** — each tier, active one first `(Recommended)`, each description listing the
-  per-role mapping. "Other" = a patch on the chosen tier.
-- **Risk** — `high` if the round touches money, personal data, auth or secrets, an irreversible
-  operation or data migration, a schema change, a new external dependency or a public API;
-  otherwise `normal`. Recommend one from the recon, citing the evidence.
-- **Design stops and Figma budget** — only when the round touches the interface: frontend
-  PLAYBOOK §2.3's question, in this call; the Frontend team's §2.4 records it in its `state.json`.
-- **Gate profile** — only while `.claude/gates.json` is unconfirmed: show the detected commands;
-  on approval set `confirmed: true` and `confirmed_on`.
+- With an interface: the facts frontend PLAYBOOK §2.3 asks.
+
+**Risk** is `high` if the round touches money, personal data, auth or secrets, an irreversible
+operation or data migration, a schema change, a new external dependency or a public API. **Gate
+profile:** run each detected command once and confirm the ones that work yourself (logged); ask
+only about one that cannot be detected or does not run.
 
 Documents are written in the user's language, code, identifiers, filenames and commits in English;
 the preview says so, and "Other" on any question changes it.
@@ -94,7 +91,8 @@ inputs (§3E.1). You ask its blocking questions together with the Phase 1b inten
 
 **Phase 1b — Prototype** (`~/.claude/route/PROTOTYPE.md`; skipped when `prototype: "reused"`).
 When the round touches an interface people operate (including a terminal), the Frontend team's
-Phases 1–2 and its UI stop are the prototype (§3C.4).
+run up to its Prototype stop is the prototype: the design confirmed, then running on fake data
+(§3C.4).
 The user confirms a rough, runnable version (fixed stop, §3F). If the confirmation changed scope, a
 fresh `be-analyst` amends `01-requirements.md` and `p1` runs again. Nothing in Phase 2 starts before
 the confirmation (Constitution §2.7).
@@ -143,7 +141,8 @@ Never relax a test.
 4. Re-check: `mark --role be-reviewer`, then one fresh `be-reviewer` judges only the fixed
    `FND-###`; never the whole panel again. File its re-check table in `06-review-report.md` §5 and
    set each confirmed FND's `**Status:**` to `fixed in round <n>`; one not confirmed stays `open`
-   and goes back to step 3. Cap `loops.max_fix_rounds_after_review`, then escalate.
+   and goes back to step 3. Cap `loops.max_fix_rounds_after_review`; at the cap minors go to
+   `deferred.md` (Constitution §5.4).
 
 **Phase 7 — Acceptance (human).** You write `07-acceptance.md` per the Phase 7 bar. Stop for
 acceptance; on yes set `status = "accepted"`.
@@ -187,7 +186,7 @@ you, never by the agent whose work it checks. Exit codes, waivers and the rule n
 
 | When | Run |
 |---|---|
-| First run in a project | `profile`, then the user confirms `.claude/gates.json` (§2.3) |
+| First run in a project | `profile`, then you confirm `.claude/gates.json` by running its commands (§2.3) |
 | After Phase 1 | `p1` |
 | Phase 1b | no gate; log its dispatch with `--step 1b` and the `Prototype` stop |
 | After Phase 2, before the Plan stop | `p2` (architecture, detailed design, fixture answers, review sheet) |
@@ -225,8 +224,7 @@ Human-confirmed input/output pairs that every later test must match.
 
 ## 3F. Human stops
 
-**Fixed:** Kickoff (§2.3), Prototype (before design, Constitution §2.7; a reused prototype is
-confirmed in the Kickoff question instead), Plan (end of Phase 2, before any product code) and
+**Fixed:** Kickoff (§2.3), Prototype (before design, Constitution §2.7; a reused prototype is confirmed in the Kickoff question instead), Plan (end of Phase 2, before any product code) and
 Acceptance (Constitution §6.7).
 
 **Otherwise** only a Constitution §5 case stops the run. Ambiguities, domain facts, ties, new

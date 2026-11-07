@@ -210,7 +210,9 @@ class FrontBase(Base):
     def fe_dispatch(self, role, step="x", figma=None):
         subprocess.run([PY, str(GATE), "mark", "--role", role, "--team", "frontend", "--project", str(self.p.root)],
                        capture_output=True, text=True)
-        self.fe_log("dispatch", "--agent", role, "--model", "opus", "--step", step, "--note", "work")
+        budget = (json.loads(self.p.read("docs/frontend/state.json")).get("figma") or {}).get("budget")
+        left = ["--figma-left", str(budget)] if budget is not None and role in ("fe-ui", "fe-engineer") else []
+        self.fe_log("dispatch", "--agent", role, "--model", "opus", "--step", step, "--note", "work", *left)
         extra = ["--figma-calls", str(figma)] if figma is not None else []
         self.fe_log("return", "--agent", role, "--step", step, "--status", "ok", "--note", "done", *extra)
 
@@ -558,6 +560,199 @@ class Trail(FrontBase):
         self.fe_dispatch("fe-engineer", step="2")
         self.fe_log("human", "--stop", "UI", "--decision", "approved", "--by", "user", "--note", "ok")
         self.assertEqual(self.st(self.fe("fe-accept")[2], "LOG.trail"), "pass")
+
+
+UX_INTAKE = """# UX — Duplicate upload message (intake of the confirmed design)
+
+- **Named user:** office admin uploading contracts daily
+- **Surface:** web
+
+## 1. Pages
+| Page | Job | Serves | Form — why |
+|---|---|---|---|
+| PAGE-001 | Upload one file | REQ-001 | form — as drawn in the confirmed design |
+
+## 4. Page details
+### PAGE-001 — Upload
+| State | User sees | Words | Can do next |
+|---|---|---|---|
+| loading | not drawn: bar under the picker | Uploading | Cancel |
+| empty | as drawn | Choose a file | choose |
+| success | as drawn | Uploaded | open |
+| error | as drawn | Already uploaded | open original |
+| permission | n/a — every admin can upload | | |
+
+## 5. Open in the design
+- Narrow size not drawn: stack picker above the button (recommended).
+"""
+
+UI_INTAKE = """# UI — Duplicate upload message (intake of the confirmed design)
+
+- **Figma file:** https://www.figma.com/design/AbCdEfGhIjKlMnOpQrStUv/Upload
+
+## 3. Tokens
+| Token | Layer | Value | Use |
+|---|---|---|---|
+| color.notice | semantic | #9A6700 | notice |
+
+## 4. Components
+### CMP-001 — Notice
+- **States:** default, focus
+
+## 5. Frames
+| Frame | Page | State | Size | Figma |
+|---|---|---|---|---|
+| FRAME-001 | PAGE-001 | error | 1440 | https://www.figma.com/design/AbCdEfGhIjKlMnOpQrStUv/Upload?node-id=1-2 |
+"""
+
+
+class ExternalDesign(FrontBase):
+    """8.0: a design the user confirmed outside the harness is taken in, not rewritten."""
+    def setUp(self):
+        super().setUp()
+        self.p.write("docs/frontend/01-ux.md", UX_INTAKE + FILL)
+        self.p.write("docs/frontend/02-ui.md", UI_INTAKE + FILL)
+
+    def test_intake_forms_pass_only_for_an_external_design(self):
+        rep = self.fe("fe-ux")[2]
+        self.assertEqual((self.st(rep, "FE1.flows"), self.st(rep, "FE1.wireframes")), ("fail", "fail"))
+        rep = self.fe("fe-ui")[2]
+        self.assertEqual((self.st(rep, "FE2.plan"), self.st(rep, "FE2.self-check")), ("fail", "fail"))
+        self.set_state(design="external", design_stops=0)
+        code, out, rep = self.fe("fe-ux")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.st(rep, "FE1.flows"), "unavailable")
+        code, out, _ = self.fe("fe-ui")
+        self.assertEqual(code, 0, out)
+
+    def test_intake_still_needs_every_state_and_frame(self):
+        self.set_state(design="external", design_stops=0)
+        self.p.write("docs/frontend/01-ux.md", UX_INTAKE.replace("| permission | n/a — every admin can upload | | |\n", "") + FILL)
+        self.assertEqual(self.st(self.fe("fe-ux")[2], "FE1.states"), "fail")
+        self.p.write("docs/frontend/02-ui.md", UI_INTAKE.split("## 5. Frames")[0] + FILL)
+        self.assertEqual(self.st(self.fe("fe-ui")[2], "FE2.frames"), "fail")
+
+    def _baseline(self):
+        r = subprocess.run([PY, str(GATE), "baseline", "--team", "frontend", "--project", str(self.p.root)],
+                           capture_output=True, text=True)
+        assert r.returncode == 0, r.stdout + r.stderr
+
+    def test_prototype_code_allowed_once_the_design_is_confirmed(self):
+        self.set_state(design="external", design_stops=0)
+        self._baseline()
+        self.p.write("docs/frontend/03-queue.md", "# Queue\n\n## Scaffold\n| File | What |\n|---|---|\n| `web/app.js` | prototype |\n" + FILL)
+        self.fe_dispatch("fe-engineer", step="2b")
+        self.p.write("web/app.js", "export const fake = [];\n")
+        self.assertEqual(self.st(self.fe("fe-build")[2], "FE.observables"), "fail")
+        self.fe_log("human", "--stop", "UI", "--decision", "approved", "--by", "user", "--note", "external, confirmed")
+        self.assertEqual(self.st(self.fe("fe-build")[2], "FE.observables"), "unavailable")
+
+
+class PrototypeTrail(FrontBase):
+    """8.0: design approved → prototype (2b) → Prototype approved → build (3)."""
+    def setUp(self):
+        super().setUp()
+        self.set_state(harness_version="8.0.0", design_stops=1)
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        for g in ("fe-product", "fe-ux", "fe-ui", "fe-queue", "fe-plan"):
+            self.fe(g)
+
+    def trail(self):
+        return self.details(self.fe("fe-accept")[2], "LOG.trail")
+
+    def ui(self):
+        self.fe_log("human", "--stop", "UI", "--decision", "approved", "--by", "user", "--note", "ok")
+
+    def proto_ok(self):
+        self.fe_log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "ok")
+
+    def test_in_order(self):
+        self.ui()
+        self.fe_dispatch("fe-engineer", step="2b")
+        self.proto_ok()
+        self.fe_dispatch("fe-engineer", step="3")
+        self.assertEqual(self.st(self.fe("fe-accept")[2], "LOG.trail"), "pass")
+
+    def test_no_prototype_stop(self):
+        self.ui()
+        self.fe_dispatch("fe-engineer", step="3")
+        self.assertIn("no approved Prototype stop", self.trail())
+
+    def test_build_before_prototype_stop(self):
+        self.ui()
+        self.fe_dispatch("fe-engineer", step="3")
+        self.proto_ok()
+        self.assertIn("before the Prototype was approved", self.trail())
+
+    def test_prototype_before_design_approved(self):
+        self.fe_dispatch("fe-engineer", step="2b")
+        self.ui()
+        self.proto_ok()
+        self.assertIn("prototype dispatched", self.trail())
+
+    def test_runs_before_8_0_are_not_charged(self):
+        self.set_state(harness_version="7.2.6")
+        self.ui()
+        self.fe_dispatch("fe-engineer", step="3")
+        self.assertNotIn("Prototype", self.trail())
+
+
+class MarkOrder(FrontBase):
+    def test_marks_before_their_dispatches_are_fine_until_a_gate(self):
+        g = lambda *a: subprocess.run([PY, str(GATE), *a, "--team", "frontend", "--project", str(self.p.root)],
+                                      capture_output=True, text=True)
+        g("mark", "--role", "fe-tester")
+        g("mark", "--role", "fe-engineer")
+        for role in ("fe-tester", "fe-engineer"):
+            self.fe_log("dispatch", "--agent", role, "--model", "opus", "--step", "3", "--note", "w")
+            self.fe_log("return", "--agent", role, "--step", "3", "--status", "ok", "--note", "d")
+        self.assertNotIn("not followed by its dispatch", self.details(self.fe("fe-accept")[2], "LOG.trail"))
+        g("mark", "--role", "fe-engineer")
+        self.fe("fe-ux")
+        self.fe_log("dispatch", "--agent", "fe-engineer", "--model", "opus", "--step", "3", "--note", "w")
+        self.fe_log("return", "--agent", "fe-engineer", "--step", "3", "--status", "ok", "--note", "d")
+        self.assertIn("not followed by its dispatch", self.details(self.fe("fe-accept")[2], "LOG.trail"))
+
+
+class CrossTeamSerial(FrontBase):
+    def be_log(self, *args):
+        return subprocess.run([PY, str(GATE), "log", *args, "--project", str(self.p.root)],
+                              capture_output=True, text=True).returncode
+
+    def mark(self):
+        return subprocess.run([PY, str(GATE), "mark", "--role", "fe-engineer", "--team", "frontend",
+                               "--project", str(self.p.root)], capture_output=True, text=True)
+
+    def test_mark_and_gates_wait_for_the_other_teams_writer(self):
+        self.p.write("docs/backend/state.json", json.dumps({"status": "in_progress"}))
+        self.be_log("dispatch", "--agent", "be-developer", "--model", "sonnet", "--step", "4", "--note", "build")
+        r = self.mark()
+        self.assertEqual(r.returncode, 4, r.stdout + r.stderr)
+        self.assertIn("be-developer", r.stderr)
+        self.assertEqual(self.fe("fe-ux")[0], 4)
+        self.assertEqual(self.fe_log("dispatch", "--agent", "fe-ux", "--model", "opus", "--step", "1",
+                                     "--note", "logging is never blocked"), 0)
+        self.be_log("return", "--agent", "be-developer", "--step", "4", "--status", "ok", "--note", "done")
+        self.assertEqual(self.mark().returncode, 0)
+
+    def test_reviewers_and_settled_runs_do_not_block(self):
+        self.p.write("docs/backend/state.json", json.dumps({"status": "in_progress"}))
+        self.be_log("dispatch", "--agent", "be-review-security", "--model", "opus", "--step", "6", "--note", "r")
+        self.assertEqual(self.mark().returncode, 0)
+        self.be_log("dispatch", "--agent", "be-developer", "--model", "sonnet", "--step", "4", "--note", "lost")
+        self.p.write("docs/backend/state.json", json.dumps({"status": "accepted"}))
+        self.assertEqual(self.mark().returncode, 0)
+
+
+class FigmaLeft(FrontBase):
+    def test_dispatch_of_a_figma_role_needs_the_calls_left(self):
+        self.set_state(figma={"budget": 40})
+        self.assertEqual(self.fe_log("dispatch", "--agent", "fe-ui", "--model", "opus", "--step", "2", "--note", "w"), 2)
+        self.assertEqual(self.fe_log("dispatch", "--agent", "fe-ui", "--model", "opus", "--step", "2", "--note", "w",
+                                     "--figma-left", "40"), 0)
+        self.assertEqual(self.fe_log("dispatch", "--agent", "fe-tester", "--model", "opus", "--step", "4", "--note", "w"), 0)
+        self.set_state(figma={"budget": None})
+        self.assertEqual(self.fe_log("dispatch", "--agent", "fe-engineer", "--model", "opus", "--step", "2", "--note", "w"), 0)
 
 
 class RunDir(FrontBase):

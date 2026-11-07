@@ -23,7 +23,7 @@ Loaded before you start:
 - Timeline (last 15): !`python3 ~/.claude/gates/gate.py timeline --project . --team frontend 2>&1 | tail -15 || true`
 
 1. Use the `state.json` loaded above. If there is none, say there is no run here and stop.
-2. **Phases:** tier, phase, status, artifact, human stop decision (UX, UI, Acceptance, Budget,
+2. **Phases:** tier, phase, status, artifact, human stop decision (UX, UI, Prototype, Acceptance, Budget,
    conditional), model.
 3. **Counts:** pages, flows, frames, components, queue rows by verdict, findings by severity, DFBs
    by decision, Figma calls used against the budget, open questions.

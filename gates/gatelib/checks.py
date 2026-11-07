@@ -235,7 +235,9 @@ def log_valid(ctx):
 
 
 def _trail_common(events):
-    """Every dispatch returned; every writer mark was followed by its dispatch."""
+    """Every dispatch returned; every writer mark was followed by its dispatch before the next gate
+    run. Several marks may precede their dispatches (backend Phase 4 marks the tester, then the
+    developer, then dispatches both in one message)."""
     problems, open_ = [], {}
     for ev in events:
         if ev["event"] == "dispatch":
@@ -248,10 +250,30 @@ def _trail_common(events):
     problems += [f"{a}: {n} dispatch(es) never returned" for a, n in open_.items() if n]
     for i, ev in enumerate(events):
         if ev["event"] == "mark" and not _is_reviewer(ev["role"]):
-            nxt = next((e for e in events[i + 1:] if e["event"] in ("dispatch", "mark", "gate")), None)
-            if not nxt or nxt["event"] != "dispatch" or nxt["agent"] != ev["role"]:
+            dispatched = False
+            for e in events[i + 1:]:
+                if e["event"] == "gate" or (e["event"] == "mark" and e["role"] == ev["role"]):
+                    break
+                if e["event"] == "dispatch" and e["agent"] == ev["role"]:
+                    dispatched = True
+                    break
+            if not dispatched:
                 problems.append(f"#{ev['seq']}: mark for {ev['role']} not followed by its dispatch")
     return problems
+
+
+def open_writers(log_paths):
+    """[(log, agent, n)] writers dispatched and not yet returned in the given run logs."""
+    out = []
+    for path in log_paths:
+        open_ = {}
+        for _, ev in runlog.read(path):
+            if ev.get("event") == "dispatch":
+                open_[ev["agent"]] = open_.get(ev["agent"], 0) + 1
+            elif ev.get("event") == "return" and open_.get(ev.get("agent")):
+                open_[ev["agent"]] -= 1
+        out += [(path, a, n) for a, n in sorted(open_.items()) if n and not _is_reviewer(a)]
+    return out
 
 
 def _prototype_first(ctx, events, design_phases):

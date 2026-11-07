@@ -41,6 +41,8 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
 - **One ASCII wireframe per page**: layout and priority only. A page block is at most 200 words,
   wireframe excluded. `[FE1.wireframes · FE1.page-length]`
 - No visual decision: no colour, font, icon or component styling.
+- **Intake form** (external design): flows and wireframes are not required; pages and every state
+  row still are. `[FE1.pages · FE1.coverage · FE1.states]`
 
 ## Phase 2 — UI (`02-ui.md`, Figma)
 
@@ -60,6 +62,7 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
 - Accessibility as rules: contrast of each text/background token pair (≥ 4.5:1 body, 3:1 large text
   and controls), target sizes, focus appearance, reduced-motion alternative for every animation.
 - Figma calls within the run budget (PLAYBOOK §1E). `[FE.figma]`
+- **Intake form** (external design): no design plan or self-check; frames still are. `[FE2.frames]`
 
 ## Phase 2 — Queue (`03-queue.md`)
 
@@ -161,10 +164,13 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
 - Each `INS-###` has its source (the user, or a named channel of their users), the quote, the flow
   or page it hits, and the change it suggests. Nothing is paraphrased into a stronger claim.
 
-## UI stop and Acceptance
+## UI stop, Prototype stop and Acceptance
 
-- UI stop: pages, frames, the queue's observables, every DFB decision and the registered
-  observables this round may change, shown for approval; frames exported and locked. `[FE.observables]`
+- UI stop (`design: new`): pages, frames and every DFB decision, shown for approval; frames then
+  exported by `fe-ui`.
+- Prototype stop: the prototype running on the real surface, the queue's observables, the earlier
+  approved results this round may change (each with a recommendation), the decisions taken by
+  default; on approval the observables and frame exports are locked. `[FE.observables]`
 - Acceptance: every active `[interface]` REQ delivered by a row verified done
   (`gates/traceability.md`). `[FEA.matrix]`
 - Every `needs user` DFB carries the user's decision. `[FEA.feedback]`

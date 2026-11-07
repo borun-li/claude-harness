@@ -1,8 +1,9 @@
-"""Frontend team gates (PLAYBOOK §3D in ~/.claude/frontend, 7.0). Reuses the backend helpers.
+"""Frontend team gates (PLAYBOOK §3D in ~/.claude/frontend, 8.0). Reuses the backend helpers.
 
-Phases: 0 product (be-analyst, frontend-only runs) · 1 UX (fe-ux) · 2 UI (fe-ui), scaffold, feasibility
-and queue (fe-engineer) · UI stop · 3 build · 4 verify (fe-tester) and review (panel + fe-reviewer) ·
-Acceptance · 5 after launch."""
+Phases: 0 product (be-analyst, frontend-only runs) · 1 UX (fe-ux), or 1E intake of an external design
+(fe-ux, fe-ui) · 2 UI (fe-ui), scaffold, feasibility and queue (fe-engineer) · UI stop · 2b runnable
+prototype (fe-engineer) · Prototype stop · 3 build · 4 verify (fe-tester) and review (panel +
+fe-reviewer) · Acceptance · 5 after launch."""
 import hashlib
 import re
 
@@ -32,8 +33,12 @@ def state(ctx):
         missing.append(f"tier must be small|prototype|full, got {s['tier']!r}")
     if "risk" in s and s["risk"] not in ("normal", "high"):
         missing.append(f"risk must be normal|high, got {s['risk']!r}")
-    if "design_stops" in s and s["design_stops"] not in (1, 2):
-        missing.append(f"design_stops must be 1 or 2, got {s['design_stops']!r}")
+    if "design" in s and s["design"] not in ("new", "external", "reused"):
+        missing.append(f"design must be new|external|reused, got {s['design']!r}")
+    stops = (0,) if s.get("design") == "external" else (1, 2)
+    if "design_stops" in s and s["design_stops"] not in stops:
+        missing.append(f"design_stops must be {' or '.join(map(str, stops))} for design "
+                       f"{s.get('design', 'new')!r}, got {s['design_stops']!r}")
     return (bad("ALL.state", "state.json does not match the schema (PLAYBOOK §8)", "orchestrator", missing)
             if missing else ok("ALL.state", "state.json valid", "orchestrator"))
 
@@ -104,6 +109,18 @@ def product(ctx):
 
 # ---------- Phase 1: UX ----------
 
+def _external(ctx):
+    """A design the user confirmed outside the harness: intake forms of 01-ux.md / 02-ui.md (PLAYBOOK §2.5)."""
+    return _state_json(ctx).get("design") == "external"
+
+
+def _version(ctx):
+    try:
+        return tuple(int(x) for x in str(_state_json(ctx).get("harness_version", "0")).split(".")[:3])
+    except ValueError:
+        return (0,)
+
+
 def _ux_pages(ctx):
     return _table(ctx.doc("01-ux.md"), "PAGE")
 
@@ -140,10 +157,13 @@ def ux(ctx):
     unserved = sorted(active - served)
     res.append(bad("FE1.coverage", f"Active REQs in {_req_rel(ctx)} with no page", owner, unserved) if unserved
                else ok("FE1.coverage", f"{len(active)} active REQs each served by a page", owner))
+    external = _external(ctx)
     flows = _blocks(text, "FLOW")
     incomplete = [f"{f}: missing {[k for k in UX_FLOW_FIELDS if not docs.field(b, k)]}"
                   for f, b in flows.items() if not all(docs.field(b, k) for k in UX_FLOW_FIELDS)]
-    res.append(bad("FE1.flows", "No `### FLOW-nnn` blocks", owner) if not flows else
+    res.append(na("FE1.flows", "External design: the flows are what it shows (intake form)", owner)
+               if external and not incomplete else
+               bad("FE1.flows", "No `### FLOW-nnn` blocks", owner) if not flows else
                bad("FE1.flows", "Flows without steps or every path", owner, incomplete) if incomplete else
                ok("FE1.flows", f"{len(flows)} flows with steps, success, failure, cancel, recovery, boundary", owner))
     details = _blocks(text, "PAGE")
@@ -157,7 +177,7 @@ def ux(ctx):
         lacking = [s for s in STATES if s not in st]
         if lacking:
             gaps.append(f"{p}: state rows missing {lacking}")
-        if "```" not in b:
+        if "```" not in b and not external:
             no_wire.append(p)
     res.append(bad("FE1.states", "Pages without a full state table", owner, gaps) if gaps
                else ok("FE1.states", "Every page states loading, empty, success, error, permission", owner))
@@ -207,13 +227,16 @@ def ui(ctx):
     res = [state(ctx), up] + _role_if(ctx, "fe-ui")
     if text is None:
         return res, {}
+    external = _external(ctx)
     plan = checks._section(text, [r"design plan", r"设计计划"]) or ""
     palette = checks._section(plan, [r"palette", r"配色"]) or ""
     hexes = set(HEX.findall(palette))
     lacking = [k for k, pats in (("Type", [r"\btype", r"字体"]), ("Layout", [r"layout", r"布局"]),
                                  ("Principles", [r"principles?", r"原则"]))
                if not checks._section(plan, pats)]
-    res.append(bad("FE2.plan", "No `## Design plan` section", owner) if not plan else
+    res.append(na("FE2.plan", "External design: decided before the run (intake form)", owner)
+               if external and not plan else
+               bad("FE2.plan", "No `## Design plan` section", owner) if not plan else
                bad("FE2.plan", f"Palette has {len(hexes)} colours (4–6 named hex values)", owner)
                if not 4 <= len(hexes) <= 6 else
                bad("FE2.plan", "Design plan lacks sections", owner, lacking) if lacking else
@@ -222,6 +245,7 @@ def ui(ctx):
     filled = [r for r in docs.table_rows(check) if any(c for c in r)] or \
         [ln for ln in check.splitlines()[1:] if ln.strip().startswith("-") and len(ln.strip()) > 3]
     res.append(ok("FE2.self-check", "Self-check written", owner) if filled
+               else na("FE2.self-check", "External design: no self-check (intake form)", owner) if external
                else bad("FE2.self-check", "Self-check empty: what read like a default, and what replaced it", owner))
     tokens = checks._section(text, [r"tokens?", r"令牌"]) or ""
     body = docs.mask_code(text.replace(tokens, "").replace(plan, ""))
@@ -350,7 +374,7 @@ def queue(ctx):
     return res, {"rows": sorted(rows)}
 
 
-# ---------- UI stop: review sheet, approval ----------
+# ---------- Prototype stop: review sheet, approval ----------
 
 def plan(ctx):
     owner = "orchestrator"
@@ -362,8 +386,8 @@ def plan(ctx):
     res.append(bad("FEP.gates", "Earlier gates not green", owner, red) if red
                else ok("FEP.gates", f"{', '.join(need)} green", owner))
     ui_text = ctx.doc("02-ui.md") or ""
-    sheet = ["# UI review", "", "Confirm the frames in Figma and the queue below, or say what to change.",
-             "Nothing outside § Scaffold is built before you do.", "",
+    sheet = ["# Prototype review", "", "Try the prototype, then confirm the expected results below, or say "
+             "what to change. Rows are built after you confirm.", "",
              f"Figma file: {docs.field(ui_text, 'Figma file') or 'n/a (text mockups)'}", ""]
     sheet += ["## Pages", "", "| Page | Job |", "|---|---|",
               *(f"| {p} | {r[1] if len(r) > 1 else ''} |" for p, r in _ux_pages(ctx).items()), ""]
@@ -402,7 +426,7 @@ def _exports(ctx):
 
 
 def approve(ctx, by, retire=()):
-    """Lock each queue row and each frame export. Only after the user's yes at the UI stop."""
+    """Lock each queue row and each frame export. Only after the user's yes at the Prototype stop."""
     p = read_json(ctx.gdir / "fe-plan-latest.json")
     if not p or p["overall"] != PASS:
         raise ConfigError("`fe-plan` has not passed; run it and get the user's confirmation first")
@@ -410,7 +434,7 @@ def approve(ctx, by, retire=()):
     missing = sorted(f for f, h in exports.items() if h is None)
     if missing:
         raise ConfigError(f"frame exports missing: {missing} — save each as "
-                          f"{ctx.run_rel}/evidence/design/FRAME-nnn.png (PLAYBOOK §3H.4)")
+                          f"{ctx.run_rel}/evidence/design/FRAME-nnn.png (PLAYBOOK §3H)")
     rows = _queue_rows(ctx)
     locked = {q: _row_digest(b) for q, b in rows.items()}
     write_json(ctx.gdir / "observables-approved.json",
@@ -424,7 +448,7 @@ def approve(ctx, by, retire=()):
 def _observables(ctx, owner):
     approved = read_json(ctx.gdir / "observables-approved.json")
     if approved is None:
-        return bad("FE.observables", "No approved observables: run the UI stop and `fe-approve`", "orchestrator")
+        return bad("FE.observables", "No approved observables: run the Prototype stop and `fe-approve`", "orchestrator")
     rows = _queue_rows(ctx)
     probs = [f"{q}: changed since approval on {approved['date']}" for q, h in approved["rows"].items()
              if q in rows and _row_digest(rows[q]) != h]
@@ -451,11 +475,13 @@ def build(ctx):
         res.append(checks._command_check(ctx, name, "fe-engineer")[0])
     t, r = checks._tests(ctx, "fe-engineer", base)
     approved = (ctx.gdir / "observables-approved.json").exists()
-    one_stop = _state_json(ctx).get("design_stops") == 1
+    one_stop = _state_json(ctx).get("design_stops") in (0, 1)
     code = [p for p in changed if not ctx.is_doc(p) and not ctx.is_test(p)]
-    early = (bad("FE.observables", "One-stop run: no product code before the UI stop (Constitution §4.2; "
-                 "PLAYBOOK Phase 2)", "orchestrator", code) if one_stop and code
-             else na("FE.observables", "Before the UI stop: scaffold only", "fe-engineer"))
+    ui_ok = any(ev["event"] == "human" and ev["stop"] == "UI" and ev["decision"] == "approved"
+                for _, ev in runlog.read(ctx.run / "run-log.jsonl"))
+    early = (bad("FE.observables", "No product code before the design is confirmed (Constitution §4.2; "
+                 "PLAYBOOK Phase 2)", "orchestrator", code) if one_stop and code and not ui_ok
+             else na("FE.observables", "Before the Prototype stop: scaffold and prototype only", "fe-engineer"))
     res += [t, checks._test_file_drift(ctx, base, "fe-engineer", "FE3.test-drift"),
             _observables(ctx, "fe-engineer") if approved else early,
             registry.regression(ctx, r, "fe-engineer")]
@@ -585,7 +611,7 @@ def review(ctx):
     changed = [p for p in snap.changed(d)
                if not checks.glob_match(p, [f"{ctx.run_rel}/**"]) and not ctx.is_test(p)]
     res = [state(ctx),
-           bad("FE4.tree-unchanged", "Files changed while reviewers ran (PLAYBOOK §4.4)", owner, changed)
+           bad("FE4.tree-unchanged", "Files changed while reviewers ran (PLAYBOOK §4.3)", owner, changed)
            if changed else ok("FE4.tree-unchanged", "Tree unchanged during review", owner)]
     text, up = _need(ctx, "05-review.md", "fe-reviewer")
     res.append(up)
@@ -655,10 +681,21 @@ def _trail(ctx):
     ui_ok = approved("UI")
     build = first(lambda e: e["event"] == "dispatch" and e["agent"] in ("fe-engineer", "be-developer")
                   and str(e["phase"]) == "3")
+    proto = first(lambda e: e["event"] == "dispatch" and str(e["phase"]) == "2b")
     if ui_ok is None:
-        problems.append("no approved UI stop in the log")
-    elif build is not None and build < ui_ok:
-        problems.append(f"Phase 3 build dispatched (#{build}) before the UI was approved (#{ui_ok})")
+        problems.append("no approved UI stop in the log (an external design logs it at kickoff)")
+    else:
+        if build is not None and build < ui_ok:
+            problems.append(f"Phase 3 build dispatched (#{build}) before the UI was approved (#{ui_ok})")
+        if proto is not None and proto < ui_ok:
+            problems.append(f"prototype dispatched (#{proto}) before the design was approved (#{ui_ok})")
+    # 8.0.0: the user tries a running prototype before the build (Constitution §2.7).
+    if _version(ctx) >= (8, 0, 0):
+        proto_ok = approved("Prototype")
+        if proto_ok is None:
+            problems.append("no approved Prototype stop in the log")
+        elif build is not None and build < proto_ok:
+            problems.append(f"Phase 3 build dispatched (#{build}) before the Prototype was approved (#{proto_ok})")
     if _state_json(ctx).get("design_stops", 2) == 2:
         ux_ok = approved("UX")
         ui_first = first(lambda e: e["event"] == "dispatch" and e["agent"] == "fe-ui")

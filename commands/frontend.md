@@ -1,5 +1,5 @@
 ---
-description: 'Frontend Agent Team — product features → UX (flows, pages, states) → UI (Figma) → build on the real surface → verify and review → acceptance, with design feedback flowing back. Roles: fe-ux, fe-ui, fe-engineer, fe-tester, the review panel fe-review-experience / -accessibility / -integration with its coordinator fe-reviewer; be-analyst writes the features in frontend-only runs. For a read-only report use /frontend-status.'
+description: 'Frontend Agent Team — product features → UX (flows, pages, states) → UI (Figma), or the intake of a design you confirmed → a runnable prototype → build on the real surface → verify and review → acceptance, with design feedback flowing back. Roles: fe-ux, fe-ui, fe-engineer, fe-tester, the review panel fe-review-experience / -accessibility / -integration with its coordinator fe-reviewer; be-analyst writes the features in frontend-only runs. For a read-only report use /frontend-status.'
 argument-hint: '[description, path or URL]'
 model: opus
 disable-model-invocation: true

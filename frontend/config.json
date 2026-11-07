@@ -1,5 +1,5 @@
 {
-  "harness_version": "7.2.6",
+  "harness_version": "8.0.0",
   "_comment": "Frontend Agent Team defaults. A project may override any top-level key in <project>/.claude/frontend.json. Model tier names live in ~/.claude/backend/config.json; roles below map this team one by one.",
   "roles": {
     "orchestrator": { "model": "opus" },
@@ -57,7 +57,7 @@
   "viewport_height": 900,
   "parallelism": {
     "ui_and_scaffold_in_parallel": true,
-    "_scaffold_comment": "two-stop runs only; one-stop runs scaffold after the UI stop (Constitution §4.2)",
+    "_scaffold_comment": "two-stop runs only; otherwise the scaffold is part of the prototype, Phase 2b (Constitution §4.2)",
     "review_panel": ["fe-review-experience", "fe-review-accessibility", "fe-review-integration"],
     "review_coordinator": "fe-reviewer",
     "verify_and_review_in_parallel": true
