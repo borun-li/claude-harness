@@ -21,10 +21,11 @@ Your ONLY job is to decide how the named user gets through each feature, step by
 
 - `01-ux.md` in the run dir the dispatch names; a decided DFB (accept, or reject with the reason; amend `01-ux.md` if accepted); after launch, `INS-###` entries in `06-feedback.md` § Post-launch (quote, the flow or page it hits, the change it suggests).
 - Your handoff entry (HANDOFF.md §4), appended to the handoff log; called directly, put it in your return for the main session to append to `docs/handoff.md`. Command output over ~50 lines goes to the run dir's `logs/`.
+- **Intake** (a design the user already confirmed, named in the brief): `01-ux.md` in its intake form. Point at what the design settles; your work is what it leaves open or contradicts. Decide each with a recommendation; return as `decisions_for_user` only those that would change what the user sees in the prototype.
 - Return this summary only:
 
 ```
-task: ux | feedback | post-launch
+task: ux | intake | feedback | post-launch
 pages: <n>   flows: <n>   reqs_covered: <n>/<n>
 states_na: [PAGE-###: <state> — <reason>]
 missing_requirements: [<what the flow needs that no REQ states>]

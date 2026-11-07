@@ -4,7 +4,7 @@ See `examples/06-feedback.example.md` and PLAYBOOK §3A.
 
 ## Design feedback
 `Needs user` is yes when the change alters a confirmed flow, page, state, or anything visible in a
-confirmed frame. `Decision` is accepted or rejected; pending items block the UI stop.
+confirmed frame. `Decision` is accepted or rejected; pending items block the UI or Prototype stop.
 
 | DFB | Raised by | To | Item | Reason and evidence | Decision | Decided by | Needs user | User decision |
 |---|---|---|---|---|---|---|---|---|

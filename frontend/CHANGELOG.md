@@ -13,6 +13,29 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §0。**
 
+## 8.0.0 — 2026-11-07 — a running prototype before the build; fewer questions
+
+Major (phase flow). Source: the Ithaca Local Guide UI redesign (2026-11-03, 7.2.6; retro
+`docs/retros/2026-11-ui-redesign.md`). The design was confirmed in Figma, yet ~2 h went into
+rewriting it as `01-ux.md`/`02-ui.md`; the "prototype" was a Figma link; the first running page
+appeared at Acceptance, six hours in; the user answered 39 questions in 18 dialogs, ~14 of them
+process matters (waivers ×3, fix cap ×2, observable retirement in 3 rounds, Figma 41/40).
+
+- **Constitution (2026-11-07, by the user):** §2.7 the prototype runs (fake data allowed), a visual
+  design is confirmed first; §5.4 a cap with only minors left defers them; §6 design-only clause removed.
+- **Design input** `new | external | reused`; an external design runs Phase 1E intake, no UX/UI stop,
+  its gaps asked once.
+- **Phase 2b prototype** (`fe-engineer`, product code on fake data) and a fixed **Prototype stop**,
+  where observables and retirements are approved; the UI stop confirms the look only. §3J preview.
+- **Kickoff** asks the tier and missing facts; models, risk, stops and budget are previewed.
+- `fe-engineer` names earlier approved results the round may change (two were invisible to `fe-plan`).
+- Only `fe-ui`/`fe-engineer` call Figma (the orchestrator's 14 export calls went unlogged).
+- **Gates:** exit `4` while the other team has a writer out (5 waivers came from concurrency);
+  marks may precede their dispatches until the next gate; `--figma-left` required; intake forms
+  accepted; prototype code allowed once the design is confirmed; trail requires the Prototype stop
+  before the build (8.0+ runs); `fe-review` before `fe-verify`.
+- PLAYBOOK rewritten to 1,889 words (was 3,509): what gates enforce or other files say is cited, not retold.
+
 ## 7.2.6 — 2026-11-03 — stale wording and examples
 
 Patch, class C of the 7.2.4 audit:

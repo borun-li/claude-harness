@@ -33,7 +33,7 @@ Increment: <i — append only to the `## Increment <i>` section of your document
 Only: <TC-014, FND-003, Q-5 … — the items of this round>
 Evidence: <report path#entry for each failing item>
 Feedback: <DFB-### to decide, or "raise a DFB for what you cannot build or draw as given"; omit if none>
-Budget: <Figma calls left this run; omit for agents without Figma>
+Budget: <Figma calls left this run, the number given to `log dispatch --figma-left`; omit for agents without Figma>
 Read: <paths>; handoff entries: <their headers>
 Known pitfalls / tried and failed: <≤3 lines, from earlier entries; "none" if none>
 Do not touch: <out-of-round files or items>

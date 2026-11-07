@@ -7,6 +7,23 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.4.0 — 2026-11-07 — fewer questions to the user; shared 8.0 changes
+
+Minor. Source: the Ithaca Local Guide UI redesign run (see frontend 8.0.0).
+- Constitution amended (2026-11-07, by the user): §2.7, §5.4, §6 — see frontend 8.0.0.
+- Kickoff asks only the tier (and the frontend's missing facts); model plan, risk and gate profile
+  are shown with defaults. The orchestrator confirms the gate profile by running its commands and
+  asks only about one that cannot be detected or does not run.
+- Phase 1b for an interface is the Frontend team's run up to its Prototype stop (design, then
+  running on fake data); `route/PROTOTYPE.md`, `FRONTEND_BACKEND_LINE.md` §4 and `/route` say so.
+- Phase 6 cap: minor survivors are deferred and listed; only blockers, majors and failing TCs of
+  in-scope REQs escalate.
+- `ORCHESTRATOR.md`: ask only what is the user's to decide; process matters are decided, logged and
+  shown at the next stop with how to undo them; product questions are batched; a failure the
+  orchestrator's own sequencing caused is re-run, never waived; exit `4` and one writer at a time
+  across teams. `HANDOFF.md`: the Budget line is the `--figma-left` number.
+- Gates (shared): busy exit `4`, mark-order trail fix, `--figma-left` — see frontend 8.0.0.
+
 ## 3.3.8 — 2026-11-03 — `compileall -f`: a false-green build
 
 Patch. `BuildGate.test_build_failure` failed about half the time, also on `main`. Cause: without

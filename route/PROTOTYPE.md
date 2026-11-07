@@ -5,11 +5,8 @@ Used by the Prototype tier (the whole run) and by Full development (Phase 1b, af
 and before detailed design). The orchestrator runs this procedure; one engineer builds. The run
 dir is `docs/backend/`.
 
-**Interfaces people operate** (web, native, desktop, game UI, terminal) are prototyped as designs,
-not code: the Frontend PLAYBOOK's Phases 0–2 up to its UI stop (Phase 0 only in a frontend-only run; in a
-cross-stack run the backend Phase 1 REQs stand in for it), drawn in Figma or, for a terminal,
-as text mockups; in a cross-stack run that UI stop is the backend's Prototype stop
-(`~/.claude/route/FRONTEND_BACKEND_LINE.md` §4). This file covers only work with no such interface:
+**Interfaces people operate** (web, native, desktop, game UI, terminal) are prototyped by the
+Frontend PLAYBOOK up to its Prototype stop. This file covers only work with no such interface:
 APIs, scripts and command-line arguments, jobs.
 
 ## 1. Understand the ask

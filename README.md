@@ -46,8 +46,8 @@ Every task starts with one question: which tier is it?
 | Tier | What happens |
 |---|---|
 | Small change | Claude shows a short plan, you confirm, one engineer makes the change, you check it running |
-| Prototype | A few questions about what you want, then a rough version for you to confirm: for an interface people operate, flows and screens designed in Figma (text mockups for a terminal); otherwise a rough, runnable version |
-| Full development | The whole team process. After requirements, you see and confirm a prototype before any detailed design or code — the design for an interface people operate, a rough running version otherwise (skipped if you already confirmed one in a Prototype run) |
+| Prototype | A few questions about what you want, then a rough running version for you to try: for an interface people operate, the screens are designed first in Figma (text mockups for a terminal), or taken from a design you already confirmed, then run on the real surface with fake data |
+| Full development | The whole team process. After requirements, you try and confirm a running prototype before any detailed design (skipped if you already confirmed one in a Prototype run); for an interface, its design is confirmed first unless you bring a confirmed one |
 
 In Full development you also approve the plan (backend) or the UX and UI designs (frontend; one combined confirmation for a single page or component), and the final acceptance. Everything irreversible or outward-facing (deploys, pushes, deletes) waits for you. Other questions do not stop the run: the team takes a recommended default, marks it, and shows it to you at the next stop.
 
