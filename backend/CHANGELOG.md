@@ -7,6 +7,17 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.4.1 — 2026-11-07 — PLAYBOOK and agents trimmed
+
+Patch, wording only (the user's principles: specific yet flexible; the simplest thing that works;
+leave out what agents know or other files say). PLAYBOOK 2,596 → 1,389 words: the gate table, the
+legacy `docs/waterfall` note (`gate.py` resolves it) and rules the gates or `ORCHESTRATOR.md` already
+hold are cited, not retold; §3B and §3E keep their mechanisms in fewer words; section numbers kept.
+Agents (shared with frontend 8.0.1): descriptions, loaded in every session, cut from ~5,800 to
+~3,200 characters, each still naming the neighbour it is not; the handoff, long-output and
+"no gates" lines repeated in all 16 bodies now cite `HANDOFF.md`; lines restating the Constitution
+removed. No role rule changed.
+
 ## 3.4.0 — 2026-11-07 — fewer questions to the user; shared 8.0 changes
 
 Minor. Source: the Ithaca Local Guide UI redesign run (see frontend 8.0.0).
