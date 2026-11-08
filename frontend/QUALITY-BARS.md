@@ -103,7 +103,7 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
 - Evidence is captured by `gate.py capture` from a plan covering every row, width and state, after
   the last build and against the current source. `[FE4.capture-plan · FE4.capture]`
 - A new assertion is shown red when its behaviour breaks and green when unrelated copy changes;
-  tagged `Q-###`, it passes in this run. `[FE4.row-tests]`
+  with its `Q-###` in the test's name or title, it passes in this run. `[FE4.row-tests]`
 - Expected values come from an independent source; a negative result needs a positive control.
 - Mutation uses copy aside → mutate → run → copy back → `cmp`; never git restore.
 - A design the running interface contradicts is filed as a design defect; it costs no rework round.

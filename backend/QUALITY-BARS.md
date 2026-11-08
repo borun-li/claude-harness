@@ -98,7 +98,7 @@ gate (PLAYBOOK §3D): meet the bar anyway; the gate proves it.
 **Test coverage**
 - Every `REQ` has a `TC`; every `TC` names its `REQ`. Failure paths and boundaries included.
   `[P4.plan-ids · P4.plan-cases · P4.plan-coverage]`
-- Every automated `TC` is tagged in test code and passes in the orchestrator's own run.
+- Every automated `TC` is carried in its test's name or title and passes in the orchestrator's own run.
   `[P5.tc-in-code · P5.tc-results]`
 - No test is removed or newly skipped. `[CMD.test · P4/P5.test-drift]`
 - Tests load the approved fixtures and pass; nobody edits them. `[P4/P5.fixtures · P5.fixtures-used]`

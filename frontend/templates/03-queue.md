@@ -2,6 +2,7 @@
 
 - **Author:** fe-engineer · **Status:** draft | approved at the Prototype stop {date}
 - One row per independently buildable, observable piece. See `examples/03-queue.example.md`.
+- Row ids continue from the project's earlier rounds; they never restart at Q-001.
 
 ## Scaffold
 Files that need no visuals: data fetching, state handling, routing (two-stop runs: built while

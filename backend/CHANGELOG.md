@@ -7,6 +7,15 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.6.0 — 2026-11-08 — TC ids unique per project; ids found in any language's test names
+
+Minor. Shared with frontend 8.2.0 (same cause: ids restarted per run while gates search the whole
+project, and test names readable only in Python and JS).
+- `p4` gains `P4.tc-ids`: a `TC-###` already headed in another backend run dir's `04-test-plan.md`
+  fails, naming the next free id. Template: TC ids continue across features.
+- be-tester and QUALITY-BARS: a test carries its `TC-###` in its name or title, so the report shows
+  it in every language; the JUnit match accepts `TestX/TC-003_case` and rejects `TC-0031`.
+
 ## 3.5.0 — 2026-11-08 — agents stop only processes they started
 
 Minor. Source: the Ithaca Local Guide UI redesign run (2026-11-03, retro problem 5):

@@ -3,6 +3,7 @@
 - Author: be-tester (Backend Phase 4)
 - Derived from `01-requirements.md` and `03-detailed-design.md` only — **not** from the
   implementation. This independence is the point of the phase.
+- TC ids continue from the project's earlier features; they never restart at TC-001.
 
 ## 1. Strategy
 <Levels used (unit / integration / e2e), framework, how the environment is set up,
