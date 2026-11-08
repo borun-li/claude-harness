@@ -7,6 +7,26 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour or new role �
 **规则正文（`PLAYBOOK.md`、`QUALITY-BARS.md`、`agents/`、`templates/`）一律不得携带项目名词** ——
 每个项目都要读的规则里出现某一个项目的名词、阈值或裁定，就是把一个团队的偏好发给了所有团队。
 
+## 3.5.0 — 2026-11-08 — agents stop only processes they started
+
+Minor. Source: the Ithaca Local Guide UI redesign run (2026-11-03, retro problem 5):
+`fe-review-accessibility` ran `pkill -f "^./guide$"` to clean up its own instance and stopped
+three processes it had not started (PIDs 793, 37881, 38236). Constitution §4.6 already put the
+user's server and ports off-limits; the rule did not stop it, so the guard is now a hook.
+- **New hook** `hooks/no-foreign-process-kill.py` (PreToolUse on Bash), registered by `install.sh`.
+  Same criterion as `no-tree-restoring-git.py`: the caller must be able to name everything it
+  touches. Denies `pkill`/`killall`, `fuser -k`/`kill-port`, a process lookup (`pgrep`, `pidof`,
+  `lsof`, `ps`, except `ps -p`) and `kill` in one command, and `kill` of 0, -1 or a negative PID.
+  Allows `kill <pid>`, `kill $!`, `kill "$VAR"`, `kill %1`, `kill $(cat <pidfile>)`, lookups alone,
+  and the words inside quotes or heredocs. The deny message gives the PID-file pattern and says to
+  ask the user (`! <command>`) for anything else. Scripts and code (`os.kill`) are out of reach;
+  §4.6 covers them.
+- **New** `hooks/test_no_foreign_process_kill.py`, 43 cases (the incident's command first; the
+  ALLOW half is the PID path the message recommends).
+- Constitution amended (2026-11-08, by the user): §4.6 adds "A process you start is yours: record
+  its PID and stop only that PID; never stop a process you did not start."
+- `ORCHESTRATOR.md` Boundaries and the root README name the hook.
+
 ## 3.4.1 — 2026-11-07 — PLAYBOOK and agents trimmed
 
 Patch, wording only (the user's principles: specific yet flexible; the simplest thing that works;

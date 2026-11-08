@@ -62,7 +62,8 @@ roster, these boundaries hold:
 5. **Red is not done.** A failing, skipped or unrun check means the work is not complete. Never
    weaken a check to pass it.
 6. **The user's session, server, workspace and ports are off-limits.** Work in an isolated
-   instance.
+   instance. A process you start is yours: record its PID and stop only that PID; never stop a
+   process you did not start (the preview, another agent's, the user's).
 
 ## 5. Decision Rules
 

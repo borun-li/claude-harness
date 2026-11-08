@@ -37,6 +37,8 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
 - Tree-restoring git is blocked by `~/.claude/hooks/no-tree-restoring-git.py`. Restore one file
   with `git show HEAD:<path> > <path>`; a clean baseline with `git worktree add <tmp> HEAD`; undo
   your own change with `cp` aside, `cp` back, `cmp`.
+- Stopping processes by name, pattern or port is blocked by
+  `~/.claude/hooks/no-foreign-process-kill.py` (Constitution §4.6); stop only a PID you recorded.
 
 ## Handoff
 

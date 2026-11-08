@@ -83,7 +83,7 @@ You should see `prerequisites ok`; otherwise each missing tool is listed with wh
 ```
 
 It backs up what it will replace to `~/.claude/backup-harness-<date>.tgz`, copies the harness into
-`~/.claude`, registers two safety hooks in `~/.claude/settings.json` and installs `playwright-core`
+`~/.claude`, registers three safety hooks in `~/.claude/settings.json` and installs `playwright-core`
 for the gates. You should see `done. Restart Claude Code, then run /route in a project.`
 
 **Step 4 — restart Claude Code and confirm.** In any project, run `/backend-config`: it prints
@@ -196,8 +196,9 @@ The named agent works alone: no phases, no sign-offs, no gates.
   the working tree; the agent being checked never runs its own gate.
 - **Run log** — every dispatch, gate and sign-off goes to a hash-chained log on disk, which status,
   resume and the final checks read.
-- **Safety hooks** — one blocks git commands that discard uncommitted work, one stops a finished
-  agent from being reused.
+- **Safety hooks** — one blocks git commands that discard uncommitted work, one blocks stopping
+  processes by name, pattern or port (an agent stops only a process it started), one stops a
+  finished agent from being reused.
 
 Each team's flow and rules: [Backend team](backend/README.md) · [Frontend team](frontend/README.md).
 
@@ -217,7 +218,7 @@ claude-harness/
 ├── backend/ · frontend/  # each team's README, playbook, quality bars, templates, config, changelog
 ├── route/                # prototype procedure, handoff format, the frontend/backend line
 ├── gates/                # automatic checks, run log and evidence capture, with tests
-├── hooks/                # the two safety hooks, with tests
+├── hooks/                # the three safety hooks, with tests
 └── skills/design-taste/  # interface design taste used by the frontend team
 ```
 
@@ -233,6 +234,7 @@ the matching `CHANGELOG.md`:
 ```sh
 (cd gates && python3 -m unittest discover -s tests)
 python3 hooks/test_no_tree_restoring_git.py
+python3 hooks/test_no_foreign_process_kill.py
 python3 hooks/test_no_agent_continuation.py
 ```
 

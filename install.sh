@@ -11,7 +11,7 @@ parts="CONSTITUTION.md ORCHESTRATOR.md agents commands backend frontend route ga
 
 missing=0
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing: $1 ($2)"; missing=1; }; }
-need python3 "gates and the git hook"
+need python3 "gates and the safety hooks"
 need node "frontend evidence capture"
 need npm "installs playwright-core for the gates"
 need git "the harness assumes a git project"
@@ -46,6 +46,7 @@ python3 - "$dest/settings.json" <<'EOF'
 import json, os, sys
 path = sys.argv[1]
 hooks = [("Bash", 'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"'),
+         ("Bash", 'python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"'),
          ("SendMessage", 'python3 "$HOME/.claude/hooks/no-agent-continuation.py"')]
 s = json.load(open(path)) if os.path.exists(path) else {}
 pre = s.setdefault("hooks", {}).setdefault("PreToolUse", [])
