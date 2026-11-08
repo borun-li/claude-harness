@@ -1,7 +1,7 @@
 # Backend Agent Team
 
-A phase-gated development team for Claude Code, installed globally. It builds the backend;
-interface work goes to the Frontend team (PLAYBOOK §3C). Commands: see the root `README.md`.
+Builds the backend: requirements, architecture, code, tests and review. Interface work goes to the
+[Frontend team](../frontend/README.md). Install and commands: the [root README](../README.md).
 
 ## How it works
 
@@ -19,55 +19,36 @@ flowchart LR
     CO -. "blocker / major" .-> DEV
 ```
 
-- **■ Your sign-off**: the kickoff question (the tier; models, risk and gate commands are shown
-  with their defaults, change them if you like), the prototype, **Plan** (one page of
-  requirements, decisions and fixture answers, before any code) and **Acceptance**. You are asked
-  in between only when an answer would change what gets built.
-- **Solid arrows**: the order of work — Phase 1 requirements, 1b prototype, 2 design (ending at
-  Plan), 4 build ∥ test plan, 5 verification, 6 review, 7 acceptance (Phase 3 was merged into 2).
-- **Prototype**: a rough, runnable version (`route/PROTOTYPE.md`), skipped when you already
-  confirmed one. When the round touches an interface people operate, the Frontend team's run up to
-  its Prototype stop is the prototype instead: the design confirmed, then running on fake data
-  (`route/FRONTEND_BACKEND_LINE.md` §4).
-- **Frontend team**: `side: frontend` items are designed and built by the Frontend team once their
-  seam's backend half exists, and verified by its tester and review panel; one Acceptance covers both.
-- **Risk**: `high` (money, personal data, auth, irreversible operations, schema, new dependencies,
-  public APIs) adds the design review and the full panel; `normal` trims the panel (PLAYBOOK §6).
-- **Review panel**: read-only reviewers in parallel, one lens each; the coordinator merges them,
-  tries to disprove each candidate, and keeps only what survives. Only blockers and majors are
-  fixed; a fix is re-checked by one reviewer, not the whole panel.
-- **Dotted arrows**: fix and revision loops, always through the orchestrator, each round a fresh agent.
-- **A requirement added mid-run** never restarts the run: it joins at the next stop as an increment
-  (PLAYBOOK §3B).
-- **Orchestrator**: dispatches every step and runs automatic checks between steps (PLAYBOOK §3D).
-- **Run log**: every dispatch, gate result, decision and sign-off goes into a tamper-evident
-  `run-log.jsonl`. `/backend-status` shows it as a timeline.
-- **Deliverables**: `<project>/docs/backend/`.
+**Your sign-offs (■):** the tier at kickoff; the prototype, running; **Plan**, one page of
+requirements, decisions and fixture answers before any code; **Acceptance**.
+
+- **Fixtures**: real inputs with expected outputs you approve at Plan; every later test must match
+  them, and no agent may change them without you.
+- **Review panel**: read-only reviewers, one lens each; a coordinator keeps only findings it cannot
+  disprove. Only blockers and majors are fixed, and only the fixes are re-checked.
+- **Risk**: a `high` round (money, personal data, auth, schema, public APIs …) adds a design review
+  and the full panel.
+- **Changes mid-run** join at the next sign-off as an increment; the run never restarts.
+- Every round is a fresh agent; dotted arrows are fix loops through the orchestrator.
+
+Rules in full: [`PLAYBOOK.md`](PLAYBOOK.md). Deliverables: `<project>/docs/backend/`.
 
 ## Team
 
-| Agent | Role | Writes |
-|---|---|---|
-| Orchestrator | Plans, dispatches, runs gates, keeps state, reports | `state.json`, `07-acceptance.md` |
-| `be-analyst` | Testable requirements; later, the fixture answers and design-vs-requirement check (also the Frontend team's product role in frontend-only runs) | `01-requirements.md`, fixtures |
-| `be-architect` | Architecture and detailed design, in one pass | `02-architecture.md`, `03-detailed-design.md` |
-| `be-developer` | Builds the backend exactly to the design | backend code, `08-implementation-log.md` |
-| `be-tester` | Plans tests from the design, then writes and runs them | `04-test-plan.md`, tests, `05-test-report.md` |
-| `be-review-behavior` · `-reliability` · `-security` | One review lens each (read-only) | candidate findings |
-| `be-reviewer` | Coordinates the panel; re-checks fixes (read-only) | findings → `06-review-report.md` |
-
-## Files
-
-| Path | Change it to… |
+| Agent | Role |
 |---|---|
-| `~/.claude/CONSTITUTION.md` | change rules every agent must follow (yours alone to amend) |
-| `backend/QUALITY-BARS.md` | raise the Definition of Done |
-| `backend/PLAYBOOK.md` | change phase flow, gates, delegation |
-| `backend/config.json` | change models, review panels, loop caps (human stops are fixed) |
-| `backend/templates/` | change the deliverable documents |
-| `route/FRONTEND_BACKEND_LINE.md` | change the line between the teams |
-| `gates/` | change computational checks (keep `gates/tests` green) |
-| `agents/be-*.md` | change one role |
-| `backend/CHANGELOG.md` | record what changed and why |
+| `be-analyst` | Testable requirements and fixture answers (also the product role in frontend-only runs) |
+| `be-architect` | Architecture and detailed design |
+| `be-developer` | Builds the backend to the design |
+| `be-tester` | Plans tests from the design, writes and runs them |
+| `be-review-behavior` · `-reliability` · `-security` | Review panel, read-only |
+| `be-reviewer` | Coordinates the panel; re-checks fixes |
 
-Per-project overrides: `<project>/.claude/backend.json` and `<project>/.claude/gates.json`.
+## Customise
+
+| Change | File |
+|---|---|
+| Models, panels, loop caps | `config.json`, or per project `<project>/.claude/backend.json` |
+| Definition of done | `QUALITY-BARS.md` |
+| Deliverable documents | `templates/` |
+| Build and test commands for the gates | `<project>/.claude/gates.json` |
