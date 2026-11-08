@@ -13,6 +13,12 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §0。**
 
+## 8.1.0 — 2026-11-08 — agents stop only processes they started
+
+Minor. Shared with backend 3.5.0 (see `~/.claude/backend/CHANGELOG.md`): new hook
+`no-foreign-process-kill.py` and Constitution §4.6 amendment, after a frontend reviewer's `pkill`
+stopped processes it had not started.
+
 ## 8.0.1 — 2026-11-07 — agent files trimmed
 
 Patch, wording only: see backend 3.4.1 (shared agent descriptions and boilerplate).
