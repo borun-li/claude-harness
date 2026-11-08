@@ -350,6 +350,8 @@ def queue(ctx):
     res.append(bad("FE2.rows", "No `### Q-nnn` rows", owner) if not rows else
                bad("FE2.rows", "Queue rows incomplete", owner, probs) if probs else
                ok("FE2.rows", f"{len(rows)} rows complete", owner))
+    if rows:  # 05-queue.md: the queue's name before 7.0
+        res.append(checks.unique_ids_check(ctx, "FE2.row-ids", rows, ("03-queue.md", "05-queue.md"), "Q", owner))
     res.append(checks._length_check(ctx, "FE2.row-length", [(q, docs.words(b)) for q, b in rows.items()],
                                     "fe_row_words", owner, "queue row"))
     gaps = []

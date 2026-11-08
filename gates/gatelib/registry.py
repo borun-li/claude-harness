@@ -55,7 +55,11 @@ def promote(ctx, by, exclude, rows_fn):
             continue
         caps = [c for c in plan.get("captures", []) if c.get("row") == q]
         if locs.get(q) and row_tests.get(q) == "passed":
-            guard = {"kind": "test", "tests": [{"file": f, "name": name} for f, name in locs[q] if name]}
+            # A test whose name the parser cannot read (Go, Rust, Java …) is guarded by its row id,
+            # which the passing JUnit case carries in its name.
+            named = [{"file": f, "name": name} for f, name in locs[q] if name]
+            tagged = [{"file": f, "tag": q} for f in sorted({f for f, name in locs[q] if not name})]
+            guard = {"kind": "test", "tests": named + tagged}
         elif caps:
             guard = {"kind": "capture", "capture": {"surface": plan.get("surface"), "base_url": plan.get("base_url"),
                                                      "sizes": plan.get("sizes"), "spec": caps[0]}}
@@ -90,23 +94,44 @@ def retire(ctx, by, ids):
     write_json(path(ctx), reg)
 
 
+def _guards(entry):
+    """(named tests, row tags). An entry registered before 8.2 with an empty list (its tests' names
+    were unreadable) is guarded by the row id in its `source`."""
+    tests = entry.get("tests") or []
+    named = [(t["file"], t["name"]) for t in tests if t.get("name")]
+    tags = [t["tag"] for t in tests if t.get("tag")]
+    if not tests:
+        tags = re.findall(r"#(Q-\d+)$", entry.get("source", ""))
+    return named, tags
+
+
 def regression(ctx, r, owner):
-    """Every active `test` entry's test still exists and passes in this run."""
+    """Every active `test` entry's tests still exist and pass in this run."""
     reg = load(ctx)
     probs = _tampered(reg)
     tests = {k: v for k, v in active(reg).items() if v["kind"] == "test"}
     if not reg["entries"]:
         return na("FE.regression", "No approved observables registered yet", owner)
+    legacy = sorted(k for k, v in tests.items() if not v.get("tests"))
     if tests and (not r or r.get("cases") is None):
         probs.append(f"{len(tests)} registered tests; pass status needs a JUnit report")
     elif tests:
-        locs = {k: [(t["file"], t["name"]) for t in v["tests"]] for k, v in tests.items()}
-        probs += [f"{k}: {t['file']} missing" for k, v in tests.items() for t in v["tests"]
+        probs += [f"{k}: {t['file']} missing" for k, v in tests.items() for t in v.get("tests") or []
                   if not (ctx.project / t["file"]).exists()]
-        seen = checks._observed_ids(locs, dict.fromkeys(locs), r["cases"])
-        probs += [f"{k} ({tests[k]['observable']}): {st}" for k, st in sorted(seen.items()) if st != "passed"]
+        for k, v in sorted(tests.items()):
+            named, tags = _guards(v)
+            if not named and not tags:
+                probs.append(f"{k} ({v['observable']}): no guarding test recorded")
+                continue
+            seen = list(checks._observed_ids({k: named}, [k], r["cases"]).values()) if named else []
+            seen += list(checks._observed_ids({}, tags, r["cases"]).values())
+            st = ("failed" if "failed" in seen else "not-executed" if "not-executed" in seen else "passed")
+            if st != "passed":
+                how = f", guarded by row id {', '.join(tags)}" if tags and not named else ""
+                probs.append(f"{k} ({v['observable']}): {st}{how}")
+    note = f"; {len(legacy)} older entries guarded by their row id" if legacy else ""
     return (bad("FE.regression", "Approved observables regressed (only the user retires one)", owner, probs)
-            if probs else ok("FE.regression", f"{len(tests)} registered observables still hold", owner))
+            if probs else ok("FE.regression", f"{len(tests)} registered observables still hold{note}", owner))
 
 
 def capture_entries(ctx):

@@ -416,6 +416,12 @@ class BuildGate(Base):
         os.utime(core, (st.st_atime, st.st_mtime))
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "CMD.build"), "fail")
 
+    def test_tc_id_from_an_earlier_feature_is_refused(self):
+        self.p.write("docs/backend/first-feature/04-test-plan.md", "### TC-001 — x\n\n### TC-004 — y\n")
+        rep = self.p.gate("p4")[2]
+        self.assertEqual(self.p.status(rep, "P4.tc-ids"), "fail")
+        self.assertIn("continue from TC-005", next(c for c in rep["checks"] if c["id"] == "P4.tc-ids")["message"])
+
     def test_plan_defects(self):
         self.p.write("docs/backend/04-test-plan.md", PLAN.replace("- **Verifies:** REQ-002\n", "")
                      .replace("- **Mode:** automated\nline", "line"))
@@ -893,6 +899,16 @@ class RunLog(Base):
         for risk, want in (("high", "pass"), ("normal", "pass"), ("medium", "fail")):
             self.p.write("docs/backend/state.json", json.dumps(dict(STATE, risk=risk)))
             self.assertEqual(self.p.status(self.p.gate("p1")[2], "ALL.state"), want, risk)
+
+
+class IdInName(unittest.TestCase):
+    def test_boundaries(self):
+        sys.path.insert(0, str(GATE.parent))
+        from gatelib.checks import id_in_name
+        for name in ("Q-003 cards", "TestRows/Q-003_cards", "test_x[Q-003]", "Q-003"):
+            self.assertTrue(id_in_name("Q-003", name), name)
+        for name in ("Q-0031", "XQ-003", "test_q003", "Q-03"):
+            self.assertFalse(id_in_name("Q-003", name), name)
 
 
 class JsRunners(unittest.TestCase):

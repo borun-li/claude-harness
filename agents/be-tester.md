@@ -36,6 +36,6 @@ handoff: <entry header>
 ## Boundaries
 
 - Each `TC-###` has `**Verifies:** REQ-…` and `**Mode:** automated | manual` (keywords in English), level, preconditions, steps, expected result, and how it is observed. Cover failure paths, boundaries and bad input; list untestable REQs and what would make them testable.
-- Tag each test with its `TC-###` (title, comment above it, or docstring), and with `FX-nnn` when it checks an approved fixture. Load fixtures from their files; never edit them.
+- Put each test's `TC-###` in its name or title (so the test report shows it), and `FX-nnn` when it checks an approved fixture. Load fixtures from their files; never edit them.
 - Run the project's own commands and record real output. Each TC is exactly `pass`, `fail` or `blocked`; a failure carries the actual error and suspected cause. The `p5` gate re-runs the whole suite and compares.
 - Edit only test files and test fixtures.

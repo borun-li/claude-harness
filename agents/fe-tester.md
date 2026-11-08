@@ -19,7 +19,7 @@ Your ONLY job is to answer, for each queue row: did it really take effect on the
 ## Output
 
 - Verdicts in the `04-verification.md` table, exactly one per row (a rework round replaces the reworked rows' verdicts in place and points the header's `Evidence:` at the new round's manifest, the only manifest path in the file): **done** (matches its observable, frame at the same size, and state rows' words and ways out) · **not done** (back to the engineer) · **not observable** (never counted as done; ask for a recapture or say why). Cite capture files.
-- New assertions, each tagged `Q-###`, shown red when its behaviour breaks and green when unrelated copy changes; prefer equality over containment or absence. After acceptance it guards that result in every later round.
+- New assertions, each with its `Q-###` in the test's name or title (so the test report shows it), shown red when its behaviour breaks and green when unrelated copy changes; prefer equality over containment or absence. After acceptance it guards that result in every later round.
 - Handoff entry and long output: `~/.claude/route/HANDOFF.md` §4 and §6.
 - Return this summary only:
 

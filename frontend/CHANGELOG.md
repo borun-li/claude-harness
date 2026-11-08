@@ -13,6 +13,25 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §0。**
 
+## 8.2.0 — 2026-11-08 — row ids unique per project; OBS guards that every language can keep
+
+Minor. Source: the Ithaca Local Guide UI redesign (2026-11-03, retro technical details), a Go
+project. Its second round restarted the queue at Q-001, so Q-003 meant "browse place cards" in one
+round and "location and five fields" in the other while the gates searched the whole project for
+the tag (`FE4.row-tests`, `fe-promote`); an agent re-homed the old tests by hand. And all 24
+test-guarded `OBS` entries were registered with an empty test list: the gates read test names only
+from Python and JS, so the Go tests' names were dropped and `FE.regression` stayed red.
+- `fe-queue` gains `FE2.row-ids`: a `Q-###` already headed in another frontend run dir (`03-queue.md`,
+  or `05-queue.md` before 7.0) fails, naming the next free id. Template: ids continue across rounds.
+- A test proves a row by carrying its `Q-###` in its name or title (fe-tester, QUALITY-BARS
+  `[FE4.row-tests]`). The id match in JUnit names now accepts Go's `TestRows/Q-003_cards` and still
+  rejects `Q-0031` (shared with backend).
+- `fe-promote`: a test whose name the parser cannot read is registered as `{file, tag: Q-###}`
+  instead of being dropped; `FE.regression` requires a JUnit case carrying that id, all passing.
+  Entries registered earlier with an empty list are guarded by the row id in their `source`, without
+  rewriting the hashed registry; the check says how many.
+- Tests: `RowIds` (2), `Registry` (+2), `IdInName`; each failed on 8.1.0.
+
 ## 8.1.0 — 2026-11-08 — agents stop only processes they started
 
 Minor. Shared with backend 3.5.0 (see `~/.claude/backend/CHANGELOG.md`): new hook

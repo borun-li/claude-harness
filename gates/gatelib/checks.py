@@ -16,6 +16,32 @@ NO_REQ = {"none", "n/a", "-", "—", "deferred", ""}
 RUN_DIRS = ("docs/backend", "docs/waterfall", "docs/frontend", "docs/uiux", "uiux")
 
 
+def ids_in_other_runs(ctx, names, prefix):
+    """{id: run dir} for every PREFIX-nnn heading in NAMES under the project's other run dirs.
+    Tests carry these ids project-wide, so a new run continues the numbering instead of restarting."""
+    rel = pathlib.PurePosixPath(ctx.run_rel)
+    bases = (set(RUN_DIRS) | {ctx.run_rel, rel.parent.as_posix()}) - {".", "", "docs"}
+    out = {}
+    for b in sorted(bases):
+        for name in names:
+            for f in [ctx.project / b / name, *sorted((ctx.project / b).glob(f"*/{name}"))]:
+                if not f.is_file() or f.parent.resolve() == ctx.run.resolve():
+                    continue
+                for i in docs.id_blocks(docs.read(f) or "", prefix):
+                    out.setdefault(i, f.parent.relative_to(ctx.project).as_posix())
+    return out
+
+
+def unique_ids_check(ctx, cid, ids, names, prefix, owner):
+    used = ids_in_other_runs(ctx, names, prefix)
+    clash = [f"{i}: already used in {used[i]}" for i in sorted(ids) if i in used]
+    if not clash:
+        return ok(cid, f"{len(ids)} {prefix} ids new to the project", owner)
+    nxt = max(int(i.split("-")[1]) for i in used) + 1
+    return bad(cid, f"{prefix} ids reused from an earlier run: continue from {prefix}-{nxt:03d} "
+                    "(ids never restart in a project)", owner, clash)
+
+
 class Ctx:
     def __init__(self, project, run_dir, cfg):
         self.project = pathlib.Path(project).resolve()
@@ -575,6 +601,8 @@ def phase4(ctx):
     res.append(bad("P4.plan-ids", "No `### TC-nnn` headings", owner) if not tcs else
                bad("P4.plan-ids", "Duplicate TC ids", owner, dups) if dups else
                ok("P4.plan-ids", f"{len(tcs)} TCs, ids unique", owner))
+    if tcs:
+        res.append(unique_ids_check(ctx, "P4.tc-ids", tcs, ("04-test-plan.md",), "TC", owner))
     bad_tc = [f"{t}: verifies {sorted(v['verifies']) or 'nothing'}, mode {v['mode']}" for t, v in tcs.items()
               if not v["verifies"] or not v["verifies"] <= set(reqs) or v["mode"] is None]
     res.append(bad("P4.plan-cases", "TCs without a valid REQ or automated/manual mode", owner, bad_tc)
@@ -772,16 +800,22 @@ def _observed_tc(ctx, tcs, cases):
     return _observed_ids(locs, {t: v for t, v in tcs.items() if v["mode"] == "automated"}, cases)
 
 
+def id_in_name(tid, name):
+    """The id appears in a test name: `Q-003 cards`, `TestRows/Q-003_cards` (Go turns spaces into `_`),
+    `test_x[Q-003]`; never `Q-0031` or `XQ-003`."""
+    return re.search(r"(?<![A-Za-z0-9-])%s(?!\d)" % re.escape(tid), name or "") is not None
+
+
 def _observed_ids(locs, ids, cases):
     """{id: passed|failed|not-executed}: a JUnit case counts when its name carries the id, or when it
     is the tagged test (python function name, or JS test title)."""
     out = {}
     for tc in ids:
-        statuses = [st for cls, name, st in cases if re.search(r"\b%s\b" % re.escape(tc), name)]
+        statuses = [st for cls, name, st in cases if id_in_name(tc, name)]
         for rel, fn in locs.get(tc, []):
             stem = pathlib.PurePath(rel).with_suffix("").as_posix().replace("/", ".")
             for cls, name, st in cases:
-                if not fn or re.search(r"\b%s\b" % re.escape(tc), name):
+                if not fn or id_in_name(tc, name):
                     continue
                 if " " in fn or not fn.isidentifier():  # a JS test title
                     if fn in name:

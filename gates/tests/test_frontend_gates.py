@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Regression matrix for the frontend gates (fe-*, 7.0): red on each defect, green on innocent work.
 Run: python3 tests/test_frontend_gates.py"""
+import hashlib
 import json
 import os
 import pathlib
@@ -891,6 +892,28 @@ class Capture(FrontBase):
             srv.terminate()
 
 
+class RowIds(FrontBase):
+    """Tests carry Q ids project-wide, so a later round continues the numbering."""
+    def test_earlier_round_id_is_refused_with_the_next_free_one(self):
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        self.p.write("docs/frontend/old-round/03-queue.md", "### Q-001 — x\n\n### Q-007 — y\n")
+        for g in ("fe-product", "fe-ux", "fe-ui"):
+            self.fe(g)
+        rep = self.fe("fe-queue")[2]
+        self.assertEqual(self.st(rep, "FE2.row-ids"), "fail")
+        self.assertIn("Q-001: already used in docs/frontend/old-round", self.details(rep, "FE2.row-ids"))
+        self.assertIn("continue from Q-008", next(c for c in rep["checks"] if c["id"] == "FE2.row-ids")["message"])
+        self.p.write("docs/frontend/03-queue.md", (QUEUE + FILL).replace("Q-001", "Q-008"))
+        self.assertEqual(self.st(self.fe("fe-queue")[2], "FE2.row-ids"), "pass")
+
+    def test_pre_7_queue_name_counts(self):
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        self.p.write("docs/frontend/v6/05-queue.md", "### Q-001 — x\n")
+        for g in ("fe-product", "fe-ux", "fe-ui"):
+            self.fe(g)
+        self.assertEqual(self.st(self.fe("fe-queue")[2], "FE2.row-ids"), "fail")
+
+
 class Registry(FrontBase):
     """Accepted rows become OBS-### entries that later rounds must keep passing."""
     ROW_TEST = 'def test_notice():\n    """Q-001"""\n    assert open("web/notice.html").read().count("Already uploaded") == 1\n'
@@ -977,6 +1000,39 @@ class Registry(FrontBase):
         self.p.write("docs/frontend/04-verification.md", self.p.read("docs/frontend/04-verification.md").replace(
             "| Q-001 | done |", "| OBS-001 | done | `Q-001-dup@80x24.stdout` · recheck | holds |\n| Q-001 | done |"))
         self.assertEqual(self.st(self.fe("fe-verify")[2], "FE.regression-captures"), "pass")
+
+    # A test whose name the parser cannot read (as in Go, Rust, Java), whose JUnit case carries the
+    # row id with an underscore after it, as Go subtest names do.
+    UNNAMED_ROW_TEST = ('import pytest\nROW = "Q-001"\n\n\n'
+                        '@pytest.mark.parametrize("page", ["web/notice.html"], ids=[ROW + "_notice"])\n'
+                        'def test_notice(page):\n    assert open(page).read().count("Already uploaded") == 1\n')
+
+    def test_unreadable_test_name_is_guarded_by_row_id(self):
+        self.p.write("tests/test_rows.py", self.UNNAMED_ROW_TEST)
+        self.accept()
+        code, out = self.promote()
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.reg()["entries"]["OBS-001"]["tests"], [{"file": "tests/test_rows.py", "tag": "Q-001"}])
+        self.assertEqual(self.st(self.fe("fe-build")[2], "FE.regression"), "pass")
+        self.p.write("web/notice.html", '<p class="warn">Duplicate!</p>')
+        self.assertEqual(self.st(self.fe("fe-build")[2], "FE.regression"), "fail")
+
+    def test_older_entry_with_empty_tests_is_guarded_by_its_source_row(self):
+        self.p.write("tests/test_rows.py", self.UNNAMED_ROW_TEST)
+        self.accept()
+        self.promote()
+        reg = self.reg()
+        old = {k: v for k, v in reg["entries"]["OBS-001"].items() if k != "hash"}
+        old.update({"id": "OBS-002", "tests": [], "source": "docs/frontend#Q-001"})
+        old["hash"] = hashlib.sha256(json.dumps(old, sort_keys=True).encode()).hexdigest()
+        reg["entries"]["OBS-002"] = old
+        self.p.write("docs/frontend/observables.json", json.dumps(reg))
+        rep = self.fe("fe-build")[2]
+        self.assertEqual(self.st(rep, "FE.regression"), "pass")
+        self.assertIn("1 older entries guarded by their row id",
+                      next(c for c in rep["checks"] if c["id"] == "FE.regression")["message"])
+        self.p.write("web/notice.html", '<p class="warn">Duplicate!</p>')
+        self.assertIn("OBS-002", self.details(self.fe("fe-build")[2], "FE.regression"))
 
     def test_plan_lists_and_retire_removes_conflicts(self):
         self.accept()
