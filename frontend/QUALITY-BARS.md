@@ -97,7 +97,11 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
 - Every row has exactly one verdict: done · not done · not observable. Not observable is not
   done. `[FE4.verdicts · FEA.rows]`
 - Done means the capture matches the row's observable, its frame export at the same size, and
-  its state rows' words and ways out.
+  its state rows' words and ways out, in everything the person doing the row's task would notice or
+  be held up by. A difference seen only by setting capture and frame side by side leaves the row
+  done and goes under § Minor deviations, with its capture.
+- In a rework round a row is not done only if the named defect still shows or the fix broke what
+  held before; anything else newly seen is judged by the bullet above.
 - Evidence comes from the surface, never a picture alone, and every claim cites fields present in
   the dump it cites. `[FE4.evidence]`
 - Evidence is captured by `gate.py capture` from a plan covering every row, width and state, after
@@ -151,7 +155,8 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
   § Dropped with concrete counter-evidence. `[FE4.findings]`
 - Each finding has severity, `Where` (a run-dir file or `path:line` that exists), the UX or
   contract reference, and a scenario. `[FE4.findings]`
-- Only blockers and majors go to a fix round; minors are listed in § Deferred.
+- Only blockers and majors go to a fix round; minors, the tester's minor deviations among them, are
+  listed in § Deferred.
 - The panel includes at least what PLAYBOOK §6 requires for the risk `[FE4.panel]`; the panelists
   added for the diff are the orchestrator's call, and the report says why.
 

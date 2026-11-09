@@ -125,7 +125,7 @@ progress (§3J). A design problem is a DFB, never a silent deviation.
 2. A fresh `fe-reviewer` merges candidates and not-done rows into `05-review.md`. Gates `fe-review`,
    then `fe-verify` (it reruns the tests).
 3. Fix only blockers, majors and not-done rows, by fresh owners; design defects go to `fe-ux`/`fe-ui`.
-   Recapture; fresh tester and reviewer re-judge only what was fixed. At `loops.max_fix_rounds`
+   Recapture; fresh tester and reviewer re-judge only the named defects. At `loops.max_fix_rounds`
    minors are deferred; only blockers, majors and P1 rows escalate (Constitution §5.4).
 
 **Acceptance.** `fe-accept`, then show verification, review (drops and deferred), the DFB register

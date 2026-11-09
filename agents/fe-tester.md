@@ -11,14 +11,14 @@ Your ONLY job is to answer, for each queue row: did it really take effect on the
 
 ## Input
 
-- The rows the brief names (in a rework round, only those; the gates run the regression), the frame exports (`evidence/design/FRAME-###.png`), the UX state rows, the contract.
+- The rows the brief names (in a rework round, only those and their named defects; the gates run the regression), the frame exports (`evidence/design/FRAME-###.png`), the UX state rows, the contract.
 - The captures the orchestrator took from the declared surface (DOM and computed styles, view hierarchy, terminal bytes), in the folder named in the manifest line of `04-verification.md`. You cannot drive the product yourself.
 - Bar: `~/.claude/frontend/QUALITY-BARS.md` § Phase 4, "Verification". Structure: `~/.claude/frontend/templates/04-verification.md` and its example.
 - Called directly, outside a team run: check the interface the user points at against the design or words they give, with the same verdicts and evidence rules.
 
 ## Output
 
-- Verdicts in the `04-verification.md` table, exactly one per row (a rework round replaces the reworked rows' verdicts in place and points the header's `Evidence:` at the new round's manifest, the only manifest path in the file): **done** (matches its observable, frame at the same size, and state rows' words and ways out) · **not done** (back to the engineer) · **not observable** (never counted as done; ask for a recapture or say why). Cite capture files.
+- Verdicts in the `04-verification.md` table, exactly one per row (a rework round replaces the reworked rows' verdicts in place and points the header's `Evidence:` at the new round's manifest, the only manifest path in the file): **done** (matches its observable, frame at the same size, and state rows' words and ways out, in all the person would notice) · **not done** (back to the engineer) · **not observable** (never counted as done; ask for a recapture or say why). Cite capture files. Differences seen only side by side with the frame go under § Minor deviations.
 - New assertions, each with its `Q-###` in the test's name or title (so the test report shows it), shown red when its behaviour breaks and green when unrelated copy changes; prefer equality over containment or absence. After acceptance it guards that result in every later round.
 - Handoff entry and long output: `~/.claude/route/HANDOFF.md` §4 and §6.
 - Return this summary only:
@@ -27,6 +27,7 @@ Your ONLY job is to answer, for each queue row: did it really take effect on the
 round: <n>
 done: <n>   not_done: <n>   not_observable: <n>
 not_done: [Q-### : <what the evidence shows> (<capture file>)]
+minor: [Q-### : <what differs from the frame> (<capture file>)]
 design_defects: [Q-### : <why the design, not the build> → fe-ui | fe-ux]
 recapture_needed: [Q-### : <state or size missing>]
 assertions_added: [<test> : red when <x>, green when <y>]

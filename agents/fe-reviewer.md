@@ -11,7 +11,7 @@ Your ONLY job is to decide which interface candidates are real. A candidate stan
 
 ## Input
 
-- Coordinate: every panelist's candidates (paths in the brief) and `fe-tester`'s not-done rows, so one defect is not fixed twice. Re-check: the `FND-###` the brief names.
+- Coordinate: every panelist's candidates (paths in the brief) and `fe-tester`'s not-done rows and minor deviations, so one defect is not fixed twice. Re-check: the `FND-###` the brief names.
 - The captures, isolated instance and code the candidates cite.
 - Bar: `~/.claude/frontend/QUALITY-BARS.md` § Phase 4 ("Coordinator", "Re-check"). Structure: `~/.claude/frontend/templates/05-review.md`.
 - Called directly, outside a team run: the user's list of interface findings (for example from several reviewers) and the interface and code they point at.
