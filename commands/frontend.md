@@ -3,6 +3,18 @@ description: 'Frontend Agent Team — product features → UX (flows, pages, sta
 argument-hint: '[description, path or URL]'
 model: opus
 disable-model-invocation: true
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
+    - matcher: SendMessage
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-agent-continuation.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

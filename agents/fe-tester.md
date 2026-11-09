@@ -3,6 +3,14 @@ name: fe-tester
 description: Frontend tester. Judges from captured evidence whether each built row matches its confirmed frame and state rows; writes assertions that can fail. Not backend tests (`be-tester`) or broad review (`fe-review-*`).
 tools: Read, Grep, Glob, Bash, Write, Edit, WebFetch
 model: sonnet
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

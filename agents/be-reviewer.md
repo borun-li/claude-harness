@@ -3,6 +3,14 @@ name: be-reviewer
 description: Read-only backend review coordinator. Merges panelists' candidate findings, tries to disprove each against the code, ranks FND findings; re-checks named fixes. Use after a backend review panel.
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

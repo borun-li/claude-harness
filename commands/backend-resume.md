@@ -3,6 +3,18 @@ description: Resume an in-flight backend run from its state.json, optionally fro
 argument-hint: '[phase number to resume from, e.g. 4] [optional note]'
 model: opus
 disable-model-invocation: true
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
+    - matcher: SendMessage
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-agent-continuation.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

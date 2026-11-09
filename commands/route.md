@@ -3,6 +3,18 @@ description: 'Route software-engineering work to the be-/fe- agent team: ask the
 when_to_use: 'Use when the user explicitly asks for the agent team ("用团队", "agent team", "走完整流程"), or when the request changes software that will be used and maintained in one of two ways: its user-visible behaviour (a new product or feature, an interface design or redesign, a behaviour change, a bug whose fix changes what users see), or its structure (architecture, module boundaries, data model, API, refactoring). Judge by what changes, never by how many files. Not for: coursework or programming exercises; questions, explanations or learning; research and data analysis; one-off scripts or config edits; fixing an error or crash that leaves behaviour and structure unchanged; requirements, review or test work alone, or a request naming a single agent — dispatch that agent directly. If unsure, ask the user once whether to use the agent team.'
 argument-hint: '{what you want done, in plain words}'
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
+    - matcher: SendMessage
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-agent-continuation.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

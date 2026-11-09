@@ -3,6 +3,18 @@ description: Start a full backend software-development run — phase-gated (requ
 argument-hint: <what to build, or a path to a brief e.g. instructions.md>
 model: opus
 disable-model-invocation: true
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
+    - matcher: SendMessage
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-agent-continuation.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

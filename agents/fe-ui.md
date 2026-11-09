@@ -4,6 +4,14 @@ description: UI designer. Turns confirmed UX into visual style, tokens, componen
 tools: Read, Grep, Glob, Bash, Write, Edit, WebFetch, Skill, mcp__plugin_figma_figma__*
 skills: figma:figma-use, design-taste
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

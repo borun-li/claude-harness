@@ -41,22 +41,35 @@ for p in $parts; do
 done
 echo "installed into $dest"
 
-# Register the harness hooks in settings.json (idempotent; other settings untouched).
+# The safety hooks are declared in the harness's agent and command files, so they run only in
+# harness sessions. Remove the global entries earlier versions added (other settings untouched).
 python3 - "$dest/settings.json" <<'EOF'
 import json, os, sys
 path = sys.argv[1]
-hooks = [("Bash", 'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"'),
-         ("Bash", 'python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"'),
-         ("SendMessage", 'python3 "$HOME/.claude/hooks/no-agent-continuation.py"')]
-s = json.load(open(path)) if os.path.exists(path) else {}
-pre = s.setdefault("hooks", {}).setdefault("PreToolUse", [])
-for matcher, cmd in hooks:
-    if any(h.get("command") == cmd for e in pre for h in e.get("hooks", [])):
-        print("hook already registered:", cmd)
+if not os.path.exists(path):
+    sys.exit(0)
+old = {'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"',
+       'python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"',
+       'python3 "$HOME/.claude/hooks/no-agent-continuation.py"'}
+s = json.load(open(path))
+pre = s.get("hooks", {}).get("PreToolUse")
+if not pre:
+    sys.exit(0)
+kept, removed = [], 0
+for e in pre:
+    hs = [h for h in e.get("hooks", []) if h.get("command") not in old]
+    removed += len(e.get("hooks", [])) - len(hs)
+    if hs or not e.get("hooks"):
+        kept.append({**e, "hooks": hs})
+if removed:
+    if kept:
+        s["hooks"]["PreToolUse"] = kept
     else:
-        pre.append({"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]})
-        print("hook registered in settings.json:", cmd)
-json.dump(s, open(path, "w"), indent=2)
+        del s["hooks"]["PreToolUse"]
+        if not s["hooks"]:
+            del s["hooks"]
+    json.dump(s, open(path, "w"), indent=2)
+    print(f"removed {removed} global harness hook entries from settings.json; they now run only in harness sessions")
 EOF
 
 (cd "$dest/gates" && npm ci --silent) && echo "gates dependencies installed"
