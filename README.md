@@ -18,7 +18,7 @@ Every task starts with one question, the tier, and the tier decides the path:
 flowchart LR
   R(["/route"]) --> T{{tier ■}}
   T -- Small change --> SP{{plan ■}} --> E1[one engineer] --> A1{{check it running ■}}
-  T -- Prototype --> D1[design] --> P1{{try it running ■}}
+  T -- Prototype --> D1["design (with an interface)"] --> P1{{try it running ■}}
   T -- Full development --> D2[design] --> P2{{prototype ■}} --> PL{{plan ■}} --> B[build · tests · review] --> A2{{acceptance ■}}
 ```
 
@@ -28,11 +28,24 @@ and UI sign-offs before the prototype. The team READMEs show each team's full fl
 Between sign-offs you are asked only when something irreversible or outward-facing is about to
 happen. Everything else is decided with a recommended default and shown to you at the next stop.
 
+### Scope today
+
+Built and tested on **web applications**: a backend, a browser frontend, or both.
+
+| Interface | Design | Evidence and checks |
+|---|---|---|
+| Web | Figma | Automated: Chrome captures the DOM and computed styles at every screen size |
+| Terminal | Text mockups | Automated capture of the program's output; less used so far |
+| Native app, desktop | Figma | Manual: you or an instrument supply the evidence files; the gates do not yet recognise native UI code as frontend files |
+
+Backend-only work does not depend on the interface. Support beyond the web grows as projects use it.
+
 ---
 
 ## Table of Contents
 
 - [Description](#description)
+- [Scope today](#scope-today)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
 - [Using it](#using-it)
@@ -48,14 +61,18 @@ happen. Everything else is decided with a recommended default and shown to you a
 
 | To do this | You need |
 |---|---|
-| Any scenario | [Claude Code](https://claude.com/claude-code), Python 3, git |
-| Scenarios 2–5 with a web interface | Also Node.js with npm, and Google Chrome (evidence capture) |
+| Any scenario | [Claude Code](https://claude.com/claude-code), Python 3.10+, git, Node.js 20+ with npm |
+| Scenarios 2–5 with a web interface | Also Google Chrome (evidence capture) |
 | A new visual design (Scenarios 2, 3) | Also the Figma plugin for Claude Code, with a seat that can write to Figma files |
 | Scenario 4 with a Figma design | The Figma plugin; read access is enough |
 | A terminal interface | No Figma: screens are designed as text mockups |
 
-The Figma agents list its tools as `mcp__plugin_figma_figma__*`; if your server has another name,
-change that line in `agents/fe-ui.md` and `agents/fe-engineer.md`.
+Developed on macOS; Linux should work; on Windows use WSL.
+
+The Figma agents list the Figma plugin's tools as `mcp__plugin_figma_figma__*`; if your server has
+another name, change that line in `agents/fe-ui.md` and `agents/fe-engineer.md`. Each run has a
+Figma call budget under a monthly cap; the default cap (300) is the author's, so set yours with
+`/frontend-config`.
 
 ---
 
@@ -86,10 +103,25 @@ It backs up what it will replace to `~/.claude/backup-harness-<date>.tgz`, copie
 `~/.claude`, registers three safety hooks in `~/.claude/settings.json` and installs `playwright-core`
 for the gates. You should see `done. Restart Claude Code, then run /route in a project.`
 
+**What install changes.** Files in `~/.claude` with the same names (`CONSTITUTION.md`,
+`ORCHESTRATOR.md`, and the folders `agents/`, `commands/`, `backend/`, `frontend/`, `route/`,
+`gates/`, `hooks/`, `skills/design-taste/`) are replaced after the backup; nothing else there is
+touched. The three hooks apply to **every** Claude Code session on the machine, not only harness
+runs: Claude cannot run `git stash`, `git checkout -- <file>`, `pkill` and similar commands for
+you anywhere. Run such a command yourself with `! <command>` in the prompt.
+
 **Step 4 — restart Claude Code and confirm.** In any project, run `/backend-config`: it prints
 the effective configuration and the harness version.
 
 Update later with `git pull && ./install.sh`.
+
+**Uninstall.**
+1. In `~/.claude/settings.json`, delete the three `PreToolUse` entries whose command runs
+   `~/.claude/hooks/no-tree-restoring-git.py`, `no-foreign-process-kill.py` or
+   `no-agent-continuation.py`.
+2. Delete the installed files and folders listed above from `~/.claude`, or restore your earlier
+   copies from the backup: `tar xzf ~/.claude/backup-harness-<date>.tgz -C ~/.claude`.
+3. Restart Claude Code.
 
 ---
 
@@ -134,8 +166,9 @@ For work that will be used and maintained.
 ```
 
 The orchestrator reads the code and decides frontend, backend or both; a change on both sides runs
-as one cross-stack run with one acceptance. You sign off at kickoff, the prototype, the plan (design,
-risk and approved test fixtures) and acceptance; with a new interface also at UX and UI.
+as one cross-stack run with one acceptance. You sign off at kickoff, the prototype and acceptance;
+backend work also at the plan (design, risk and approved test fixtures), and a new interface also
+at UX and UI.
 Deliverables go to `docs/backend/` and `docs/frontend/`.
 
 ### Scenario 4 — build from a design you already have
@@ -191,7 +224,7 @@ The named agent works alone: no phases, no sign-offs, no gates.
   context ([`ORCHESTRATOR.md`](ORCHESTRATOR.md)). [`CONSTITUTION.md`](CONSTITUTION.md) overrides
   every other file.
 - **Fresh agents** — each step goes to a new agent with a written brief; a finished agent is never
-  reused, so no step inherits another's blind spots.
+  carried into another round, so no step inherits another's blind spots.
 - **Automatic gates** — between phases, `gates/gate.py` checks documents, traceability, tests and
   the working tree; the agent being checked never runs its own gate.
 - **Run log** — every dispatch, gate and sign-off goes to a hash-chained log on disk, which status,
@@ -219,7 +252,7 @@ claude-harness/
 ├── route/                # prototype procedure, handoff format, the frontend/backend line
 ├── gates/                # automatic checks, run log and evidence capture, with tests
 ├── hooks/                # the three safety hooks, with tests
-└── skills/design-taste/  # interface design taste used by the frontend team
+└── skills/design-taste/  # the author's interface taste; edit it to yours (a project's brand wins)
 ```
 
 Versions: `harness_version` in `backend/config.json` and `frontend/config.json`.
