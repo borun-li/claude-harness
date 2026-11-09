@@ -3,6 +3,14 @@ name: be-review-security
 description: Read-only backend reviewer for security. Can an attacker use it through untrusted input, auth, secrets, unsafe defaults or resource exhaustion? Use for a security review of code or an API.
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

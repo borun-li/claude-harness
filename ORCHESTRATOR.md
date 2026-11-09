@@ -39,6 +39,9 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
   your own change with `cp` aside, `cp` back, `cmp`.
 - Stopping processes by name, pattern or port is blocked by
   `~/.claude/hooks/no-foreign-process-kill.py` (Constitution §4.6); stop only a PID you recorded.
+- These hooks are declared in the agent files and in the commands that start or resume a run, so
+  they act only in harness sessions. A run continued in a reopened session goes through
+  `/backend-resume` or `/frontend-resume`, which turns them on for that session.
 
 ## Handoff
 

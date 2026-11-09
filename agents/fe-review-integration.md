@@ -3,6 +3,14 @@ name: fe-review-integration
 description: Read-only interface reviewer for data and runtime. Does the frontend hold up when the API is slow, fails, returns nothing or too much, or is called twice? Use for an integration review.
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

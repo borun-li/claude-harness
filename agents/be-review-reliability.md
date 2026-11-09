@@ -3,6 +3,14 @@ name: be-review-reliability
 description: Read-only backend reviewer for reliability and operations. Does it break when a dependency fails, under load, on restart or in an operator's hands? Use for a robustness review.
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

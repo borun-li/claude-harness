@@ -100,15 +100,21 @@ You should see `prerequisites ok`; otherwise each missing tool is listed with wh
 ```
 
 It backs up what it will replace to `~/.claude/backup-harness-<date>.tgz`, copies the harness into
-`~/.claude`, registers three safety hooks in `~/.claude/settings.json` and installs `playwright-core`
-for the gates. You should see `done. Restart Claude Code, then run /route in a project.`
+`~/.claude` and installs `playwright-core` for the gates. You should see
+`done. Restart Claude Code, then run /route in a project.`
 
 **What install changes.** Files in `~/.claude` with the same names (`CONSTITUTION.md`,
 `ORCHESTRATOR.md`, and the folders `agents/`, `commands/`, `backend/`, `frontend/`, `route/`,
 `gates/`, `hooks/`, `skills/design-taste/`) are replaced after the backup; nothing else there is
-touched. The three hooks apply to **every** Claude Code session on the machine, not only harness
-runs: Claude cannot run `git stash`, `git checkout -- <file>`, `pkill` and similar commands for
-you anywhere. Run such a command yourself with `! <command>` in the prompt.
+touched; `settings.json` is not changed (an update removes the hook entries earlier versions put
+there).
+
+**Where the safety hooks apply.** Only in harness sessions: inside every `be-*` and `fe-*` agent,
+and in your session from the moment `/route`, `/backend`, `/frontend` or a `-resume` command runs
+until the session ends. There Claude cannot run `git stash`, `git checkout -- <file>`, `pkill` and
+similar commands; run such a command yourself with `! <command>` in the prompt. Other sessions are
+not affected. A session reopened with `claude --resume` has them again after `/backend-resume` or
+`/frontend-resume`.
 
 **Step 4 — restart Claude Code and confirm.** In any project, run `/backend-config`: it prints
 the effective configuration and the harness version.
@@ -116,12 +122,9 @@ the effective configuration and the harness version.
 Update later with `git pull && ./install.sh`.
 
 **Uninstall.**
-1. In `~/.claude/settings.json`, delete the three `PreToolUse` entries whose command runs
-   `~/.claude/hooks/no-tree-restoring-git.py`, `no-foreign-process-kill.py` or
-   `no-agent-continuation.py`.
-2. Delete the installed files and folders listed above from `~/.claude`, or restore your earlier
+1. Delete the installed files and folders listed above from `~/.claude`, or restore your earlier
    copies from the backup: `tar xzf ~/.claude/backup-harness-<date>.tgz -C ~/.claude`.
-3. Restart Claude Code.
+2. Restart Claude Code.
 
 ---
 
@@ -231,7 +234,8 @@ The named agent works alone: no phases, no sign-offs, no gates.
   resume and the final checks read.
 - **Safety hooks** — one blocks git commands that discard uncommitted work, one blocks stopping
   processes by name, pattern or port (an agent stops only a process it started), one stops a
-  finished agent from being reused.
+  finished agent from being reused. They are declared in the agent and command files, so they act
+  only in harness sessions.
 
 Each team's flow and rules: [Backend team](backend/README.md) · [Frontend team](frontend/README.md).
 
@@ -243,7 +247,7 @@ Each team's flow and rules: [Backend team](backend/README.md) · [Frontend team]
 claude-harness/
 ├── README.md
 ├── LICENSE
-├── install.sh            # back up, copy into ~/.claude, register hooks
+├── install.sh            # back up, copy into ~/.claude
 ├── CONSTITUTION.md       # rules that override everything else
 ├── ORCHESTRATOR.md       # how the main session dispatches, decides and keeps context
 ├── commands/             # /route and the team slash commands
@@ -251,7 +255,7 @@ claude-harness/
 ├── backend/ · frontend/  # each team's README, playbook, quality bars, templates, config, changelog
 ├── route/                # prototype procedure, handoff format, the frontend/backend line
 ├── gates/                # automatic checks, run log and evidence capture, with tests
-├── hooks/                # the three safety hooks, with tests
+├── hooks/                # the three safety hooks and their tests
 └── skills/design-taste/  # the author's interface taste; edit it to yours (a project's brand wins)
 ```
 
@@ -269,6 +273,7 @@ the matching `CHANGELOG.md`: what changed, without project names or the story be
 python3 hooks/test_no_tree_restoring_git.py
 python3 hooks/test_no_foreign_process_kill.py
 python3 hooks/test_no_agent_continuation.py
+python3 hooks/test_hook_scoping.py
 ```
 
 ---

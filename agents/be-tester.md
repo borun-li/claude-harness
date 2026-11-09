@@ -3,6 +3,14 @@ name: be-tester
 description: Backend test engineer. Writes a test plan from requirements and design, implements and runs tests, reports real results; edits tests only. Not checking an interface against its design (`fe-tester`).
 tools: Read, Grep, Glob, Bash, Write, Edit, WebFetch
 model: sonnet
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

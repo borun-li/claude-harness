@@ -3,6 +3,14 @@ name: fe-reviewer
 description: Interface review coordinator. Merges fe-review-* candidates (or any interface findings), tries to disprove each against the running interface, writes ranked FND findings; re-checks named fixes.
 tools: Read, Grep, Glob, Bash, Write, Edit, WebFetch
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

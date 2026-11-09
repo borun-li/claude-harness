@@ -2,6 +2,19 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour or new role · major = changed phase flow or artifact contract.
 
+## 3.7.0 — 2026-11-09 — safety hooks act only in harness sessions
+
+Minor. Shared with frontend 8.4.0.
+- The three safety hooks are declared in frontmatter, no longer in the global `settings.json`:
+  every `be-*` / `fe-*` agent carries the git and process hooks; `/route`, `/backend`,
+  `/frontend`, `/backend-resume` and `/frontend-resume` carry all three for the session that runs them.
+- `install.sh` no longer registers hooks and removes the entries earlier versions added to
+  `settings.json`; other settings are untouched.
+- New `hooks/test_hook_scoping.py`: every agent and run command declares its hooks; the
+  `settings.json` cleanup keeps the user's own hooks.
+- ORCHESTRATOR Boundaries: a run continued in a reopened session goes through a `-resume` command.
+- README: where the hooks apply; Uninstall no longer edits `settings.json`.
+
 ## 3.6.1 — 2026-11-08 — public changelog; neutral comments
 
 Patch, wording only.

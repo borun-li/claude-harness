@@ -3,6 +3,14 @@ name: fe-review-experience
 description: Read-only interface reviewer for experience. Can the named user finish the task in every state and screen size, per the flows and state tables? Use for a UX/UI review of a running frontend.
 tools: Read, Grep, Glob, Bash, WebFetch
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

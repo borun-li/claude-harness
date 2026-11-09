@@ -3,6 +3,14 @@ name: be-architect
 description: Software architect. Turns approved requirements into architecture and detailed design (data model, APIs, module boundaries, errors); revises designs and refactoring plans. Not user flows (`fe-ux`) or visuals (`fe-ui`).
 tools: Read, Grep, Glob, Bash, Write, Edit, WebFetch, WebSearch
 model: opus
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+        - type: command
+          command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**
