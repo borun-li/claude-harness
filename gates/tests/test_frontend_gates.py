@@ -330,7 +330,7 @@ class DesignGates(FrontBase):
         self.assertEqual(self.st(self.fe("fe-ui")[2], "ROLE.designer-scope"), "pass")
 
     def test_backend_fixtures_written_meanwhile_are_not_charged_to_ui(self):
-        """ithaca: be-analyst wrote fixtures while fe-designer was the latest mark (ROLE.designer-scope waivers)."""
+        """be-analyst writes fixtures while fe-ui is the latest mark: not charged to fe-ui (ROLE.designer-scope)."""
         self.fe_dispatch("fe-ui", step="2")
         self.p.write("tests/fixtures/candidates/FX-001/input.json", "{}")
         self.p.write("docs/backend/03-detailed-design.md", "backend design in progress")

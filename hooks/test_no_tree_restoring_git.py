@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """``no-tree-restoring-git.py`` 的回归矩阵。跑法：``python3 <本文件>``，退出码即结果。
 
-**前 8 条不是想出来的，是发生过的** —— 2026-09-03 至 09-08 四次代理越界的原命令
-（`git checkout --` / `git apply -R` / 对语料 docx 的 `git checkout` / `git stash`），
-外加同族的 reset / clean / restore。
+前半是代理「撤掉自己改动」时常用、却会连带抹掉别人活的命令
+（`git checkout --` / `git apply -R` / `git stash`），外加同族的 reset / clean / restore。
 
 **后半的 ALLOW 同样重要，而且更容易被忽略。** 一个会对
 ``grep -rn 'git checkout' docs/`` 开火的守卫，会在第一次有人查这条禁令的出处时
@@ -20,13 +19,13 @@ import tempfile
 HOOK = pathlib.Path(__file__).with_name("no-tree-restoring-git.py")
 
 CASES: list[tuple[str, bool]] = [
-    # —— 四次真实越界的原命令 ——
-    ("git checkout -- review/views.py", True),          # 吞掉 fe-engineer 未提交的三处改动
+    # —— 撤改动的常见写法 ——
+    ("git checkout -- review/views.py", True),          # 连同别人未提交的改动一起恢复
     ("git apply -R /tmp/round1.diff", True),            # diff 对 HEAD 算，连别人的活一起撤
     ("git checkout tests/corpus/synthetic/x.docx", True),
     ("git stash push -u", True),
     ("git stash pop", True),
-    # 真实探针抓到的假阳性：这两条只读，拦了它们守卫就会被关掉
+    # 只读：拦了它们守卫就会被关掉
     ("git stash list", False),
     ("git stash show -p", False),
     # —— 同族 ——
@@ -50,7 +49,7 @@ CASES: list[tuple[str, bool]] = [
     ("git worktree remove /tmp/base", False),
     ("git worktree remove --force /tmp/base", True),
     ("git checkout -b feature/x", False),
-    ("git checkout -q -b feature/x origin/main", False),  # 曾被误拦（2026-11-03）
+    ("git checkout -q -b feature/x origin/main", False),  # 新建分支必须放行
     ("git checkout --quiet -b feature/x", False),
     ("git checkout -q -- review/views.py", True),
     ("git checkout -B feature/x", True),
@@ -88,7 +87,7 @@ def main() -> int:
             print("FAIL want=%s got=%s  %r"
                   % ("DENY" if want_deny else "ALLOW",
                      "DENY" if got else "ALLOW", command))
-    # —— 唯一的换分支例外：干净工作区切回 main（2026-11-04 用户要求）——
+    # —— 唯一的换分支例外：干净工作区切回 main——
     with tempfile.TemporaryDirectory() as tmp:
         clean, dirty, plain = (os.path.join(tmp, n) for n in ("clean", "dirty", "plain"))
         os.mkdir(plain)

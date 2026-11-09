@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """``no-foreign-process-kill.py`` 的回归矩阵。跑法：``python3 <本文件>``，退出码即结果。
 
-第一条是真实事故的原命令。ALLOW 一半和 DENY 一半同等重要：按 PID 收掉自己起的进程
+ALLOW 一半和 DENY 一半同等重要：按 PID 收掉自己起的进程
 是正路，拦了它，代理就只剩绕过这一条路。
 """
 import json
@@ -12,8 +12,8 @@ import sys
 HOOK = pathlib.Path(__file__).with_name("no-foreign-process-kill.py")
 
 CASES: list[tuple[str, bool]] = [
-    # —— 真实事故 ——
-    ('pkill -f "^./guide$"', True),
+    # —— 按命令行模式 ——
+    ('pkill -f "^./server$"', True),
     # —— 按名字或模式 ——
     ("killall node", True),
     ("pkill guide", True),
@@ -46,7 +46,7 @@ CASES: list[tuple[str, bool]] = [
     ("kill $SERVER_PID", False),
     ("kill %1", False),
     ("kill $(cat /tmp/x/preview.pid)", False),
-    ("./guide & echo $! > /tmp/x/guide.pid", False),
+    ("./server & echo $! > /tmp/x/server.pid", False),
     ("kill -l", False),
     ("ps -p $PID >/dev/null && kill $PID", False),   # 先确认自己的进程还在
     ("kill -0 $PID && kill $PID", False),

@@ -1,525 +1,247 @@
-# Frontend Agent Team（原 UI/UX Agent Team） — Harness Changelog
+# Frontend Agent Team — Changelog
 
-Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens ·
-**major** = changed phase flow or artifact contract.
+Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
-**体例**：条目记录事故发生的具体项目与数字；规则正文一律不得携带项目名词。
-一条经验要进规则，先脱掉它的项目外壳；脱不掉的，它属于那个项目的
-`team/uiux-team-config.md`，不属于这里。
+## 8.3.1 — 2026-11-08 — public changelog; neutral comments
 
-> **本文件是历史，不重写。** 下面 2.0.0 及更早的条目描述的是当时的 harness：其中点名的
-> `ux-lead` / `ux-researcher` / `ux-architect` / `ux-contract` / `ux-auditor` / `ux-reviewer`
-> 六个角色**今天已经不存在**，归档在 `~/.claude/archive/agents-v1/`，harness 里没有任何一处派工
-> 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
-> 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §0。**
+Patch, wording only. Shared with backend 3.6.1.
+- `CHANGELOG.md` lists what changed in each version, nothing else.
 
 ## 8.3.0 — 2026-11-08 — review converges: minor deviations, rework judges the named defect
 
-Minor. Source: the Ithaca Local Guide UI redesign (2026-11-03, retro problem 3). Each fix round's
-fresh `fe-tester` re-compared whole rows with their frames and found details the previous one had
-not named: round 1 layout, round 2 a 12 px tag and 55 % opacity, round 3 an outlined instead of a
-filled star. `max_fix_rounds` (2) was exceeded and the user was asked to allow one CSS change for
-the star. A row's "not done" had no severity, so every pixel difference cost a round.
-- Done now means the row matches its observable, frame and state rows in everything the person
-  doing its task would notice or be held up by. A difference seen only side by side with the frame
-  keeps the row done and goes under the new § Minor deviations (template, example, `minor:` in
-  the return).
-- In a rework round a row is not done only if the named defect still shows or the fix broke what
-  held before; anything else newly seen is judged as above, so a real miss still sends it back.
-- `fe-reviewer` files minor deviations as minor FNDs in § Deferred; Acceptance already lists
-  deferred minors for the user to pick. PLAYBOOK Phase 4: re-judge only the named defects.
-- No gate change; to be revisited after a live run if rounds still grow.
+Minor.
+- A row is done when it matches its observable, frame and state rows in everything the person doing
+  its task would notice; differences visible only side by side go under the new § Minor deviations
+  (template, example, `minor:` in the return).
+- A rework round fails a row only if the named defect still shows or the fix broke something;
+  anything newly seen is judged by the rule above.
+- `fe-reviewer` files minor deviations as minor FNDs in § Deferred. PLAYBOOK Phase 4 re-judges only
+  the named defects. No gate change.
 
-## 8.2.0 — 2026-11-08 — row ids unique per project; OBS guards that every language can keep
+## 8.2.0 — 2026-11-08 — row ids unique per project; OBS guards for any language
 
-Minor. Source: the Ithaca Local Guide UI redesign (2026-11-03, retro technical details), a Go
-project. Its second round restarted the queue at Q-001, so Q-003 meant "browse place cards" in one
-round and "location and five fields" in the other while the gates searched the whole project for
-the tag (`FE4.row-tests`, `fe-promote`); an agent re-homed the old tests by hand. And all 24
-test-guarded `OBS` entries were registered with an empty test list: the gates read test names only
-from Python and JS, so the Go tests' names were dropped and `FE.regression` stayed red.
-- `fe-queue` gains `FE2.row-ids`: a `Q-###` already headed in another frontend run dir (`03-queue.md`,
-  or `05-queue.md` before 7.0) fails, naming the next free id. Template: ids continue across rounds.
-- A test proves a row by carrying its `Q-###` in its name or title (fe-tester, QUALITY-BARS
-  `[FE4.row-tests]`). The id match in JUnit names now accepts Go's `TestRows/Q-003_cards` and still
-  rejects `Q-0031` (shared with backend).
-- `fe-promote`: a test whose name the parser cannot read is registered as `{file, tag: Q-###}`
-  instead of being dropped; `FE.regression` requires a JUnit case carrying that id, all passing.
-  Entries registered earlier with an empty list are guarded by the row id in their `source`, without
-  rewriting the hashed registry; the check says how many.
-- Tests: `RowIds` (2), `Registry` (+2), `IdInName`; each failed on 8.1.0.
+Minor.
+- `fe-queue` gains `FE2.row-ids`: a `Q-###` already used in another frontend run dir fails, naming
+  the next free id. Template: ids continue across rounds.
+- A test proves a row by carrying its `Q-###` in its name or title (`fe-tester`, `[FE4.row-tests]`).
+  JUnit id matching accepts Go subtest names (`TestRows/Q-003_cards`) and rejects `Q-0031` (shared
+  with backend).
+- `fe-promote` registers unparsed tests as `{file, tag: Q-###}`; `FE.regression` requires a passing
+  JUnit case carrying the id. Older entries with an empty test list are guarded by the row id in
+  their `source`.
+- Tests: `RowIds`, `Registry`, `IdInName`.
 
 ## 8.1.0 — 2026-11-08 — agents stop only processes they started
 
-Minor. Shared with backend 3.5.0 (see `~/.claude/backend/CHANGELOG.md`): new hook
-`no-foreign-process-kill.py` and Constitution §4.6 amendment, after a frontend reviewer's `pkill`
-stopped processes it had not started.
+Minor. Shared with backend 3.5.0: new hook `no-foreign-process-kill.py`; Constitution §4.6 amended.
 
 ## 8.0.1 — 2026-11-07 — agent files trimmed
 
-Patch, wording only: see backend 3.4.1 (shared agent descriptions and boilerplate).
+Patch, wording only; see backend 3.4.1.
 
 ## 8.0.0 — 2026-11-07 — a running prototype before the build; fewer questions
 
-Major (phase flow). Source: the Ithaca Local Guide UI redesign (2026-11-03, 7.2.6; retro
-`docs/retros/2026-11-ui-redesign.md`). The design was confirmed in Figma, yet ~2 h went into
-rewriting it as `01-ux.md`/`02-ui.md`; the "prototype" was a Figma link; the first running page
-appeared at Acceptance, six hours in; the user answered 39 questions in 18 dialogs, ~14 of them
-process matters (waivers ×3, fix cap ×2, observable retirement in 3 rounds, Figma 41/40).
-
-- **Constitution (2026-11-07, by the user):** §2.7 the prototype runs (fake data allowed), a visual
-  design is confirmed first; §5.4 a cap with only minors left defers them; §6 design-only clause removed.
-- **Design input** `new | external | reused`; an external design runs Phase 1E intake, no UX/UI stop,
-  its gaps asked once.
-- **Phase 2b prototype** (`fe-engineer`, product code on fake data) and a fixed **Prototype stop**,
-  where observables and retirements are approved; the UI stop confirms the look only. §3J preview.
-- **Kickoff** asks the tier and missing facts; models, risk, stops and budget are previewed.
-- `fe-engineer` names earlier approved results the round may change (two were invisible to `fe-plan`).
-- Only `fe-ui`/`fe-engineer` call Figma (the orchestrator's 14 export calls went unlogged).
-- **Gates:** exit `4` while the other team has a writer out (5 waivers came from concurrency);
-  marks may precede their dispatches until the next gate; `--figma-left` required; intake forms
-  accepted; prototype code allowed once the design is confirmed; trail requires the Prototype stop
-  before the build (8.0+ runs); `fe-review` before `fe-verify`.
-- PLAYBOOK rewritten to 1,889 words (was 3,509): what gates enforce or other files say is cited, not retold.
+Major (phase flow).
+- Constitution: §2.7 the prototype runs (fake data allowed) and a visual design is confirmed first;
+  §5.4 a cap with only minors left defers them; §6 design-only clause removed.
+- Design input `new | external | reused`; an external design runs Phase 1E intake, with no UX/UI stop.
+- New Phase 2b prototype (`fe-engineer`, product code on fake data) and a fixed Prototype stop, where
+  observables and retirements are approved; the UI stop confirms the look only. §3J preview.
+- Kickoff asks the tier and missing facts and previews models, risk, stops and budget. Only `fe-ui`
+  and `fe-engineer` call Figma; `fe-engineer` names earlier approved results the round may change.
+- Gates: exit `4` while the other team has a writer out; marks may precede dispatches until the next
+  gate; `--figma-left` required; intake forms accepted; trail requires the Prototype stop before the
+  build; `fe-review` before `fe-verify`.
+- PLAYBOOK rewritten and shortened.
 
 ## 7.2.6 — 2026-11-03 — stale wording and examples
 
-Patch, class C of the 7.2.4 audit:
-- PLAYBOOK: `## 2. Kickoff` (Phase 0 now means only product features, as the `--step` values do);
-  §1.1 drops the pointer to the backend's tier registry; `fe-engineer` owns the contract draft.
-- Examples follow the bars: no colour in UX; one page means one design stop; system font stack and
-  dark token values for a tool product (design-taste); capture names `@1440`; the requirements
-  example has § Assumptions and `be-analyst` points to it.
-- Contract ids are `C-001`; the contract template no longer says `fe-ux` writes it; the queue
-  template's Scaffold covers one-stop runs; the UI template mentions the `Dark` column.
-- QUALITY-BARS: `FE4.panel` checks the risk's minimum panel; diff-based panelists are the
-  orchestrator's call.
-- `commands/frontend.md` names the agents' "Called directly" rules; the CHANGELOG header points
-  to PLAYBOOK §0.
+Patch.
+- PLAYBOOK `## 2. Kickoff`; Phase 0 means product features only; `fe-engineer` owns the contract draft.
+- Examples follow the bars (no colour in UX, one page = one design stop, system font stack, capture
+  names `@1440`, requirements § Assumptions).
+- Contract ids `C-001`; queue template Scaffold covers one-stop runs; UI template has a `Dark` column.
+- `FE4.panel` checks the risk's minimum panel. `commands/frontend.md` names the agents' "Called
+  directly" rules.
 
 ## 7.2.5 — 2026-11-03 — one reading for each ambiguous rule
 
-Patch, class B of the 7.2.4 audit; each ruling is the user's:
+Patch.
 - A cross-stack run keeps one handoff log, in the Backend run dir (`HANDOFF.md` §1).
-- A DFB's raiser returns it; the orchestrator files it in `06-feedback.md`; the owner fills in only
-  its decision (`fe-ui` no longer writes the rows it raises).
-- A Prototype-tier run includes Phase 0 in a frontend-only run (`route/PROTOTYPE.md`), and ends with
-  `status: "prototype_confirmed"`, which kickoff no longer treats as unfinished; Full development
-  reusing it keeps the run dir.
-- One-stop runs recompute the Figma budget once `fe-ux` is green and ask before `fe-ui` only if it
-  grew.
-- Config `design_stops` → `design_stop_rule`; `state.json` keeps `design_stops: 1 | 2`.
-- Gate: a project's `.claude/frontend.json` `artifacts.run_dir` sets the run dir (the top-level
-  `run_dir` still works). Test added.
+- A DFB's raiser returns it; the orchestrator files it in `06-feedback.md`; the owner fills in the decision.
+- Prototype tier includes Phase 0 in frontend-only runs and ends with `status: "prototype_confirmed"`.
+- One-stop runs recompute the Figma budget after `fe-ux` and ask only if it grew.
+- Config `design_stops` → `design_stop_rule`; `.claude/frontend.json` `artifacts.run_dir` sets the run dir.
 
 ## 7.2.4 — 2026-11-03 — conflicting descriptions that broke runs
 
-Patch, from the same audit as backend 3.3.5:
-- §3H: `capture-plan.json` `sizes` are `{name, width, height}` objects, one per config `viewports`
-  width (new `viewport_height`, 900); bare widths passed `fe-capture-plan` and then crashed
-  `capture`. `fe-capture-plan` now rejects them.
-- §2.4 reused design: the log commands carry `--decision` and `--by` (they exited 2); the run
-  starts at Phase 2 step 1 (`baseline`) and runs the `fe-ux`/`fe-ui` gates on the reused documents;
-  a short UI stop confirms only the new queue's observables, then `fe-approve`.
-- Phase 4.5 and `fe-tester`: a rework round replaces the reworked rows' verdicts in place and points
-  `04-verification.md` at the new manifest only (`fe-verify` accepts one verdict per row and reads
-  the first manifest path).
-- `be-developer` in a frontend run builds from its `Side: backend` queue row and logs deviations in
-  the run dir.
-- `/frontend-status` and `/frontend-resume` find a second round's `docs/frontend/<slug>/`.
+Patch.
+- §3H: `capture-plan.json` `sizes` are `{name, width, height}` objects (new `viewport_height`, 900);
+  `fe-capture-plan` rejects bare widths.
+- §2.4 reused design: log commands carry `--decision` and `--by`; the run starts at Phase 2 step 1 and
+  a short UI stop confirms the new queue's observables.
+- Rework rounds replace reworked rows' verdicts in place; `04-verification.md` points at the new manifest.
+- `be-developer` in a frontend run builds from its `Side: backend` row. `/frontend-status` and
+  `/frontend-resume` find a second round's run dir.
 
 ## 7.2.3 — 2026-11-03 — read-only agents return their handoff entry
 
-Patch: `fe-review-experience`, `fe-review-accessibility` and `fe-review-integration` end their output
-block with a `handoff:` field naming the agent, as in backend 3.3.4 (a live direct call returned no
-entry).
+Patch: `fe-review-experience`, `fe-review-accessibility`, `fe-review-integration` end with a
+`handoff:` field (as backend 3.3.4).
 
 ## 7.2.2 — 2026-11-03 — agent files: one job, input, output, boundaries
 
-Patch: the 8 `fe-*` agents and the shared `be-analyst` follow the structure in backend 3.3.3
-(frontmatter, Constitution line, `Your ONLY job is …`, Input, Output, Boundaries; at most 48 lines).
-Descriptions drop phase numbers and dispatch conditions (PLAYBOOK §6 keeps those) and name the
-neighbour that is not them. `fe-engineer`'s coded-prototype rule is removed: a Prototype-tier
-interface ends at the UI stop, not in code. `tools`, `skills` and `model` unchanged.
+Patch: the 8 `fe-*` agents and `be-analyst` follow the backend 3.3.3 structure (at most 48 lines).
+Descriptions drop phase numbers and name the neighbouring role. `fe-engineer`'s coded-prototype rule
+removed.
 
 ## 7.2.1 — 2026-11-03 — terminal prototypes stay in this PLAYBOOK
 
-Patch, with backend 3.3.2: a terminal surface is prototyped here as text mockups up to the UI stop,
-never through `route/PROTOTYPE.md`; §7 drops `prototype/` (no frontend code prototype remains).
+Patch (with backend 3.3.2): terminal surfaces are prototyped as text mockups up to the UI stop, not
+via `route/PROTOTYPE.md`; §7 drops `prototype/`.
 
 ## 7.2.0 — 2026-11-03 — `/frontend-status`; commands follow Claude Code's guidance
 
-Minor (a new command), from the same comparison as backend 3.3.1.
-
-- New `/frontend-status`, replacing `/frontend status`: the same report, in line with
-  `/backend-status`, and callable by the model (`/frontend` is user-only). Read-only by tool
-  (`disallowed-tools`), with `state.json` and the timeline loaded before it starts. `/frontend
-  status` now points to it and starts nothing.
+Minor.
+- New read-only `/frontend-status` replaces `/frontend status` (now a pointer), callable by the model.
 - `/frontend-config` and `/frontend-resume` set `disable-model-invocation: true`.
 
 ## 7.1.0 — 2026-11-02 — design taste: type, spacing, icons, avoid-list
 
-Minor: new taste rules, agreed with the user after comparing `design-taste` with Anthropic's
-`frontend-design` skill, the frontend-aesthetics cookbook prompt and skill-authoring best practices,
-and the community `taste-skill` and `design-memory`. Section numbers unchanged; §8 appended.
-
-- **§1 by class.** The brand question now covers typefaces as well as colours (still four
-  questions). The class table adds small screens, keyboard (command palette for tools only), dark
-  mode (required for tools; one mode for showcases unless the user asks), density (tools: 14 px
-  body, 36–40 px rows) and boldness (showcases: one signature moment). The kickoff procedure is left
-  to the PLAYBOOK.
-- **§3** adds empty states. **§4** adds type (follows the brand; with none, fe-ui proposes and uses
-  the system stack meanwhile), a 4 px spacing scale, 4–6 px radius, and icons (the library's own
-  set, else Lucide; one set, line style). **§5**: start Figma work from the library's kit.
-- **§6** adds a list of generic AI-design defaults to avoid. **§7** checklist split into 14
-  single-question items. **§8** where the preferences come from; new ones are proposed by fe-ui and
-  added only when the user confirms.
-- New `examples.md` (error, single-value edit, risky action, empty state, in-place feedback,
-  optimistic rollback, status not colour alone, a generic AI-design first screen): only rules that
-  need judgement or that models habitually break; more are added from real runs (§8). Description
-  rewritten as what + when, without section numbers. `PLAYBOOK.md` §2.3 and `fe-ui` say "brand
-  (colours, typefaces)".
+Minor (`design-taste` skill).
+- §1: brand question covers typefaces; class table adds small screens, keyboard, dark mode, density,
+  boldness.
+- §3 empty states; §4 type, 4 px spacing scale, 4–6 px radius, icons (library set, else Lucide);
+  §5 start Figma from the library's kit.
+- §6 avoid-list of generic AI-design defaults; §7 checklist of 14 items; §8 how preferences are added.
+- New `examples.md`. PLAYBOOK §2.3 and `fe-ui` say "brand (colours, typefaces)".
 
 ## 7.0.0 — 2026-11-02 — product, UX, UI, engineering; Figma; review panel
 
-Major: changed roles, phase flow and every artifact contract. Built from a review of the ithaca run
-(harness 5.5.0, mode `new` plus implement: 41 dispatches, 239 agent-minutes — Phase 7 build 135,
-Phase 8 verify 37, Phase 5 document review 35 — 10 human events, 20 rows, verification round 4;
-two of the human events were `ROLE.designer-scope` waivers for fixture files the Backend team wrote
-while `fe-designer` was the latest mark), and from Anthropic's `frontend-design` skill and best
-practices, OneRedOak's design-review agent and ux-agent.
-
-- **Roles follow real frontend work.** `fe-designer` is split into `fe-ux` (flows, page structure,
-  per-page state tables, ASCII wireframes, post-launch insights) and `fe-ui` (design plan with a
-  self-check against generic defaults, tokens, components, Figma frames). `fe-critic` is removed:
-  `be-analyst` writes product features in frontend-only runs (Phase 0); the document review is gone.
-  `fe-engineer` also scaffolds while UI draws, checks feasibility, drafts the contract and writes the
-  queue (no longer the orchestrator).
-- **Flow.** Kickoff (one question: tier, models, risk, design stops, Figma budget) → 0 features →
-  1 UX → UX stop (2+ pages or a new flow) → 2 UI ‖ scaffold → feasibility and queue → UI stop
-  (Figma frames and the queue's observables; frames exported and locked) → 3 build → 4 verify ‖
-  review panel → coordinator → fix blockers and majors only → Acceptance → 5 after launch. Modes
-  `new`, `redesign`, `audit`, `review`, `implement` are retired; audits and reviews are direct calls.
-- **Design feedback (§3A).** Any role raises a `DFB-###`; its owner decides; changes to anything the
-  user confirmed need the user. Register in `06-feedback.md`; `fe-queue` and `fe-accept` check it.
-- **Figma (§1E).** UI is drawn and confirmed in Figma; a per-run call budget (20 + 8 per page, under
-  a monthly 300) is proposed at kickoff, calls are logged on returns (`--figma-calls`) and checked
-  (`FE.figma`); exceeding it needs the user (`--stop Budget`). Terminal surfaces use text mockups.
-- **Review panel (§6).** `fe-review-experience` (always), `fe-review-accessibility`,
-  `fe-review-integration` (by risk and what the diff touches), merged by `fe-reviewer`, which drops
-  a candidate only with counter-evidence and re-checks only fixed FNDs. Same rules as backend 3.2.0.
-- **Increments (§3B)** as in backend 3.2.0.
-- **Artifacts:** `00-requirements`, `01-ux`, `02-ui`, `03-queue`, `04-verification`, `05-review`,
-  `06-feedback`; `evidence/design/FRAME-###.png`.
-- **Gates:** `fe-product`, `fe-ux`, `fe-ui`, `fe-queue`, `fe-plan`, `fe-approve` (rows and frame
-  exports), `fe-build` (scaffold allowed before approval), `fe-capture-plan`, `fe-verify`,
-  `fe-review`, `fe-accept` (own trail: UX before UI, UI before Phase 3 build). Role checks no longer
-  charge one team's agent for the other team's run dir or fixtures (the ithaca waivers). Run-log
-  stops `UX`, `UI`, `Budget`.
-- **Shared:** the frontend/backend line moved to `route/FRONTEND_BACKEND_LINE.md`; in a cross-stack
-  run the UI stop is the backend's Prototype stop. `/route` asks the frontend kickoff questions in
-  its one question; a visual Prototype tier is the frontend run up to the UI stop.
-- 6.x runs are not resumed by 7.0 (PLAYBOOK §1.3).
-- **Constitution amended (2026-11-02, by the user), shared with backend 3.3.0.** §2.7: the
-  rough version may be a visual design when the deliverable is a visual interface. §3.2: reviewers
-  never change what they review and may write their own report (`fe-reviewer`). §5.1: a result the
-  user confirmed they will see or get (approved expected output or observable, confirmed flow or
-  screen) changing is a stop — internal design details are not. §5.5 (new): a budget the user set
-  would be exceeded. §6: a tier whose deliverable is a design replaces 6.4 and 6.7 with the user's
-  review of the design. Why: the frontend prototype is a Figma design, the coordinator writes its
-  report, and DFB and Figma-budget stops need a constitutional basis; worded so backend stops are
-  unchanged.
-- `ORCHESTRATOR.md`: start is recon then one question; stops `UX`, `UI`, `Budget` and
-  `--figma-calls` in the log commands; more than 4 questions → a second call right after.
-- Kickoff asks design stops and the Figma budget as one question (4 in all); surface, named user
-  and gate profile, when unset, in a second call. One-stop runs scaffold only after the UI stop
-  (Constitution §4.2); `fe-build` fails product code before it (`FE.observables`).
+Major: roles, phase flow and every artifact contract.
+- `fe-designer` split into `fe-ux` and `fe-ui`; `fe-critic` removed (`be-analyst` writes product
+  features in Phase 0); `fe-engineer` also scaffolds, checks feasibility, drafts the contract, writes
+  the queue.
+- Flow: Kickoff → 0 features → 1 UX → UX stop → 2 UI ‖ scaffold → queue → UI stop → 3 build →
+  4 verify ‖ review panel → fixes → Acceptance → 5 after launch. Modes `new`, `redesign`, `audit`,
+  `review`, `implement` retired.
+- §3A design feedback (`DFB-###`, `06-feedback.md`); §1E Figma with a per-run call budget
+  (`--figma-calls`, `FE.figma`, `--stop Budget`); §3B increments.
+- §6 review panel: `fe-review-experience`, `fe-review-accessibility`, `fe-review-integration`, merged
+  by `fe-reviewer`.
+- Artifacts `00-requirements` … `06-feedback`, `evidence/design/FRAME-###.png`. Gates `fe-product`,
+  `fe-ux`, `fe-ui`, `fe-queue`, `fe-plan`, `fe-approve`, `fe-build`, `fe-capture-plan`, `fe-verify`,
+  `fe-review`, `fe-accept`; stops `UX`, `UI`, `Budget`.
+- Shared: `route/FRONTEND_BACKEND_LINE.md`; Constitution amended with backend 3.3.0 (§2.7, §3.2, §5.1,
+  §5.5, §6). 6.x runs are not resumed.
 
 ## 6.1.0 — 2026-10-31 — context discipline; constitution made stable
 
-Shared with backend 3.1.0 (see `~/.claude/backend/CHANGELOG.md`): Constitution §8 context discipline and the stable, roster-free Constitution; `route/HANDOFF.md`. PLAYBOOK §4.3 no longer resumes a dead agent — the orchestrator writes its handoff entry from the disk and dispatches a fresh one. Phase 8 rework: a fresh engineer per row and a fresh `fe-tester`. `/frontend-resume` starts from the last orchestrator handoff entry. Log: `docs/frontend/handoff.md`. New shared `ORCHESTRATOR.md`; this PLAYBOOK's §1A, §3G, §4, §5, §6 point to it. Constitution §5 simplified: Phase 1 questions carry defaults and are asked with the Phase 1b intent questions (or at the Plan stop); §3F no longer stops for domain facts, ties or unconfirmed capabilities. Hook `no-agent-continuation.py`.
+Shared with backend 3.1.0: Constitution §8, `route/HANDOFF.md`, `ORCHESTRATOR.md`, hook
+`no-agent-continuation.py`. A dead agent is replaced by a fresh one from its handoff entry; rework uses
+a fresh engineer per row and a fresh `fe-tester`. Log `docs/frontend/handoff.md`. Constitution §5 simplified.
 
 ## 6.0.0 — 2026-10-18 — run tiers and Phase 1b prototype
 
-Shared with backend 3.0.0 (see `~/.claude/backend/CHANGELOG.md`): Constitution §7 tiers, asked first in kickoff (§2.0); Phase 1b prototype in `new` and `redesign` before Phase 3, with a fixed Prototype stop; in cross-stack runs the backend Phase 1b covers it, and the same stop is logged here. `fe-accept`'s trail check enforces the order when `tier: "full"`.
+Shared with backend 3.0.0: Constitution §7 tiers asked first at kickoff; Phase 1b prototype with a
+fixed Prototype stop; `fe-accept` trail check enforces the order when `tier: "full"`.
 
 ## 5.5.0 — 2026-09-24 — The user's design taste as a skill
 
-- New `~/.claude/skills/design-taste/SKILL.md`, from an interview with the user. Usability over looks;
-  fewest steps (edit in place or drawer by size, keyboard-first with a command palette, secondary
-  items collapsed); in-place feedback, confirm risky actions, skeleton plus optimistic updates;
-  brand colours, thin-border hierarchy, dark mode required; product class decides navigation,
-  motion and copy; a never-list; an 8-item review checklist.
-- Kickoff (§2.4) confirms the product-dependent choices (class, brand colours, motion, copy tone)
-  unless `project-context.md` records them. fe-designer reads the skill and never guesses them.
-  fe-critic's design-system lens runs its checklist.
+- New skill `design-taste` (usability, fewest steps, in-place feedback, brand colours, dark mode,
+  never-list, review checklist).
+- Kickoff (§2.4) confirms class, brand colours, motion, copy tone unless `project-context.md` has them;
+  `fe-designer` and `fe-critic` use the skill.
 
 ## 5.4.0 — 2026-09-23 — Approved-observable registry
 
-- `docs/frontend/observables.json`: after Acceptance, `fe-promote` registers each row verified done
-  as `OBS-###` (hashed, approver, date), guarded by its passing test (file and name recorded) or,
-  without one, by a planned capture re-judged every round. Rows with neither are refused.
-- `FE.regression` (fe-build, fe-verify) and `FE.regression-captures` (fe-verify) check every later
-  round; `fe-plan` lists registered observables the round may change; `fe-approve --retire` retires
-  them. PLAYBOOK §3I; §3 subsections reordered D→I.
-- Suite: 41 frontend cases; tamper, regression and conflict checks mutation-tested.
+- `docs/frontend/observables.json`: `fe-promote` registers verified rows as `OBS-###`, guarded by a
+  test or a planned capture.
+- `FE.regression` and `FE.regression-captures` check later rounds; `fe-plan` lists affected
+  observables; `fe-approve --retire`. PLAYBOOK §3I.
 
 ## 5.3.0 — 2026-09-23 — Parity with the backend's checks
 
-- `FE7.dependencies` (fe-build): new packages must be named in the spec's Dependencies table.
-- `FEA.matrix` (fe-accept): task → page → row → verdict written to `gates/traceability.md`; every
-  active task must end in a row verified done.
-- `FE1.source`: every task in the brief quotes the user or cites an artifact (new Source column).
-- Item length limits: flow 80, page spec 200, finding 80, queue row 80 words (gates `doc_budgets`).
-- Templates and examples updated (the examples pass the design gates). Suite: 34 frontend cases.
+- `FE7.dependencies`, `FEA.matrix` (`gates/traceability.md`), `FE1.source`.
+- Item length limits via `doc_budgets`. Templates and examples updated.
 
 ## 5.2.0 — 2026-09-23 — Scripted evidence capture
 
-- `gate.py capture --round <n>` from `docs/frontend/capture-plan.json` (PLAYBOOK §3H). Web: playwright-core
-  drives the system Chrome for DOM, computed styles, ARIA snapshot and screenshot per capture and size.
-  Terminal: raw stdout/stderr bytes at a fixed size. Manual (native, desktop, engine): files copied and
-  stamped. The manifest records instrument, time and source fingerprint; rounds are never overwritten.
-- Gates: `fe-capture-plan` (every row to verify is planned); `FE8.capture` in `fe-verify` (every planned
-  capture and size present, not failed, not empty, not older than the last `fe-build`, source unchanged).
-- Dependency: `~/.claude/gates/node_modules/playwright-core` (13 MB, `package.json` there).
-- Suite: 30 frontend cases, including a real-Chrome capture at two sizes.
+- `gate.py capture --round <n>` from `docs/frontend/capture-plan.json` (§3H): web via playwright-core,
+  terminal output bytes, manual files stamped.
+- Gates `fe-capture-plan` and `FE8.capture`. Dependency `~/.claude/gates/node_modules/playwright-core`.
 
 ## 5.1.1 — 2026-09-23 — JS test results
 
-- `FE8.row-tests`: tests tagged with a queue row id must pass in the orchestrator's run. JS runners
-  report per test (see backend 2.7.3). fe-tester tags row assertions with `Q-###`.
+- `FE8.row-tests`: tests tagged with a queue row id must pass; JS runners report per test.
 
 ## 5.1.0 — 2026-09-23 — Gates, approved observables, run log (batch 2)
 
-- Frontend gates in `~/.claude/gates` (`gatelib/frontend.py`): `fe-brief`, `fe-structure`, `fe-spec`,
-  `fe-findings`, `fe-queue`, `fe-plan` (writes the Plan sheet), `fe-approve`, `fe-build`, `fe-verify`,
-  `fe-accept`. Shared `baseline`, `mark`, `log` and `timeline` take `--team frontend`.
-- Role rules: fe-engineer (files named in the queue, no test edits), fe-tester (tests and docs),
-  fe-designer (design docs only), fe-critic (read-only).
-- Approved observables: `fe-approve` hashes each queue row's spec, observable and acceptance;
-  `FE.observables` fails if a row changes after the user's approval.
-- Run log: `LOG.valid` on every gate; `fe-accept` checks the trail (Plan before the first fe-engineer).
-- Run dir moved to `docs/frontend/` (next to `docs/backend/`); `frontend/` at the root clashed with
-  source folders. Legacy `docs/uiux/` and `uiux/` are still read.
-- New commands `/frontend-config` and `/frontend-resume`; `/frontend status` shows gates and timeline.
-- Fixed: `baseline` counted the other team's run dir as uncommitted user work; the spec example lacked
-  the loading and permission-denied states its own bar requires.
-- Suites: 22 frontend + 64 backend cases; observables, verdict and designer checks mutation-tested.
+- Frontend gates in `gatelib/frontend.py` (`fe-brief` … `fe-accept`); shared commands take `--team frontend`.
+- Role rules per agent; `fe-approve` hashes rows and `FE.observables` detects changes; `LOG.valid` and
+  trail check.
+- Run dir moved to `docs/frontend/`. New `/frontend-config`, `/frontend-resume`.
+- Fixed: `baseline` counted the other team's run dir as user work; spec example missing states.
 
 ## 5.0.0 — 2026-09-23 — Frontend aligned with the backend harness (batch 1)
 
-- PLAYBOOK, QUALITY-BARS, command, README and the four fe-* agents rewritten, core rules only, in
-  English. Rules plus templates went from 18,504 to 5,860 words. Incident narratives remain in the
-  entries below.
-- §4b automation policy replaced by Constitution §5 plus PLAYBOOK §3F (frontend-specific stops).
-- Human stops G0–G4 → **Plan** (design approval, or the queue's observables before building) and
-  **Acceptance** (implement mode). The model plan is confirmed once at kickoff.
-- About 15 artifacts → `01-brief` · `02-structure` · `03-spec` · `04-findings` · `05-queue` ·
-  `06-verification`, plus the shared contract. Skeleton templates and worked examples in
-  `templates/examples/`. Old artifact names are still read (PLAYBOOK §1.3).
-- Removed: checklists/, workflows/, model-registry-reference.md (folded into §1), 9 old
-  templates, retrospective phase, frontmatter requirement.
-- README: agent-and-loop flowchart and bullets.
-- Placeholders in all templates changed from `<…>` to `{…}` (the preview swallowed `<word>`).
-
-## note — 2026-09-23 — Backend team no longer builds the interface
-
-No rule change here. Backend 2.1.0 made `be-developer` backend-only. A `/backend` run that touches
-the interface now dispatches this team's roles itself (backend PLAYBOOK §3C), following this
-PLAYBOOK's §1C and Phases 6–8 as written.
+- PLAYBOOK, QUALITY-BARS, command, README and the four `fe-*` agents rewritten in English, shorter.
+- §4b replaced by Constitution §5 plus PLAYBOOK §3F. Stops G0–G4 → Plan and Acceptance.
+- Artifacts `01-brief` … `06-verification`; templates in `templates/examples/`. Old names still read.
+- Removed: checklists/, workflows/, model-registry-reference.md, 9 templates, retrospective phase.
+- Template placeholders `<…>` → `{…}`.
 
 ## 4.0.0 — 2026-09-22 — renamed: uiux → frontend
 
-Rename only; no behaviour change.
+Rename only.
+- `/uiux` → `/frontend`; `~/.claude/uiux/` → `~/.claude/frontend/`; `ux-critic`/`ux-designer` →
+  `fe-critic`/`fe-designer`; `wf-*` → `be-*`.
+- Artifact paths, `.claude/frontend.json`, `team/frontend-team-config.md`, `FRONTEND_*.md`, config key
+  `artifacts.frontend_dir`; legacy names still read.
 
-- Command `/uiux` → `/frontend`. Harness dir `~/.claude/uiux/` → `~/.claude/frontend/`.
-- Agents `ux-critic` / `ux-designer` → `fe-critic` / `fe-designer` (`fe-engineer`, `fe-tester`
-  unchanged). The Waterfall team is now the Backend team (`wf-*` → `be-*`).
-- **Artifact contract (why major):** `<root>/uiux/` → `<root>/frontend/`, `.claude/uiux.json` →
-  `.claude/frontend.json`, `team/uiux-team-config.md` → `team/frontend-team-config.md`,
-  `UIUX_*.md` → `FRONTEND_*.md`, config key `artifacts.uiux_dir` → `artifacts.frontend_dir`.
-  Legacy names are still read when the new ones are absent (PLAYBOOK §1 rule 4a).
-- Entries below this one are history and keep the old names.
+## 3.0.0 — 2026-09-09 — four roles; no assumed browser
 
-## 3.0.0 — 2026-09-09
+Major.
+- Four roles: `ux-critic`, `ux-designer`, `fe-engineer`, `fe-tester`; dispatch lines fixed; one role
+  registry in `config.json`; duties map in PLAYBOOK §1B.
+- `observable` means what a person perceives on the running interface; `delivery_surface` slot (§1C).
+- Shared rules moved from role prompts to `QUALITY-BARS.md` §Phase 7; new bar: assertions red on
+  broken behaviour, green on copy changes.
 
-**Major: seven roles became four, and the harness stopped assuming a browser.** Both by the
-user's ruling; this entry records what the harness did about them.
+## 2.0.0 — 2026-08-29 — implementation, verification and rework phases
 
-**① 四角色。** `ux-critic` · `ux-designer` · `fe-engineer` · `fe-tester`，加上编排者。
+Major.
+- New Phases 6–8: implementation queue, build by `wf-developer`, browser verification, rework capped
+  at 2 rounds; retrospective renumbered to 9.
+- New mode `implement`; artifacts `IMPLEMENTATION_QUEUE.md`, `VERIFICATION_REPORT.md`;
+  `checklists/verification.md`.
+- Queue rows are per design problem with an observable result; `不可观察` verdict; spec defects don't
+  consume a rework round.
+- §4b automation policy: rule and log by default; three stop conditions.
 
-The harness was **not runnable** when this change started, and it had stopped itself: `PLAYBOOK.md`
-§4 rule 8 says a dispatch target must be verified to exist and the run must stop otherwise, and
-every phase that dispatched named an archived type. Counted from the pre-change `PLAYBOOK.md §3`
-by which phases each mode runs: Phase 1 named the researcher, 2A and 7.2 the auditor, 2B the
-architect, 3 the contract role and the lead, 4 the reviewer and the lead, 5 / 6.1 / 9 the lead —
-so **six of the eight modes had no runnable path**, and only `status` and `config`, which
-delegate to nobody, still worked. **The rule was right and the dispatch lines were wrong** —
-which is now written into rule 8 itself, so the next person to hit a halt does not "fix" the
-rule.
+## 1.0.0 — 2026-08-29 — first release
 
-`config.json` also carried **two role registries at once** — an archived seven-role × four-tier
-table under `model_plan.roles`, and the live four-role `roles` object — with **no line anywhere
-saying which won**, while `PLAYBOOK.md §1` orders every downstream decision to come from the
-merged config. There is now exactly one, and §1 gained a rule that finding a second is itself
-the bug.
+- Seven roles, one command, five gates, four review lenses.
+- `ux-auditor` and `ux-reviewer` have no Write/Edit; model registry shared with waterfall.
+- Per-project `team/` pointer; orchestrator captures evidence into `uiux/evidence/`.
+- `未定义` placeholder in state matrices; `[ASSUMPTION]` label carried downstream; blocking finding
+  forbids "complete".
 
-Where the seven roles' duties went is recorded as a table in `PLAYBOOK.md §1B`, including the
-ones that went to the orchestrator (the interview, the queue, the state, the retrospective —
-each because it needs a tool no subagent has, or because the alternative was letting a role
-grade its own work).
+## 1.0.1 — 2026-08-29 — researcher questions asked by the orchestrator
 
-**② 交付形态不再默认 Web.** The `observable` criterion used to read 「what a person would see in
-a **browser**」 and Phase 7 was called 「browser verification」. The harness is used for products
-that have no browser at all. The criterion is unchanged in force and now reads **「what a person
-would perceive on the running interface」**, where the surface is a project-declared slot
-(`delivery_surface`, `PLAYBOOK.md §1C`): browser page · native app · desktop · terminal · engine
-UI. **Only the instrument changes** — DOM and computed styles, view hierarchy and accessibility
-tree, real output bytes, UI node tree — and **a picture alone is never evidence on any of them**.
+- `ux-researcher` produces the questions; the orchestrator asks them at G1 (PLAYBOOK §3 Phase 1,
+  `agents/ux-researcher.md`).
 
-Deliberately **not** a gate: unlike `primary_user_role`, an empty `delivery_surface` does not
-stop the run. The right default is to ask one question, not to halt — and not to assume Web.
-Deliberately **not** written as `if web / else`, which would have made Web the default again
-with a patch on top.
+## 1.0.2 — 2026-08-29 — write each artifact as it finishes
 
-**③ 60 lines moved from role prompts into the bars.** Three sections (the mutation protocol for
-touching production files · an acceptance criterion can itself be the defective artifact ·
-「make it fail before you claim it covers anything」) had been copied verbatim into five role
-files. `README.md` had said not to do this since 1.0.0: a rule that belongs in a bar does not
-belong in a role prompt, because only one role reads it.
+- PLAYBOOK §4: agents write each artifact when done; the orchestrator checks the filesystem before
+  recovering.
 
-They now live in `QUALITY-BARS.md` §Phase 7, and the two frontend roles point at it. **The order
-mattered**: those two roles read no quality bars at all before this change, and the bars had
-**zero** entries for the implementation and verification phases — deleting first would have lost
-the rules rather than moved them.
+## 3.0.0 — 2026-08-30 — four roles and a Router
 
-One bar is new and is frontend-specific: **an assertion must be shown red when the behaviour
-breaks *and* green when unrelated copy changes.** A backend guard only has to prove sensitivity;
-a frontend's product is the words a person reads, so the cheapest possible assertion hangs on
-copy, is red for every innocent wording edit, and gets switched off — after which it is not a
-weaker guard but no guard, plus the belief that there is one.
-
-## 2.0.0 — 2026-08-29
-
-**Major: the phase flow changed.** The team's output used to end at a document. It now ends at a
-screen someone looked at.
-
-New Phases 6 → 8: **implementation queue → `wf-developer` builds it → browser verification →
-capped rework**. Retrospective renumbered 6 → 9. New mode `implement`, new artifacts
-`IMPLEMENTATION_QUEUE.md` and `VERIFICATION_REPORT.md`, new `checklists/verification.md`.
-
-Why, measured on the first real run: a `redesign` produced **11,093 lines across 22 documents**
-for a frontend of **1,415 lines** — roughly 8:1 — and **not one line had been opened in a
-browser**. Four numbers (56/64/104/112) were cross-referenced by three documents without a
-single pixel having been seen; `@media` appeared **0 times** in the codebase the spec commits to
-responsive behaviour for. A design package can be internally consistent, version-stamped and
-wrong at the root, and nothing in phases 0–5 can discover that.
-
-Decisions made in this upgrade:
-
-1. **The boundary the user set is unchanged.** `ux-*` still write nothing but documents;
-   `wf-developer` is still the only role in either harness that writes production code. What
-   changed is that the design team now *escorts* the build and *verifies* it — the team that
-   specifies is not the team that builds, and the team that verifies is not the team that built.
-2. **The queue is per design problem, not per page or per file** — and every row must state what
-   a person would **see in a browser** if it shipped. A row whose result cannot be observed
-   cannot be verified; it gets split or marked `不可观察`, never quietly passed.
-3. **`不可观察` is a verdict, not a rounding error.** Two outcomes collapse into 「done」 if you
-   let them: 「we looked and it is there」 and 「we did not look」. They are kept apart by name.
-4. **A spec defect found in the browser does not consume a rework round.** The screen outranks
-   the specification: when they disagree, the finding is filed against whichever the evidence
-   shows to be wrong, which is sometimes the spec, and it is routed to the owning `ux-*` role.
-5. **Rework is capped at 2 rounds.** Two rounds that did not land an item usually mean the spec
-   is unbuildable or a capability is missing; a third round buys a third identical failure.
-6. **§4b — the automation policy.** Default is to **rule and log**, not to ask. Only three
-   things stop: a fact about the world only the user knows · changing words the user authored ·
-   a genuine tie no criterion in the package resolves. The tie test is constructive — try to
-   derive it from the invariants and measurements on disk first; if a derivation exists, you
-   were never tied. Everything ruled by an agent is recorded **as ruled by an agent**, with its
-   derivation and what would overturn it, and is never laundered into 「已裁定」 as though the
-   user had said it. Stops are batched into one `AskUserQuestion` at a phase boundary.
-
-## 1.0.0 — 2026-08-29
-
-First release. Seven roles, one command, five gates, four review lenses.
-
-Design decisions made at creation, each because the alternative had a known failure mode:
-
-1. **Read-only is a capability, not an instruction.** `ux-auditor` and `ux-reviewer` have no
-   `Write` and no `Edit` in their frontmatter. A prompt that says 「you are read-only」 can be
-   reasoned around; an absent tool cannot.
-2. **The model registry is not forked.** Tier names and semantics stay owned by
-   `~/.claude/waterfall/config.json`; this harness adds only the `ux-*` role mapping, and a
-   `ux-*` key appearing in the shared file wins over ours. Merging the two is documented as a
-   proposal, not performed unilaterally on another team's runtime.
-3. **The harness is global, the artifacts are per project.** The requested `team/` directory
-   became a project-level pointer instead of a copy of the harness, because a copy per project
-   is a fork per project.
-4. **Browser evidence is gathered by the orchestrator.** Subagent `tools:` is an allowlist that
-   does not include MCP browser tools. Rather than pretend otherwise, the flow captures evidence
-   into `uiux/evidence/` and the audit template forces every surface to be labelled **observed**
-   or **inferred**.
-5. **`未定义` is the only legal placeholder in a state matrix.** A blank cell reads as 「nothing
-   to say here」, which is the one message it must never send.
-6. **An `[ASSUMPTION]` label travels into every downstream artifact.** The reader of a page spec
-   must not have to cross-check the research file to learn that a fact was guessed.
-7. **A blocking finding forbids the word 「complete」.** The handoff is either clean or
-   explicitly `conditional`. There is no third state, and the checklist enforces it.
-8. **Two review traps are named in the checklist**, because both are green-looking failures:
-   coverage claimed by presence rather than content, and state matrices reviewed only where
-   there is writing.
-
-## 1.0.1 — 2026-08-29
-
-**A role was given a duty its tools cannot perform.** `ux-researcher` was told to 「interview the
-user」 with `AskUserQuestion` — a tool no subagent has. Caught on the first real run, by the
-researcher itself, which reported the gap instead of simulating answers (the 「never write an
-answer the user did not give」 bar working as intended).
-
-Fixed by moving the act to where the capability is: the researcher **produces** the questions
-and what each answer would change; the **orchestrator asks them at G1**. `PLAYBOOK.md` §3 Phase 1
-and `agents/ux-researcher.md` both updated.
-
-**The general lesson, worth carrying**: when a role prompt assigns an action, check the role's
-`tools:` can perform it. A duty without a capability is a prompt that will be either ignored or
-faked, and only one of those is detectable.
-
-## 1.0.2 — 2026-08-29
-
-**Four artifacts, one turn, one crash, three losses.** A Phase 2B agent gathered all its grounding,
-announced it was writing four files, and died mid-turn when the machine slept. One file had landed.
-The other three — and the reasoning that would have produced them — went with the turn.
-
-`PLAYBOOK.md` §4 gains two rules: an agent owning several artifacts **writes each as it finishes**,
-and the orchestrator **checks the filesystem before deciding how to recover**, resuming the same
-agent rather than paying for the grounding twice.
-
-**The general shape**: a turn is not a transaction. Anything a role produces incrementally should
-be durable incrementally, and 「I am about to write」 is a status line, not a result.
-
-## Staged for promotion (L2 → L1 when a round earns it)
-
-- `QUALITY-BARS` §2A: a quantified pre-redesign baseline (clicks/fields/time per core task), so
-  「better」 stops being an opinion.
-- `QUALITY-BARS` §4: an adversarial pass where each blocker gets an agent trying to refute it.
-- `PLAYBOOK` §3 Phase 4: a fifth lens for domain fitness in regulated or expert domains.
-
-## 3.0.0 — 2026-08-30
-
-**Major：角色从七个减到四个，并新增一个前置的 Router。** 用户在跑完一整轮完整闭环之后提的六条改进，逐条落地。
-
-`ux-critic`（发现 + 定性质 + 定档位 + 裁定 + 台账）· `ux-designer`（界面/布局/组件/结构，吸收原 architect）· `fe-engineer`（前端代码）· `fe-tester`（验证，生效不了打回）。旧七角色归档在 `~/.claude/archive/agents-v1/`，未删。
-
-1. **模型按「要不要做判断」分档，不按角色。** 做判断 → opus；照已定结论执行 → sonnet。依据是实测：那一轮里 opus 挣回成本的地方全部是判断（推翻编排者的前提、发现证据早于构建、拆穿一条空转断言），而改字面、扫替换、写量具用 sonnet 足够。
-
-2. **`ux-critic` 兼裁定人。** 用户知情后选的：发现问题的人同时给问题定性。代价写在它自己的提示词里，并要求它对自己格外严（裁定写推导不写偏好 · 署自己的名绝不写成用户裁的 · 每条写明什么能推翻它）。结构上的补偿是 `fe-tester` 只读且独立，编排者仍逐条核 Critic 的数。
-
-3. **前端代码从 Waterfall 移出。** `wf-developer` 收窄为后端专责；模板、样式，以及项目那条前后端分界线划到前端一侧的部分，归 `fe-engineer`。
-
-4. **新增 Router 与能力台账。** 任务先分类（纯前端/纯后端/跨栈），台账只记「后端已经有什么」。**分类必须探代码，不许读 prompt** —— 上一轮有一份需求逐字写着「只修改前端」，而其中三项最后需要后端裁定，那个依赖是做到一半才浮出来的。台账的存在是因为：同一个后端事实被误记为「不存在」，挡了很久，最后靠有人去读源码才拆穿。
-
-5. **P1/P2/P3 是硬闸。** 尺量是「项目声明的那个具名用户能不能完成任务」，不是缺陷难不难发现。上一轮花在 P3 上的往返明显多于 P1，而「操作失败但不说原因」这条 P1 很久没人动。**不带档位的发现不受理。**
-
-6. **前后端的线**：开工前把「前端可改什么、后端才能改什么」写下来，署裁定人的名与日期；撞线就报，不自己越过去。**这条线由项目定，harness 不预置清单** —— 落点数量取决于渲染架构。上一轮这条线没写下来，卡了很久。
-
-**没做的一件**：Designer 的第三方 skills 还没装 —— 候选已选出，但来源仓库没有 license，等用户定。
+Major.
+- Roles: `ux-critic` (also rules on findings), `ux-designer`, `fe-engineer`, `fe-tester`.
+- Model tier by judgement: opus for judgement, sonnet for execution.
+- Frontend code moved from `wf-developer` to `fe-engineer`.
+- New Router (frontend / backend / cross-stack, classified from code) and capability ledger.
+- P1/P2/P3 severity required on findings; frontend/backend line written per project before work.
