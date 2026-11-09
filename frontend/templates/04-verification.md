@@ -9,6 +9,9 @@
 |---|---|---|---|
 | Q-001 | done | | |
 
+## Minor deviations (row stays done; filed as minor, deferred, shown at Acceptance)
+- {Q-### — what differs from the frame, seen only side by side — capture file}
+
 ## Design defects (routed to fe-ui or fe-ux; no rework round)
 - {Q-### — why the design, not the build → owner}
 

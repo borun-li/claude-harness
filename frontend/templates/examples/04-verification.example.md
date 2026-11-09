@@ -7,6 +7,9 @@
 |---|---|---|---|
 | Q-001 | done | `Q-001-dup@1440.dom.html` · duplicate · 1440 px | text and href match the stored file id 17 |
 
+## Minor deviations
+- Q-001 — notice corner radius 4 px, frame 6 px — `Q-001-dup@1440.dom.html`
+
 ## Assertions added
 | Test | Red when | Green when |
 |---|---|---|

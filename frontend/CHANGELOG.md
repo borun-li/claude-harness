@@ -13,6 +13,23 @@ Semver: **patch** = prompt/bar tuning · **minor** = new behaviour, role or lens
 > 指向它们。把这些条目改写成四角色的措辞，等于把「当时是七个角色」这件事从记录里抹掉 —— 而
 > 变更日志唯一的价值就是它没被改写过。**要找活的角色定义，看 `PLAYBOOK.md` §0。**
 
+## 8.3.0 — 2026-11-08 — review converges: minor deviations, rework judges the named defect
+
+Minor. Source: the Ithaca Local Guide UI redesign (2026-11-03, retro problem 3). Each fix round's
+fresh `fe-tester` re-compared whole rows with their frames and found details the previous one had
+not named: round 1 layout, round 2 a 12 px tag and 55 % opacity, round 3 an outlined instead of a
+filled star. `max_fix_rounds` (2) was exceeded and the user was asked to allow one CSS change for
+the star. A row's "not done" had no severity, so every pixel difference cost a round.
+- Done now means the row matches its observable, frame and state rows in everything the person
+  doing its task would notice or be held up by. A difference seen only side by side with the frame
+  keeps the row done and goes under the new § Minor deviations (template, example, `minor:` in
+  the return).
+- In a rework round a row is not done only if the named defect still shows or the fix broke what
+  held before; anything else newly seen is judged as above, so a real miss still sends it back.
+- `fe-reviewer` files minor deviations as minor FNDs in § Deferred; Acceptance already lists
+  deferred minors for the user to pick. PLAYBOOK Phase 4: re-judge only the named defects.
+- No gate change; to be revisited after a live run if rounds still grow.
+
 ## 8.2.0 — 2026-11-08 — row ids unique per project; OBS guards that every language can keep
 
 Minor. Source: the Ithaca Local Guide UI redesign (2026-11-03, retro technical details), a Go
