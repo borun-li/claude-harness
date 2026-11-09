@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """PreToolUse(Bash) —— 拦下「按名字、模式或端口」选中进程再停掉的命令。
 
-**来由。** 一次真实运行里，一个只读的审查代理为了收掉自己起的实例，跑了
-``pkill -f "^./guide$"``，同时停掉了 3 个不是它启动的进程（可能是预览、别的代理的实例
-或用户自己的服务器）。Constitution §4.6 早就写着「用户的会话、服务器和端口不能碰」，
-规则本身没有拦住它 —— 所以这里用结构来承载（~/.claude/ORCHESTRATOR.md，Boundaries）。
+**为什么是钩子而不是一句提示。** 代理收掉自己起的实例时，常顺手写 ``pkill -f "^./server$"``，
+连带停掉预览、别的代理的实例或用户自己的服务器。Constitution §4.6 写着「用户的会话、
+服务器和端口不能碰」，这里用结构来承载（~/.claude/ORCHESTRATOR.md，Boundaries）。
 
 **判据只有一条，和 no-tree-restoring-git.py 相同：调用者能不能把要碰的东西全部说出名字。**
 PID 是名字：``kill 38236`` 只碰你点名的那一个。程序名、命令行模式、端口不是名字：
@@ -91,7 +90,7 @@ def reason(command: str) -> str | None:
 
 MESSAGE = (
     "这条命令{what}，选中的不一定是你启动的。\n"
-    "本仓出过事故：一个审查 agent 用 pkill 停掉了 3 个不是它启动的进程（Constitution §4.6）。\n\n"
+    "别人的进程（预览、其他 agent、用户的服务器）一律不碰（Constitution §4.6）。\n\n"
     "改用：启动时记下 PID ——  <命令> & echo $! > <项目外的临时目录>/<名字>.pid\n"
     "      结束时只停它 ——    kill $(cat <项目外的临时目录>/<名字>.pid)\n"
     "不是你启动的进程：不要停，报告给 orchestrator。确实需要，说出来让人来跑（在提示里打 `! <命令>`），"

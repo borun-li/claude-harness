@@ -229,7 +229,7 @@ Versions: `harness_version` in `backend/config.json` and `frontend/config.json`.
 ## Contributing
 
 Work on a branch and open a pull request. Before merging, run the tests and record the change in
-the matching `CHANGELOG.md`:
+the matching `CHANGELOG.md`: what changed, without project names or the story behind it.
 
 ```sh
 (cd gates && python3 -m unittest discover -s tests)

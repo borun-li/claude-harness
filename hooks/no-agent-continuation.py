@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """PreToolUse(SendMessage) —— 不许把一个已返回的 be-* / fe-* 代理续用到下一轮。
 
-**为什么是钩子而不是一句提示。** Ithaca Local Guide MVP 一次运行里，同一个
-be-tester 在多轮修改之间被一直续用：702 轮、3.21 亿 token。PLAYBOOK 当时没有
-禁止续用，而「每轮新开」写成句子之后仍然要靠调度者记得。Constitution §8.1 是规则，
+**为什么是钩子而不是一句提示。** 一个被续用多轮的代理，上下文越积越大，成本和出错率
+随之上升；「每轮新开」写成句子，仍然要靠调度者记得。Constitution §8.1 是规则，
 这个文件是承载它的结构。
 
 **判据。** SendMessage 的 ``to`` 是代理名或 agentId，本身看不出角色。Claude Code
