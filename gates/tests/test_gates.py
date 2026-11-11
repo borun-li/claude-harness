@@ -440,6 +440,12 @@ class VerifyGate(Base):
         self.assertEqual(code, 0, out)
         self.assertEqual(rep["data"]["tc_observed"], {"TC-001": "passed", "TC-002": "passed"})
 
+    def test_junit_report_stays_outside_the_project(self):
+        # The report is read (tc_observed above needs it) but never written into the
+        # checked repository, where the project's own tests could see it.
+        self.assertEqual(self.p.gate("p5")[0], 0)
+        self.assertEqual(list(self.p.root.rglob("*junit*.xml")), [])
+
     def test_tester_edits_production(self):
         self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# tester\n")
         self.assertEqual(self.p.status(self.p.gate("p5")[2], "ROLE.tester-scope"), "fail")
@@ -628,6 +634,26 @@ class Fixtures(Base):
         sheet = (self.p.run / "gates" / "plan-review.md").read_text()
         self.assertIn("## FX-001 — REQ-001", sheet)
         self.assertIn('{"args": [2, 3]}', sheet)
+
+    def test_fixture_shared_by_two_reqs_is_stable(self):
+        # Which declaring REQ won used to follow the hash seed, so PLAN.meta flipped.
+        self.p.write("docs/backend/01-requirements.md", REQS.replace(
+            "n/a — covered by the arithmetic identity test", "FX-001"))
+        self.p.draft_fixture()
+        old = os.environ.get("PYTHONHASHSEED")
+        try:
+            for seed in ("0", "1", "2", "3", "4", "5"):
+                os.environ["PYTHONHASHSEED"] = seed
+                code, out, rep = self.p.gate("p2")
+                self.assertEqual(code, 0, f"seed {seed}: {out}")
+                self.assertEqual(self.p.status(rep, "PLAN.meta"), "pass")
+                sheet = (self.p.run / "gates" / "plan-review.md").read_text()
+                self.assertIn("## FX-001 — REQ-001, REQ-002", sheet)
+        finally:
+            if old is None:
+                os.environ.pop("PYTHONHASHSEED", None)
+            else:
+                os.environ["PYTHONHASHSEED"] = old
 
     def test_approve_needs_green_gf_and_approver(self):
         self.assertEqual(self.p.gate("fixtures-approve", "--by", "user")[0], 2)

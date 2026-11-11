@@ -4,6 +4,7 @@ import json
 import pathlib
 import re
 import shutil
+import tempfile
 import time
 
 from . import docs, runlog, runner, snap
@@ -118,12 +119,27 @@ def _command_check(ctx, name, owner):
     return ok(cid, f"{name} passed", owner, detail), r
 
 
+def _junit_path(ctx):
+    """Where the test runner writes its JUnit report.
+
+    **Outside the project.** It used to be `<run-dir>/gates/junit.xml`, inside the
+    repository being checked: a report full of test ids, which a project's own
+    secret-scanning test then read as committable content and failed on (ctrip,
+    2026-11-10 — parametrize ids of the form `scrypt$16384$8$1$...`). A gate must not
+    change what the suite it runs sees.
+    """
+    key = hashlib.sha256(str(ctx.project.resolve()).encode()).hexdigest()[:12]
+    out = pathlib.Path(tempfile.gettempdir()) / "claude-gates" / key
+    out.mkdir(parents=True, exist_ok=True)
+    return out / f"{ctx.gdir.parent.name}-junit.xml"
+
+
 def _tests(ctx, owner, baseline=None):
     cmd = ctx.cmd("test")
     if not cmd:
         return bad("CMD.test", "No test command configured, and it is required", "user"), None
     r = runner.run_tests(cmd, ctx.project, ctx.cfg["timeout_seconds"], ctx.log("test"),
-                         ctx.gdir / "junit.xml", ctx.cfg.get("junit"))
+                         _junit_path(ctx), ctx.cfg.get("junit"))
     c = r["counts"]
     detail = [f"$ {r['cmd']} -> exit {r['exit']} ({r['seconds']}s), log: {r['log']}",
               f"counts: {c if c is not None else 'not parsed'}", f"per-test results: {r['junit_note']}"]
@@ -635,9 +651,19 @@ def _manifest(ctx):
 
 
 def _declared_fx(ctx):
-    """{FX: REQ} for the active REQs of this round."""
+    """{FX: {REQ, ...}} for the active REQs of this round.
+
+    One fixture may serve several REQs, so the value is the whole set of
+    declaring REQs. It used to be a single REQ picked by iterating
+    `active_reqs()`, which is a set: with more than one declarer the winner
+    moved with the process hash seed, and PLAN.meta could not be stably green.
+    """
     reqs = _reqs(ctx)
-    return {fx: r for r in docs.active_reqs(reqs) for fx in (reqs[r]["fixtures"] or [])}
+    out: dict[str, set[str]] = {}
+    for r in docs.active_reqs(reqs):
+        for fx in (reqs[r]["fixtures"] or []):
+            out.setdefault(fx, set()).add(r)
+    return out
 
 
 def _sha(path):
@@ -659,8 +685,8 @@ def _fixture_integrity(ctx, cid, owner):
                 problems.append(f"{fx}/{rel}: missing")
             elif _sha(f) != digest:
                 problems.append(f"{fx}/{rel}: changed since approval on {case['date']}")
-    problems += [f"{fx} ({r}): declared but never approved at Plan" for fx, r in _declared_fx(ctx).items()
-                 if fx not in man["cases"]]
+    problems += [f"{fx} ({', '.join(sorted(r))}): declared but never approved at Plan"
+                 for fx, r in _declared_fx(ctx).items() if fx not in man["cases"]]
     return (bad(cid, "Approved fixtures changed or missing (only the user re-approves, at Plan)", owner, problems)
             if problems else ok(cid, f"{len(man['cases'])} approved fixtures intact", owner))
 
@@ -686,7 +712,8 @@ def _fixtures_for_plan(ctx):
     sheet = _plan_summary(ctx) + ["## Fixtures", "",
              "Approve, edit or reject each case. Approved cases become the answers every later test must match.",
              ""]
-    for fx, req in sorted(declared.items()):
+    for fx, req_set in sorted(declared.items()):
+        req = ", ".join(sorted(req_set))
         d = cand / fx
         if not d.exists() and fx in man["cases"]:
             continue  # approved in an earlier round, unchanged
@@ -696,9 +723,9 @@ def _fixtures_for_plan(ctx):
             missing_in.append(f"{fx} ({req}): no {_fx_cand(ctx)}/{fx}/input.*")
         if not exps:
             missing_out.append(f"{fx} ({req}): no {_fx_cand(ctx)}/{fx}/expected.*")
-        if d.exists() and (meta.get("req") != req or not _valid_compare(meta.get("compare"))
+        if d.exists() and (meta.get("req") not in req_set or not _valid_compare(meta.get("compare"))
                            or not meta.get("source")):
-            bad_meta.append(f"{fx}: meta.json needs req={req}, source, compare in "
+            bad_meta.append(f"{fx}: meta.json needs req in {{{req}}}, source, compare in "
                             f"{ctx.cfg['fixture_compare_rules']} (got {meta})")
         if ins and exps:
             to_approve.append(fx)
