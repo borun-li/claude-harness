@@ -2,6 +2,15 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour or new role · major = changed phase flow or artifact contract.
 
+## 3.7.1 — 2026-11-11 — gate fixes: JUnit report location, shared fixtures
+
+Patch. Shared with frontend 8.4.1.
+- The JUnit report the gates read is written outside the project (system temp directory), no
+  longer to `<run-dir>/gates/junit.xml`, so the project's own tests never see it.
+- A fixture declared by several REQs is tied to all of them: `PLAN.meta` accepts any of them in
+  `meta.json`, and the plan review sheet lists them all. The result no longer varies between runs.
+- Tests for both.
+
 ## 3.7.0 — 2026-11-09 — safety hooks act only in harness sessions
 
 Minor. Shared with frontend 8.4.0.
