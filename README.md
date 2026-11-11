@@ -116,6 +116,12 @@ similar commands; run such a command yourself with `! <command>` in the prompt. 
 not affected. A session reopened with `claude --resume` has them again after `/backend-resume` or
 `/frontend-resume`.
 
+**Branches and pull requests.** Each run works on its own branch and commits as it goes; only the
+main session does git writes, never an agent. To let it also push that branch and open a draft pull
+request for you to review and merge, add `"git": {"push": true}` to `<project>/.claude/gates.json`
+(the harness asks at the start of a run if the key is missing). Merging, force pushes, deleting
+unmerged branches and rewriting history stay yours.
+
 **Step 4 — restart Claude Code and confirm.** In any project, run `/backend-config`: it prints
 the effective configuration and the harness version.
 
@@ -232,7 +238,9 @@ The named agent works alone: no phases, no sign-offs, no gates.
   the working tree; the agent being checked never runs its own gate.
 - **Run log** — every dispatch, gate and sign-off goes to a hash-chained log on disk, which status,
   resume and the final checks read.
-- **Safety hooks** — one blocks git commands that discard uncommitted work, one blocks stopping
+- **Safety hooks** — one blocks git commands that discard uncommitted work or force and rewrite
+  history, and keeps git writes to the main session (branch, commit, push the run's branch, draft
+  PR), one blocks stopping
   processes by name, pattern or port (an agent stops only a process it started), one stops a
   finished agent from being reused. They are declared in the agent and command files, so they act
   only in harness sessions.

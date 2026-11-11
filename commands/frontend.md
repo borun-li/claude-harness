@@ -8,7 +8,7 @@ hooks:
     - matcher: Bash
       hooks:
         - type: command
-          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py" --role orchestrator
         - type: command
           command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
     - matcher: SendMessage
