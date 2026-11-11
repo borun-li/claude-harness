@@ -8,7 +8,7 @@ hooks:
     - matcher: Bash
       hooks:
         - type: command
-          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py" --role orchestrator
         - type: command
           command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
     - matcher: SendMessage
@@ -83,6 +83,7 @@ Record the answers; every team reads them instead of asking again.
    to a new, fresh dispatch naming only the failure, never back to the returned agent.
 4. Run the project's build and test commands yourself, then run the change through its real entry
    point (Constitution §6.4). Red is not done.
-5. Ask the user to accept it running (URL or command). Commit when they accept and ask.
+5. Ask the user to accept it running (URL or command). Commit when they accept, on the run's
+   branch (`~/.claude/ORCHESTRATOR.md` § Git).
 6. No phase documents, fixtures, gates or run log; the handoff log is the only record. If the work needs a new data model, dependency
    or a scope decision, stop and ask whether to switch tiers (Constitution §7).

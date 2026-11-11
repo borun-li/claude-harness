@@ -2,6 +2,22 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 8.5.0 — 2026-11-11 — runs work on a branch and open a draft PR
+
+Minor. Shared with backend 3.8.0.
+- The git hook takes a role. The main session (`--role orchestrator`, from the run commands) may
+  create a branch at HEAD, switch to an existing branch when the tree is clean, stage by path,
+  commit, push the run's branch, open a draft PR and mark it ready, and delete a merged branch
+  with `git branch -d`. Agents (`--role agent`) do no git writes. No role means agent.
+- Both roles are denied force and history rewrites: `push --force`/`--force-with-lease`/`+ref`,
+  pushing the default branch, `branch -D`, `switch -C`, `rebase`, `commit --amend`/`--no-verify`/`-a`,
+  `git add -A`/`.`/`-u`, `gh pr merge`, and non-GET `gh api`.
+- Push and PR need `"git": {"push": true}` in the project's `.claude/gates.json`.
+- Commands inside `bash -c "…"` / `eval` are checked; a quoted `-C` directory no longer hides
+  the subcommand.
+- ORCHESTRATOR § Git: one run, one branch, one PR; commit after each passed gate and human stop;
+  draft PR at the first push, ready at Acceptance; unrelated work gets its own PR.
+
 ## 8.4.1 — 2026-11-11 — gate fixes: JUnit report location, shared fixtures
 
 Patch. Shared with backend 3.7.1.

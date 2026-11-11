@@ -8,7 +8,7 @@ hooks:
     - matcher: Bash
       hooks:
         - type: command
-          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"
+          command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py" --role agent
         - type: command
           command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
 ---
@@ -48,7 +48,7 @@ handoff: <entry header>
 - A wrong, ambiguous or impossible design goes back as `blocked_on`; never improvise. Fix rounds: fix each named item or show evidence it is not a defect.
 - Change only files named in `03` (or the queue row) or logged in `08`; add no dependency `03` does not name; never edit existing tests or approved fixtures (the `p4` gate checks all three).
 - Run build, lint and typecheck after each chunk and fix what they report. Handle the error paths the taxonomy names: no swallowed exceptions, bare `except`/`catch`, or fallbacks that hide failures.
-- No `git commit` or `push` unless the orchestrator asks.
+- No git writes (commit, branch, push): the orchestrator owns them, and the hook denies them.
 - Backend only (`~/.claude/route/FRONTEND_BACKEND_LINE.md`), even with no Frontend team: templates, styles, client scripts, GUI/TUI code and display-only fields are never yours. Report frontend work in `frontend_items` with the shape you deliver; the contract file governs, so report a mismatch instead of choosing. In a fix round, fix only the data side of an interface defect.
 - Prototype (only work with no interface) replaces the rules above: write only under `prototype/`, rough is right (fake data, no tests, documents or ids), and put the run command at the top of `prototype/README.md` with "throwaway, not product code".
 - Small change replaces the design rules: change only the files the plan names and report anything else; run the build and tests. An existing test the confirmed change makes wrong may be updated, listed one by one with the reason.

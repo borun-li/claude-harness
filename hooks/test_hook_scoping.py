@@ -2,8 +2,8 @@
 """安全钩子只在 harness 会话里生效。跑法：``python3 <本文件>``，退出码即结果。
 
 钩子写在 agent 和命令文件开头的 frontmatter 里，不写进全局 settings.json：
-- 每个 be-* / fe-* agent 带 git 和停进程两个钩子（subagent 只认自己文件里的钩子）；
-- 开启或恢复一次 run 的命令带全部三个钩子，调用后对本会话的主线程生效；
+- 每个 be-* / fe-* agent 带 git（``--role agent``，只读）和停进程两个钩子（subagent 只认自己文件里的钩子）；
+- 开启或恢复一次 run 的命令带全部三个钩子，git 钩子是 ``--role orchestrator``，调用后对本会话的主线程生效；
 - install.sh 删掉旧版本写进 settings.json 的全局条目，别的设置不动。
 """
 import json
@@ -14,7 +14,9 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-GIT = 'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"'
+GIT = 'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"'  # 旧版本写进 settings.json 的形式
+GIT_AGENT = GIT + " --role agent"
+GIT_ORCH = GIT + " --role orchestrator"
 KILL = 'python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"'
 CONT = 'python3 "$HOME/.claude/hooks/no-agent-continuation.py"'
 RUN_COMMANDS = ["route", "backend", "frontend", "backend-resume", "frontend-resume"]
@@ -54,10 +56,10 @@ def main() -> int:
     agents = sorted((ROOT / "agents").glob("*.md"))
     expect("16 agents", len(agents) == 16)
     for p in agents:
-        expect(p.name, hooked(frontmatter(p), "Bash") == {GIT, KILL})
+        expect(p.name, hooked(frontmatter(p), "Bash") == {GIT_AGENT, KILL})
     for n in RUN_COMMANDS:
         fm = frontmatter(ROOT / "commands" / f"{n}.md")
-        expect(n + " Bash", hooked(fm, "Bash") == {GIT, KILL})
+        expect(n + " Bash", hooked(fm, "Bash") == {GIT_ORCH, KILL})
         expect(n + " SendMessage", hooked(fm, "SendMessage") == {CONT})
 
     def entry(matcher, cmd):

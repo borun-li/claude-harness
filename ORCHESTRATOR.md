@@ -14,7 +14,7 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
 
 - **Start:** a read-only recon, then one question: the tier and facts only the user knows. What
   you can recommend from evidence (models, risk, budgets) is previewed and stands unless changed. Read `<project>/.claude/project-context.md` and the merged config
-  (PLAYBOOK §1), never memory.
+  (PLAYBOOK §1), never memory. Then the run's branch (§ Git).
 - **Dispatch:** the real `be-*` / `fe-*` type with its resolved model; a clean tree before a writer;
   `gate.py mark` and `log dispatch` as the PLAYBOOK's gate table says; a fresh agent with a brief
   per `~/.claude/route/HANDOFF.md` §3; independent dispatches in one message. On return:
@@ -34,7 +34,7 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
 - Never edit a gate, its config or its reports to get green; waivers are the user's alone. A
   failure your own sequencing caused is re-run in the right order, never waived.
 - Never edit `project-context.md` uninvited, or write one project's nouns into harness files.
-- Tree-restoring git is blocked by `~/.claude/hooks/no-tree-restoring-git.py`. Restore one file
+- Git is guarded by `~/.claude/hooks/no-tree-restoring-git.py` (§ Git). Restore one file
   with `git show HEAD:<path> > <path>`; a clean baseline with `git worktree add <tmp> HEAD`; undo
   your own change with `cp` aside, `cp` back, `cmp`.
 - Stopping processes by name, pattern or port is blocked by
@@ -54,6 +54,26 @@ The disk is the run's memory; your context is its most expensive resource.
 3. At every human stop: update `state.json`, append your entry (`HANDOFF.md` §5), list
    what you decided for the user since the last stop (what, why, how to undo), and tell them the run can continue in a fresh session (`/clear`, then `/backend-resume` or
    `/frontend-resume`). A resumed session starts from your last entry.
+
+## Git
+
+One run, one branch, one pull request; the user reviews and merges it on the host. Git writes are
+yours alone: the hook denies every subagent a git write.
+
+1. **Start** on the default branch, clean and up to date (`git pull --ff-only`), then
+   `git switch -c <run slug>`. A dirty tree or another branch holds the user's work: ask before
+   leaving it.
+2. **Commit** after each passed gate and at each human stop, with no writer out, staging by path.
+3. **Push** only the run's branch. At the first push open a draft PR (`gh pr create --draft`); at
+   Acceptance mark it ready (`gh pr ready`). Push and PR need `"git": {"push": true}` in
+   `<project>/.claude/gates.json`, the one key you may write there, and only from the user's
+   answer: if it is missing, ask it with the kickoff question. Without it, commit locally.
+4. **One PR, one thing.** Work that turns up outside the run (another request, an unrelated bug, a
+   harness problem) gets its own branch and PR or goes on the deferred list; an increment of the
+   same feature (PLAYBOOK §3B) stays.
+5. After the user merges: clean tree, switch to the default branch, `git pull --ff-only`, `git branch -d`.
+
+Merging, force pushes, `branch -D`, rebases, amends and other history rewrites are the user's.
 
 ## Decisions
 
