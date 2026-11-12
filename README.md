@@ -197,7 +197,8 @@ or 3.
 ### Scenario 5 — change your mind, pause, resume
 
 Tell the orchestrator the new requirement mid-run. The run is not restarted: the change joins at the
-next sign-off, and a change to something you already approved comes back to you first.
+next sign-off. Where your new words replace something you approved earlier, the team follows them
+and lists what it changed; anything else that would change an approved result comes back to you.
 
 ```
 /frontend-status      # phases, sign-offs, checks, open items
