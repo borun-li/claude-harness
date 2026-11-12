@@ -17,7 +17,7 @@ Frontend team (run dir docs/frontend; pass --team frontend to baseline, mark, lo
     gate.py fe-approve --by <who>        lock the queue's observables and frame exports confirmed at the Prototype stop
     gate.py fe-build | fe-capture-plan | fe-verify | fe-review | fe-accept
     gate.py log return ... --figma-calls <n>   record the Figma calls an agent reported (PLAYBOOK §1E)
-    gate.py log dispatch ... --figma-left <n>  calls left, required for fe-ui / fe-engineer when the run has a budget
+    gate.py log dispatch ... --figma-left <n>  calls left, required for fe-ux / fe-ui / fe-engineer when the run has a budget
     gate.py fe-promote --by <who> [--exclude Q-…]   after Acceptance: register accepted rows as OBS-###
     gate.py fe-approve --by <who> [--retire OBS-…]  also retires registered observables the user drops
     gate.py capture --round <n>          capture evidence per docs/frontend/capture-plan.json
@@ -140,7 +140,7 @@ def main():
     for f in ("agent", "model", "step", "status", "stop", "decision", "note"):
         ap.add_argument(f"--{f}")
     ap.add_argument("--figma-calls", type=int, help="log return: Figma MCP calls the agent made")
-    ap.add_argument("--figma-left", type=int, help="log dispatch: Figma calls left for fe-ui / fe-engineer")
+    ap.add_argument("--figma-left", type=int, help="log dispatch: Figma calls left for fe-ux / fe-ui / fe-engineer")
     ap.add_argument("--redo", action="store_true", help="log dispatch: this dispatch redoes its step's work")
     ap.add_argument("--project", default=".")
     ap.add_argument("--run-dir")
@@ -167,7 +167,7 @@ def main():
         if a.event in ("gate", "mark", "approve"):
             raise ConfigError(f"`{a.event}` events are written by the gates themselves")
         budget = ((read_json(ctx.run / "state.json") or {}).get("figma") or {}).get("budget")
-        if (a.event == "dispatch" and team == "frontend" and a.agent in ("fe-ui", "fe-engineer")
+        if (a.event == "dispatch" and team == "frontend" and a.agent in ("fe-ux", "fe-ui", "fe-engineer")
                 and budget is not None and a.figma_left is None):
             raise ConfigError(f"dispatch of {a.agent}: add --figma-left <calls left of {budget}>, the number "
                               "the brief's Budget line gives (PLAYBOOK §1E)")

@@ -16,7 +16,7 @@ and capture evidence; you make no Figma calls.
 | Agent | Does | Writes |
 |---|---|---|
 | `be-analyst` | Product features in a frontend-only run (cross-stack: the Backend team's Phase 1) | `00-requirements.md` |
-| `fe-ux` | Flows, pages, state tables, wireframes; intake of an external design; post-launch insights | `01-ux.md`, `06-feedback.md` |
+| `fe-ux` | Flows, pages, state tables, wireframes (Figma for a UX stop); intake of an external design; post-launch insights | `01-ux.md`, `06-feedback.md`, Figma wireframes |
 | `fe-ui` | Design plan, tokens, components, Figma frames; intake index; frame exports | `02-ui.md`, Figma, `evidence/design/` |
 | `fe-engineer` | Scaffold, feasibility, contract draft, queue, runnable prototype, rows, fixes | `03-queue.md`, contract draft, frontend code |
 | `fe-tester` | One verdict per row against its frame and state rows | `04-verification.md`, tests |
@@ -46,8 +46,8 @@ finishes, but it is hard; **P3**: would not notice. Rows are built P1 first.
 ## 1E. Figma budget
 
 The user's monthly cap is `figma.monthly_budget`; a run's budget is `base + per_page × pages`,
-shown at kickoff and re-shown when the page count changes. Only `fe-ui` and `fe-engineer` call
-Figma: each brief carries the calls left (`--figma-left` on `log dispatch`), each return's
+shown at kickoff and re-shown when the page count changes. Only `fe-ux` (UX-stop wireframes),
+`fe-ui` and `fe-engineer` call Figma: each brief carries the calls left (`--figma-left` on `log dispatch`), each return's
 `figma_calls` is logged. Warn at `warn_at`; going over needs the user's yes (`--stop Budget`).
 
 ---
@@ -95,7 +95,10 @@ A phase ends when its gate exits 0. Phase numbers are the run log's `--step`. `m
 **Phase 0 — Features.** Frontend-only: `be-analyst` → `00-requirements.md`, gate `fe-product`.
 
 **Phase 1 — UX** (`new`). `fe-ux` → `01-ux.md`, gate `fe-ux`; `missing_requirements` go back to the
-analyst as one amendment. **UX stop** in two-stop runs.
+analyst as one amendment. **UX stop** in two-stop runs: on a canvas surface `fe-ux` draws one grey
+low-fidelity wireframe per page in Figma (layout and priority, no visual style), and the stop shows
+those frames with the flows as the path between them, never `01-ux.md` to read. One-stop runs and
+terminals keep text wireframes: they are a handoff to `fe-ui`, not something the user is asked about.
 
 **Phase 1E — Intake** (`external`). In one message `fe-ux` and `fe-ui` take in the design: what it
 shows is pointed at, not rewritten; what it leaves open gets a recommended decision; `fe-ui` exports
@@ -113,7 +116,7 @@ change what the prototype shows; the rest take their defaults and go on the Prot
 **Phase 2b — Prototype.** `fe-engineer` makes the confirmed design run on the real surface: pages
 reachable, the primary flow working, fake data behind one replaceable layer. It is the start of the
 product, not throwaway. Gate `fe-build`; start the preview (§3J) and try it yourself.
-- **Prototype stop**: the address, `gates/plan-review.md`, the earlier results it may change (§3I),
+- **Prototype stop**: the link to the page to try (it opens as is, §3J), `gates/plan-review.md`, the earlier results it may change (§3I),
   and what was decided without the user. Changes → a fresh `fe-engineer`, or a DFB if the design
   changes. On yes: `fe-approve --by <user>` (`--retire` what they let go) and log `--stop Prototype`
   (cross-stack: in both run logs). A Prototype-tier run ends here (`prototype_confirmed`).
@@ -142,7 +145,9 @@ Any agent may raise a `DFB-###`; you file it in `06-feedback.md` and a fresh own
 (`fe-ux` for flows, pages, states; `fe-ui` for looks). A change to something the user confirmed
 needs the user: at once if it blocks, otherwise at the next stop; until then the confirmed design
 stands. Smaller details the owner decides and you list. Accepted changes flow forward (UX → frames
-→ rows); approved rows change only by re-approval.
+→ rows); approved rows change only by re-approval. A new screen or a changed look gets its frame from
+`fe-ui` before any code, also mid-build; a DFB the user decides is shown as that frame. Wording-only
+changes need no frame.
 
 ## 3B. Increments
 
@@ -193,7 +198,8 @@ user lets go.
 ## 3J. Preview and progress
 
 From the prototype on, keep the product running in an isolated instance and give the user its
-address. After each batch of rows, one line on what is done. Not a stop; what the user says becomes
+address. It opens as is: on the run's current code, with seeded data, signed in or with the
+credentials given, at the page in question; never a copy that needs setup. After each batch of rows, one line on what is done. Not a stop; what the user says becomes
 a DFB or an increment.
 
 ---

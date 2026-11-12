@@ -88,6 +88,11 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
    round): decide, log, list at the next stop.
 4. **Batch** product questions to the next fixed stop, or one batch if they block work. One
    `AskUserQuestion` (≤4 questions, recommendation first, user's language); more → a second call.
+   **Each question carries what answers it, chosen by the question, not the phase:** how it looks
+   or is laid out → Figma frames, options side by side; whether it works → the running product, a
+   link to the exact page that opens as is, and the steps to try; no screen involved → a few
+   lines. Without an interface: the real command and its output. Never ask the user to read a long
+   document to answer.
 5. **Rounds.** A dispatch that redoes its step's work (a fix, a revision, re-work after the user's
    answer) is a round: log it with `--redo`. Each agent gets `loops.max_rounds` rounds per step;
    past that `log dispatch` exits `3`. A step failed twice, gate exit `3`, or a cap with a blocker,
@@ -101,7 +106,7 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
   for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` round cap → the user · `2` config error · `4` busy: the other team has a writer out — wait for it. Cross-stack runs keep one team's
   writers out at a time.
 - **Run log** (`<run-dir>/run-log.jsonl`, hash-chained; add `--team frontend` in Frontend runs):
-  `log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` (a round: add `--redo`; `fe-ui`/`fe-engineer` with a Figma budget: add `--figma-left <n>`) ·
+  `log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` (a round: add `--redo`; `fe-ux`/`fe-ui`/`fe-engineer` with a Figma budget: add `--figma-left <n>`) ·
   `log return --agent <a> --step <phase> --status ok|blocked|failed --note "<result>"` (add
   `--figma-calls <n>` for an agent that reports Figma calls) ·
   `log human --stop Prototype|Plan|UX|UI|Acceptance|Budget|conditional --decision approved|changes|rejected|answered --by <user> --note "<what>"` ·

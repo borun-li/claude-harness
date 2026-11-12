@@ -63,6 +63,8 @@ UX = """# UX — Duplicate upload message
 | error | amber notice | Already uploaded | open original |
 | permission | n/a — every admin can upload | | |
 
+- **Wireframe:** https://www.figma.com/design/AbCdEfGhIjKlMnOpQrStUv/Upload?node-id=5-1
+
 ```text
 [ picker ] [ Upload ]
 [ notice ]
@@ -282,11 +284,21 @@ class DesignGates(FrontBase):
         t = UX.replace("office admin uploading contracts daily", "{one concrete user}")
         t = t.replace("| PAGE-001 | Upload one file | REQ-001 |", "| PAGE-001 | Upload one file | REQ-009 |")
         t = t.replace("- **Steps:** 1. Choose 2. Upload 3. See notice\n", "")
-        t = t.replace("| permission | n/a — every admin can upload | | |\n", "").replace("```text", "").replace("```", "")
+        t = t.replace("| permission | n/a — every admin can upload | | |\n", "").replace("?node-id=5-1", "")
         self.p.write("docs/frontend/01-ux.md", t + FILL)
         rep = self.fe("fe-ux")[2]
         for cid in ("FE1.user", "FE1.pages", "FE1.coverage", "FE1.flows", "FE1.states", "FE1.wireframes"):
             self.assertEqual(self.st(rep, cid), "fail", cid)
+
+    def test_wireframe_medium_follows_the_ux_stop(self):
+        text_only = UX.replace("- **Wireframe:** https://www.figma.com/design/AbCdEfGhIjKlMnOpQrStUv/Upload?node-id=5-1\n", "")
+        self.p.write("docs/frontend/01-ux.md", text_only + FILL)
+        self.assertEqual(self.st(self.fe("fe-ux")[2], "FE1.wireframes"), "fail")  # two stops, web: Figma
+        self.set_state(design_stops=1)
+        self.assertEqual(self.st(self.fe("fe-ux")[2], "FE1.wireframes"), "pass")  # no UX stop: text will do
+        self.set_state(design_stops=2)
+        self.p.write("docs/frontend/01-ux.md", text_only.replace("- **Surface:** web", "- **Surface:** terminal") + FILL)
+        self.assertEqual(self.st(self.fe("fe-ux")[2], "FE1.wireframes"), "pass")  # no canvas: text mockup
 
     def test_ux_long_flow(self):
         self.p.write("docs/frontend/01-ux.md", UX.replace("- **Cancel:** back to empty form",
@@ -761,6 +773,7 @@ class FigmaLeft(FrontBase):
         self.assertEqual(self.fe_log("dispatch", "--agent", "fe-ui", "--model", "opus", "--step", "2", "--note", "w"), 2)
         self.assertEqual(self.fe_log("dispatch", "--agent", "fe-ui", "--model", "opus", "--step", "2", "--note", "w",
                                      "--figma-left", "40"), 0)
+        self.assertEqual(self.fe_log("dispatch", "--agent", "fe-ux", "--model", "opus", "--step", "1", "--note", "w"), 2)
         self.assertEqual(self.fe_log("dispatch", "--agent", "fe-tester", "--model", "opus", "--step", "4", "--note", "w"), 0)
         self.set_state(figma={"budget": None})
         self.assertEqual(self.fe_log("dispatch", "--agent", "fe-engineer", "--model", "opus", "--step", "2", "--note", "w"), 0)
@@ -1062,6 +1075,7 @@ class FrontendExamples(FrontBase):
     def test_examples_pass_design_gates(self):
         if not self.EXAMPLES.is_dir():
             self.skipTest(f"{self.EXAMPLES} not installed next to the gates")
+        self.set_state(design_stops=1)  # the example is a one-stop run: a text wireframe
         for n in ("00-requirements", "01-ux", "02-ui", "03-queue", "06-feedback"):
             self.p.write(f"docs/frontend/{n}.md", (self.EXAMPLES / f"{n}.example.md").read_text())
         for g in ("fe-product", "fe-ux", "fe-ui", "fe-queue"):
