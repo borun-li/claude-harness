@@ -86,8 +86,11 @@ def state(ctx):
     if s is None:
         return bad("ALL.state", "state.json missing", "orchestrator")
     problems = [f"missing key: {k}" for k in
-                ("harness_version", "feature", "status", "current_phase", "phases", "models", "loops")
+                ("harness_version", "feature", "goal", "status", "current_phase", "phases", "models")
                 if k not in s]
+    g = s.get("goal")
+    if "goal" in s and not (isinstance(g, dict) and g.get("change") and g.get("check")):
+        problems.append("goal needs change and check, set by the user at kickoff (Constitution §7.4)")
     if s.get("status") not in ("in_progress", "blocked", "accepted"):
         problems.append(f"status must be in_progress|blocked|accepted, got {s.get('status')!r}")
     if not isinstance(s.get("phases", []), list):

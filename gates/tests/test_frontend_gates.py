@@ -177,7 +177,8 @@ TERMINAL_PLAN = {"surface": "terminal", "captures": [
     {"id": "Q-001-dup", "row": "Q-001", "state": "duplicate", "command": "cat web/notice.html"}]}
 
 FE_STATE = {"harness_version": "7.0.0", "feature": "dup", "status": "in_progress", "tier": "full",
-            "risk": "normal", "design_stops": 2, "current_phase": 1, "phases": [], "models": {}}
+            "risk": "normal", "design_stops": 2, "current_phase": 1, "phases": [], "models": {},
+            "goal": {"change": "the list page shows rows", "check": "open the list page"}}
 
 DOCS = (("00-requirements.md", REQS), ("01-ux.md", UX), ("02-ui.md", UI), ("06-feedback.md", FEEDBACK))
 
@@ -263,6 +264,15 @@ class DesignGates(FrontBase):
         sheet = (self.p.fe / "gates" / "plan-review.md").read_text()
         for needle in ("| Q-001 | P1 | FRAME-001 | an amber notice", "| DFB-001 | accepted", "node-id=1-2"):
             self.assertIn(needle, sheet)
+
+    def test_state_needs_the_users_goal(self):
+        self.p.write("docs/frontend/state.json", json.dumps({k: v for k, v in FE_STATE.items() if k != "goal"}))
+        self.assertEqual(self.st(self.fe("fe-product")[2], "ALL.state"), "fail")
+
+    def test_frontend_round_cap_reads_frontend_config(self):
+        self.p.write(".claude/frontend.json", json.dumps({"loops": {"max_rounds": 1}}))
+        args = ("dispatch", "--agent", "fe-ui", "--model", "opus", "--step", "2", "--note", "revise", "--redo")
+        self.assertEqual([self.fe_log(*args) for _ in range(2)], [0, 3])
 
     def test_product_needs_an_active_req(self):
         self.p.write("docs/frontend/00-requirements.md", REQS.replace("- **Cut:** above", "- **Cut:** below") + FILL)

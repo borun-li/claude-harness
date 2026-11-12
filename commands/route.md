@@ -33,6 +33,8 @@ Do §1 and §2 first (read-only, about 30 s), so one question can carry what the
 
 - **Tier:** Small change / Prototype / Full development (Constitution §7), each option describing
   what runs and roughly what it costs. Never infer the tier from the request.
+- **Goal** (Constitution §7.4): the change the user will observe when the run ends, and how they
+  will tell it worked. Offer one drafted from the request as the first option.
 - Only the facts the team's PLAYBOOK §2.3 asks; everything else it previews, before the question.
 
 Record the answers; every team reads them instead of asking again.

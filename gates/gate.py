@@ -22,7 +22,10 @@ Frontend team (run dir docs/frontend; pass --team frontend to baseline, mark, lo
     gate.py fe-approve --by <who> [--retire OBS-…]  also retires registered observables the user drops
     gate.py capture --round <n>          capture evidence per docs/frontend/capture-plan.json
 
-Exit: 0 pass · 1 fail (send failures to their owners, fix, re-run) · 3 loop cap reached
+    gate.py log dispatch ... --redo     the dispatch redoes its step's work (a fix, a revision, re-work
+                                         after an answer); refused past the round cap (loops.max_rounds)
+
+Exit: 0 pass · 1 fail (send failures to their owners, fix, re-run) · 3 round cap reached
 (escalate to the user) · 2 usage or configuration error · 4 busy: the other team has a writer
 dispatched and not returned; `mark`, `capture` and every check gate wait for it (ORCHESTRATOR.md).
 Reports: <run-dir>/gates/<phase>-<utc>.json and <phase>-latest.json.
@@ -36,8 +39,6 @@ sys.path.insert(0, str(HERE))
 
 from gatelib import capture, checks, frontend, profile, registry, runlog  # noqa: E402
 from gatelib.common import ConfigError, FAIL, PASS, UNAVAILABLE, WAIVED, read_json, stamp, utc_now, write_json  # noqa: E402
-
-HARNESS = pathlib.Path.home() / ".claude" / "backend" / "config.json"
 
 
 def load_cfg(project, need_profile=True):
@@ -56,11 +57,19 @@ def load_cfg(project, need_profile=True):
     return cfg
 
 
-def loop_cap(project):
-    cap = 3
-    for p in (HARNESS, project / ".claude" / "backend.json"):
-        cap = ((read_json(p) or {}).get("loops") or {}).get("max_gate_fix_rounds", cap)
+def loop_cap(project, team="backend"):
+    """Rounds a step may redo its work: `loops.max_rounds` from the team's config, then the project's."""
+    cap = 2
+    for p in (HERE.parent / team / "config.json", project / ".claude" / f"{team}.json"):
+        cap = ((read_json(p) or {}).get("loops") or {}).get("max_rounds", cap)
     return cap
+
+
+def redo_round(log, step, agent, cap):
+    """(the round this redo would be, the rounds allowed): `cap`, plus `cap` for each yes the user
+    gave to more rounds at this step (`log human --stop conditional --decision approved --step <s>`)."""
+    used, granted = runlog.rounds(log)
+    return used.get((str(step), agent), 0) + 1, cap * (1 + granted.get(str(step), 0))
 
 
 PHASES = {**checks.PHASES, **frontend.PHASES}
@@ -132,6 +141,7 @@ def main():
         ap.add_argument(f"--{f}")
     ap.add_argument("--figma-calls", type=int, help="log return: Figma MCP calls the agent made")
     ap.add_argument("--figma-left", type=int, help="log dispatch: Figma calls left for fe-ui / fe-engineer")
+    ap.add_argument("--redo", action="store_true", help="log dispatch: this dispatch redoes its step's work")
     ap.add_argument("--project", default=".")
     ap.add_argument("--run-dir")
     ap.add_argument("--role")
@@ -161,14 +171,28 @@ def main():
                 and budget is not None and a.figma_left is None):
             raise ConfigError(f"dispatch of {a.agent}: add --figma-left <calls left of {budget}>, the number "
                               "the brief's Budget line gives (PLAYBOOK §1E)")
+        if a.redo and a.event != "dispatch":
+            raise ConfigError("--redo goes with `log dispatch`")
+        n = allowed = None
+        if a.redo:
+            n, allowed = redo_round(log, a.step, a.agent, loop_cap(project, team))
+            if n > allowed:
+                print(f"[gate] ROUND CAP: {a.agent} at step {a.step} has used {allowed} of {allowed} rounds; "
+                      f"not logged. Ask the user; on yes: log human --stop conditional --decision approved "
+                      f"--step {a.step} --by <user> --note \"<why more rounds>\"")
+                return 3
         ev = runlog.append(log, a.event or "", agent=a.agent, model=a.model, phase=a.step, status=a.status,
-                           stop=a.stop, decision=a.decision, by=a.by, note=a.note,
+                           stop=a.stop, decision=a.decision, by=a.by, note=a.note, redo=n,
                            figma_calls=a.figma_calls if a.event == "return" else None,
                            figma_left=a.figma_left if a.event == "dispatch" else None)
-        print(f"[gate] logged #{ev['seq']} {ev['event']}")
+        print(f"[gate] logged #{ev['seq']} {ev['event']}" + (f": round {n} of {allowed} at step {a.step}" if n else ""))
         return 0
     if a.phase == "timeline":
+        cap, (used, _) = loop_cap(project, team), runlog.rounds(log)
         md = runlog.timeline(log)
+        if used:
+            md += "\nRounds used: " + ", ".join(f"step {s} {ag} {n}/{redo_round(log, s, ag, cap)[1]}"
+                                               for (s, ag), n in sorted(used.items())) + "\n"
         if ctx.run.is_dir():
             (ctx.run / "run-log.md").write_text(md, encoding="utf-8")
         print(md)
@@ -222,7 +246,7 @@ def main():
     attempts = read_json(ctx.gdir / "attempts.json", {})
     attempts[a.phase] = attempts.get(a.phase, 0) + 1 if overall == FAIL else 0
     write_json(ctx.gdir / "attempts.json", attempts)
-    cap = loop_cap(project)
+    cap = loop_cap(project, team)
     capped = overall == FAIL and attempts[a.phase] > cap
 
     by_owner = {}

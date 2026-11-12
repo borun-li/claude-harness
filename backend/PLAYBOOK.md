@@ -25,7 +25,8 @@ Interface work goes to the Frontend team under §3C.
 ## 1. Configuration
 
 Read `~/.claude/backend/config.json`; shallow-merge `<project>/.claude/backend.json` and say so.
-Gates, panels, caps and paths come from the merged config, never from memory.
+Gates, panels, caps and paths come from the merged config, never from memory. Rounds per step are
+counted in the run log (`ORCHESTRATOR.md` § Decisions), not in `state.json`.
 
 ---
 
@@ -45,14 +46,16 @@ user changes it: models (`model_plan.tiers[_active_tier]`, plus `fe-*` with an i
 - **Tier** (Constitution §7). A confirmed prototype is offered first ("Full development, reusing the
   prototype confirmed <date>"). Small change → `~/.claude/commands/route.md` §4; Prototype →
   `~/.claude/route/PROTOTYPE.md`.
+- **Goal** (Constitution §7.4): what the user will observe at the end and how they will check it;
+  the round (§2.1) is what that goal needs, and nothing more.
 - With an interface: the facts frontend PLAYBOOK §2.3 asks.
 
 **Risk** is `high` for money, personal data, auth or secrets, irreversible operations or data
 migration, schema changes, new external dependencies or public APIs. **Gate profile:** run each
 detected command once, confirm the ones that work yourself (logged), ask only about the rest.
 
-**2.4** Write `state.json` (§8); an unfinished one → `/backend-resume`. A reused prototype: log
-`--stop Prototype --decision approved --note "reused <path>, confirmed <date>"`.
+**2.4** Write `state.json` (§8) with the goal in the user's words; an unfinished one →
+`/backend-resume`. A reused prototype: log `--stop Prototype --decision approved --note "reused <path>, confirmed <date>"`.
 
 ---
 
@@ -97,10 +100,10 @@ tester. Gate `p5`. Never relax a test.
 3. Blockers and majors go to fresh owners; minors to `deferred.md`; then Phase 5 on the affected TCs.
 4. A fresh `be-reviewer` re-checks only the fixed FNDs; file its table in `06-review-report.md` §5
    and set each FND's `**Status:**` to `fixed in round <n>` or leave it `open` (back to step 3).
-   At `loops.max_fix_rounds_after_review` minors are deferred (Constitution §5.4).
+   At `loops.max_rounds` minors are deferred (Constitution §5.4).
 
-**Phase 7 — Acceptance.** Write `07-acceptance.md` (QUALITY-BARS § Phase 7), gate `p7`, stop. On
-yes `status: accepted`.
+**Phase 7 — Acceptance.** Write `07-acceptance.md` (QUALITY-BARS § Phase 7), gate `p7`, stop: lead
+with the goal and the user running their own check. On yes `status: accepted`.
 
 ## 3B. Increments
 
@@ -178,11 +181,12 @@ prototype/         throwaway prototype (Phase 1b, no interface)
 ```json
 {
   "harness_version": "x.y.z", "feature": "one line", "slug": "feature-slug",
+  "goal": { "change": "what the user will observe", "check": "how they will tell it worked" },
   "started_at": "ISO-8601", "updated_at": "ISO-8601",
   "status": "in_progress | blocked | accepted",
   "tier": "full", "risk": "high | normal", "prototype": "built | reused",
   "models": { "be-analyst": "opus", "…": "…" },
-  "current_phase": 4, "phases": [], "loops": { "review_rounds": 0 },
+  "current_phase": 4, "phases": [],
   "frontend_items": [ { "des": "DES-021", "queue_row": "Q-3", "status": "verified" } ],
   "increments": [], "open_questions": [], "notes": []
 }

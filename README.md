@@ -232,6 +232,10 @@ The named agent works alone: no phases, no sign-offs, no gates.
 - **Orchestrator** — the main session dispatches, decides with recommended defaults and keeps
   context ([`ORCHESTRATOR.md`](ORCHESTRATOR.md)). [`CONSTITUTION.md`](CONSTITUTION.md) overrides
   every other file.
+- **A goal per run** — with the tier, you say what change you will see when the run ends and how
+  you will check it; the run does not grow past it, and Acceptance opens with your check.
+- **Round caps** — each step may redo its work twice by default (`loops.max_rounds`); after that
+  the run asks you instead of looping.
 - **Fresh agents** — each step goes to a new agent with a written brief; a finished agent is never
   carried into another round, so no step inherits another's blind spots.
 - **Automatic gates** — between phases, `gates/gate.py` checks documents, traceability, tests and

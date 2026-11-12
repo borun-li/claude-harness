@@ -12,11 +12,13 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
 
 ## Capabilities
 
-- **Start:** a read-only recon, then one question: the tier and facts only the user knows. What
+- **Start:** a read-only recon, then one question: the tier, the run's goal (Constitution §7.4)
+  and facts only the user knows. What
   you can recommend from evidence (models, risk, budgets) is previewed and stands unless changed. Read `<project>/.claude/project-context.md` and the merged config
   (PLAYBOOK §1), never memory. Then the run's branch (§ Git).
 - **Dispatch:** the real `be-*` / `fe-*` type with its resolved model; a clean tree before a writer;
-  `gate.py mark` and `log dispatch` as the PLAYBOOK's gate table says; a fresh agent with a brief
+  `gate.py mark` and `log dispatch` as the PLAYBOOK's gate table says (`--redo` when it redoes the
+  step's work); a fresh agent with a brief
   per `~/.claude/route/HANDOFF.md` §3; independent dispatches in one message. On return:
   `log return`, file read-only roles' handoff entries, check confined roles changed only their files.
 - **Verify:** run the gate yourself, then the real thing through its real entry point in an
@@ -86,16 +88,20 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
    round): decide, log, list at the next stop.
 4. **Batch** product questions to the next fixed stop, or one batch if they block work. One
    `AskUserQuestion` (≤4 questions, recommendation first, user's language); more → a second call.
-5. A step failed twice, gate exit `3`, or a cap with a blocker, major or unmet requirement open →
-   escalate with each survivor's history; minors left at a cap are deferred (Constitution §5.4).
+5. **Rounds.** A dispatch that redoes its step's work (a fix, a revision, re-work after the user's
+   answer) is a round: log it with `--redo`. Each agent gets `loops.max_rounds` rounds per step;
+   past that `log dispatch` exits `3`. A step failed twice, gate exit `3`, or a cap with a blocker,
+   major or unmet requirement open → ask the user with each survivor's history whether to give the
+   step more rounds, change the goal, or stop; on yes `log human --stop conditional --decision
+   approved --step <s>`. Minors left at a cap are deferred (Constitution §5.4).
 
 ## Key information
 
 - **Gates:** `python3 ~/.claude/gates/gate.py <gate> --project <root>` (`--run-dir docs/<team>/<slug>`
-  for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` cap → escalate · `2` config error · `4` busy: the other team has a writer out — wait for it. Cross-stack runs keep one team's
+  for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` round cap → the user · `2` config error · `4` busy: the other team has a writer out — wait for it. Cross-stack runs keep one team's
   writers out at a time.
 - **Run log** (`<run-dir>/run-log.jsonl`, hash-chained; add `--team frontend` in Frontend runs):
-  `log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` (`fe-ui`/`fe-engineer` with a Figma budget: add `--figma-left <n>`) ·
+  `log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` (a round: add `--redo`; `fe-ui`/`fe-engineer` with a Figma budget: add `--figma-left <n>`) ·
   `log return --agent <a> --step <phase> --status ok|blocked|failed --note "<result>"` (add
   `--figma-calls <n>` for an agent that reports Figma calls) ·
   `log human --stop Prototype|Plan|UX|UI|Acceptance|Budget|conditional --decision approved|changes|rejected|answered --by <user> --note "<what>"` ·

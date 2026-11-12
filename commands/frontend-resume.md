@@ -41,6 +41,7 @@ with `harness_version` below 7.0 is not resumed
    that phase's gate first.**
 4. Run `gate.py timeline --team frontend`. A `dispatch` with no `return` is unverified work.
 5. If `state.json` and disk disagree, trust the disk, say so, and correct the state.
+6. No `goal` (a run started before it existed): ask the user for it in the confirmation below.
 
 ## Confirm before continuing
 

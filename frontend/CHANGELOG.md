@@ -2,6 +2,23 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 9.0.0 — 2026-11-12 — a goal per run, round caps, simplest thing that works
+
+Major (`state.json` gains a required `goal`). Shared with backend 4.0.0.
+- Constitution amended: every run ends with a change the user can observe (§1); principle §2.10
+  "Simplest thing that works" for code and documents alike; every step has a round cap, going past
+  it needs the user's yes (§5.4); done includes the run's goal met (§6.8); the user sets the goal
+  with the tier, and it does not grow during the run (§7.4).
+- Kickoff asks the goal with the tier: the change the user will observe and how they will check
+  it. `state.json` `goal: {change, check}` is required (`ALL.state`); resuming a run without one
+  asks for it. Acceptance opens with the goal and the user's check.
+- One round cap, `loops.max_rounds` (default 2, per project in `.claude/frontend.json`), replaces
+  `max_fix_rounds`. It counts redo dispatches (`log dispatch --redo`) per agent and step from the run log;
+  past the cap `log dispatch` exits 3 until the user says yes
+  (`log human --stop conditional --decision approved --step <s>`), which grants another cap.
+  Gate fix rounds use the same cap (was 3). `timeline` ends with a `Rounds used` line.
+- `state.json` no longer carries `loops`.
+
 ## 8.5.0 — 2026-11-11 — runs work on a branch and open a draft PR
 
 Minor. Shared with backend 3.8.0.
