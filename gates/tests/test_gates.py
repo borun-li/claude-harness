@@ -714,6 +714,20 @@ class Fixtures(Base):
         case = json.loads(self.p.read("tests/fixtures/approved/APPROVED.json"))["cases"]["FX-001"]
         self.assertEqual(len(case["history"]), 1)
 
+    def test_newer_decision_relocks_without_the_user(self):
+        self.p.approve()
+        self.p.draft_fixture(expected=6)
+        self.assertEqual(self.p.gate("p2")[0], 0)
+        code, out, _ = self.p.gate("fixtures-approve", "--by", "orchestrator", "--reapprove", "FX-001")
+        self.assertEqual(code, 2, out)  # the orchestrator must name the newer decision
+        self.assertIn("--because", out)
+        because = "user 2026-11-12: 'show the total, not the sum of parts'"
+        self.assertEqual(self.p.gate("fixtures-approve", "--by", "orchestrator", "--reapprove", "FX-001",
+                                     "--because", because)[0], 0)
+        case = json.loads(self.p.read("tests/fixtures/approved/APPROVED.json"))["cases"]["FX-001"]
+        self.assertEqual((case["approved_by"], case["because"], len(case["history"])), ("orchestrator", because, 1))
+        self.assertEqual(self.p.events()[-1]["note"], because)
+
     def test_unapproved_declared_fixture_blocks_p4(self):
         assert self.p.gate("baseline")[0] == 0
         self.p.write("docs/backend/04-test-plan.md", PLAN)

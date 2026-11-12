@@ -690,7 +690,8 @@ def _fixture_integrity(ctx, cid, owner):
                 problems.append(f"{fx}/{rel}: changed since approval on {case['date']}")
     problems += [f"{fx} ({', '.join(sorted(r))}): declared but never approved at Plan"
                  for fx, r in _declared_fx(ctx).items() if fx not in man["cases"]]
-    return (bad(cid, "Approved fixtures changed or missing (only the user re-approves, at Plan)", owner, problems)
+    return (bad(cid, "Approved fixtures changed or missing (re-lock: the user's yes, or --because a newer decision)",
+                owner, problems)
             if problems else ok(cid, f"{len(man['cases'])} approved fixtures intact", owner))
 
 
@@ -779,8 +780,9 @@ def _section(text, patterns):
     return None
 
 
-def approve_fixtures(ctx, by, reapprove):
-    """Lock the candidates the user approved at Plan. Never run without the user's explicit yes."""
+def approve_fixtures(ctx, by, reapprove, because=None):
+    """Lock the candidates the user approved at Plan, or re-lock answers a newer decision replaced
+    (`because`: whose words, when; Constitution §5). Never run otherwise."""
     plan = read_json(ctx.gdir / "p2-latest.json")
     if not plan or plan["overall"] != PASS:
         raise ConfigError("`p2` has not passed; run it and get the user's approval first")
@@ -789,7 +791,8 @@ def approve_fixtures(ctx, by, reapprove):
     blocked = [fx for fx in todo if fx in man["cases"] and fx not in reapprove]
     if blocked:
         raise ConfigError(f"{blocked} change already-approved answers; pass --reapprove {' '.join(blocked)} "
-                          "only after the user has seen the difference")
+                          "after the user has seen the difference, or with --because naming the newer decision "
+                          "that replaces them")
     date = utc_now()[:10]
     for fx in todo:
         src, dst = cand / fx, base / fx
@@ -800,7 +803,7 @@ def approve_fixtures(ctx, by, reapprove):
         shutil.copytree(src, dst)
         files = {f.relative_to(dst).as_posix(): _sha(f) for f in sorted(dst.rglob("*")) if f.is_file()}
         man["cases"][fx] = {"req": meta["req"], "source": meta["source"], "compare": meta["compare"],
-                            "approved_by": by, "date": date, "files": files,
+                            "approved_by": by, "date": date, "files": files, **({"because": because} if because else {}),
                             "history": (prev.get("history", []) + [{k: prev[k] for k in ("date", "approved_by", "files")}])
                             if prev else []}
         shutil.rmtree(src)

@@ -27,6 +27,8 @@ and UI sign-offs before the prototype. The team READMEs show each team's full fl
 
 Between sign-offs you are asked only when something irreversible or outward-facing is about to
 happen. Everything else is decided with a recommended default and shown to you at the next stop.
+A question that doesn't block the run waits in a list while work continues, and when your newer
+words replace an earlier decision, the team follows them without asking again.
 
 ### Scope today
 
@@ -195,7 +197,8 @@ or 3.
 ### Scenario 5 — change your mind, pause, resume
 
 Tell the orchestrator the new requirement mid-run. The run is not restarted: the change joins at the
-next sign-off, and a change to something you already approved comes back to you first.
+next sign-off. Where your new words replace something you approved earlier, the team follows them
+and lists what it changed; anything else that would change an approved result comes back to you.
 
 ```
 /frontend-status      # phases, sign-offs, checks, open items
@@ -203,6 +206,18 @@ next sign-off, and a change to something you already approved comes back to you 
 ```
 
 The `/backend-…` pair does the same for a backend or cross-stack run.
+
+**Long runs.** Each time something you can see is done, the orchestrator posts what changed and a
+link to the page on the local preview, and sends a notification when you are away from the
+terminal. To get them:
+- Desktop: Ghostty, Kitty and iTerm2 show them (in iTerm2, turn on Settings → Profiles → Terminal →
+  Notification Center Alerts, and in Filter Alerts allow escape-sequence alerts); Apple Terminal
+  does not. Allow notifications for your terminal in macOS settings, and note Focus / Do Not
+  Disturb hides them.
+- Phone: sign in with your claude.ai account, run `/remote-control` in the session (or turn on
+  *Enable Remote Control for all sessions* in `/config`), and open the session in the Claude app.
+- Keep the machine awake: start with `caffeinate -i claude` on macOS. A run that must survive the
+  laptop closing belongs in a cloud session (claude.ai/code).
 
 ### Scenario 6 — one agent, one job
 

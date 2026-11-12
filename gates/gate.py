@@ -4,7 +4,8 @@
     gate.py profile                      draft <project>/.claude/gates.json (user confirms it)
     gate.py p1                           after Phase 1 (requirements)
     gate.py p2                           after Phase 2 (design + fixture answers); writes the Plan review sheet
-    gate.py fixtures-approve --by <who>  lock the fixtures the user approved at Plan (never without their yes)
+    gate.py fixtures-approve --by <who>  lock the fixtures the user approved at Plan (never without their yes;
+                                         --by orchestrator --because "<newer decision>" re-locks what it replaced)
     gate.py baseline                     Phase 4 start: clean tree, baseline tests, snapshot
     gate.py mark --role <agent>          snapshot before dispatching a writing agent or reviewers
     gate.py p4 | p5 | p6 | p7            gates after build, verification, review, acceptance
@@ -147,6 +148,8 @@ def main():
     ap.add_argument("--role")
     ap.add_argument("--by", help="fixtures-approve: who approved (the user)")
     ap.add_argument("--reapprove", nargs="*", default=[], help="fixtures-approve: FX ids whose approved answer changes")
+    ap.add_argument("--because", help="fixtures-approve / fe-approve: the newer decision (whose words, when) that "
+                                      "replaces what was approved; required with --by orchestrator")
     a = ap.parse_args()
     project = pathlib.Path(a.project).resolve()
 
@@ -223,18 +226,22 @@ def main():
         runlog.append(log, "approve", by=a.by, fixtures=added)
         print(f"[gate] registered {len(added)}: {', '.join(added)}")
         return 0
+    if a.phase in ("fe-approve", "fixtures-approve") and a.by == "orchestrator" and not a.because:
+        raise ConfigError(f"{a.phase} --by orchestrator re-locks only what a newer decision replaced: "
+                          "add --because \"<whose words, when>\" (Constitution §5)")
     if a.phase == "fe-approve":
         if not a.by:
             raise ConfigError("fe-approve needs --by <who approved>")
-        results, _ = frontend.approve(ctx, a.by, a.retire)
-        runlog.append(log, "approve", by=a.by, fixtures=results[0]["details"] + [f"retired {i}" for i in a.retire])
+        results, _ = frontend.approve(ctx, a.by, a.retire, a.because)
+        runlog.append(log, "approve", by=a.by, note=a.because,
+                      fixtures=results[0]["details"] + [f"retired {i}" for i in a.retire])
         print(f"[gate] {results[0]['message']}")
         return 0
     if a.phase == "fixtures-approve":
         if not a.by:
             raise ConfigError("fixtures-approve needs --by <who approved>")
-        results, _ = checks.approve_fixtures(ctx, a.by, set(a.reapprove))
-        runlog.append(log, "approve", by=a.by, fixtures=results[0]["details"])
+        results, _ = checks.approve_fixtures(ctx, a.by, set(a.reapprove), a.because)
+        runlog.append(log, "approve", by=a.by, note=a.because, fixtures=results[0]["details"])
         print(f"[gate] {results[0]['message']}: {', '.join(results[0]['details'])}")
         return 0
 

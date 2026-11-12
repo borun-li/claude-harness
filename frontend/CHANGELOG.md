@@ -2,6 +2,34 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 9.3.0 — 2026-11-12 — report what the user can see, as it happens
+
+Minor. Shared with backend 4.2.0.
+- Each time a visible change passes its check, the orchestrator says so at once, without waiting
+  for a stop: what changed, a link to the exact page on the preview, the steps to see it (no
+  interface: the command and its output). The same line goes out as a `PushNotification`, which
+  reaches the desktop, or the phone through Remote Control, when the user is away from the terminal.
+- Every report, phase end and stop leads with what the user can see now that they could not
+  before, or says that nothing new is visible yet and what is next; internal state comes last.
+- Frontend §3J: a report per row that passes `fe-build`, instead of one line per batch.
+- README: how to receive the notifications (desktop terminals, Remote Control on a phone) and how
+  to keep a long run awake.
+
+## 9.2.0 — 2026-11-12 — a newer decision replaces an older one; waiting never stops the team
+
+Minor. Shared with backend 4.1.0.
+- Constitution §5 amended: when the user's later words, the run's goal or a harness update
+  contradict an earlier decision, an approved expected output or observable, or a test written to
+  the earlier one, the team follows the newer one without asking: change, re-lock, record whose
+  words and when, list it at the next stop. §2.5 and §5.1 point to it. Waivers stay the user's.
+- Re-locking: `fixtures-approve --reapprove FX-nnn` and `fe-approve` (including `--retire`) take
+  `--by orchestrator --because "<whose words, when>"`; `--by orchestrator` without `--because` is
+  refused. The reason is stored with the lock and in the run log.
+- A question that does not block the run's goal opens no dialog: the recommended default is taken,
+  the question goes to `state.json` `open_questions` and the next report or stop. Before a blocking
+  question, every piece of work that does not depend on it is dispatched first (dispatched agents
+  keep running while a dialog is open).
+
 ## 9.1.0 — 2026-11-12 — show the user what answers the question
 
 Minor. Backend 4.0.1 shares the ORCHESTRATOR rule.

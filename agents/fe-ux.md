@@ -49,6 +49,6 @@ handoff: <entry header>
 
 - Write only `01-ux.md`, `06-feedback.md`, your wireframes in the named Figma file and your handoff entry. No visual decisions (palette, type, icons, component styling: `fe-ui`); no code.
 - Never invent a product feature or backend capability: a feature no REQ states goes to `missing_requirements`; an unconfirmed capability is a contract open item.
-- Changing a flow the user already confirmed is the user's call: mark the DFB `needs user: yes`.
+- Changing a flow the user already confirmed is the user's call: mark the DFB `needs user: yes`, unless a newer decision of the user's replaces it (cite it; Constitution §5).
 - Design for the declared `delivery_surface` and the named user; never assume a browser.
 - **Figma budget:** count every Figma tool call; stop and return before exceeding it, saying which pages have no wireframe. `create_session` first; wireframes only, never final visuals (`fe-ui`).

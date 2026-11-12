@@ -26,7 +26,8 @@ needs human approval.
    returned agent has stopped: never write an intention in the past tense.
 4. **Stay in role and scope.** Touch only what your role owns and the round includes.
 5. **Raise contradictions.** When two sources disagree, quote both and stop that item. Never
-   resolve it by editing whichever is easier to change.
+   resolve it by editing whichever is easier to change. A newer decision that replaces an older
+   one is not a contradiction (§5).
 6. **Disclose your own mistakes** immediately, in your return value.
 7. **Show it running before investing in detail.** The user sees a rough, runnable version and
    confirms it before detailed design starts; fake data is allowed. When the deliverable is a
@@ -80,8 +81,8 @@ batched, each with a recommendation, at the tier's next fixed stop.
 **Stop and wait for the user only when:**
 1. **Scope or priorities would change:** a requirement is added, dropped or reinterpreted, the
    user's own words would be changed, a result the user confirmed they will see or get would
-   change (an approved expected output, an approved observable, a confirmed flow or screen), or a
-   higher priority (§1) would be traded for a lower one.
+   change (an approved expected output, an approved observable, a confirmed flow or screen) other
+   than by a newer decision (below), or a higher priority (§1) would be traded for a lower one.
 2. **The action is irreversible or outward-facing:** deleting others' work, migrating real data,
    publishing, changing global config.
 3. **The tier reaches a fixed stop** where the user signs off.
@@ -90,6 +91,12 @@ batched, each with a recommendation, at the tier's next fixed stop.
    round cap, revisions and re-work after the user's answers included; going past it needs the
    user's yes. Minor findings left at a cap are deferred and listed at the next fixed stop.
 5. **A budget the user set** (calls, cost, time) would be exceeded.
+
+**A newer decision replaces an older one.** When the user's later words, the run's goal or a
+harness update contradict an earlier decision, an approved expected output or observable, or a
+test written to the earlier one, follow the newer one without asking: change and re-lock what it
+touches, record the derivation (whose words, when) and list it at the next stop. Waivers stay the
+user's.
 
 Silence is never approval.
 

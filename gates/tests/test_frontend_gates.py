@@ -393,6 +393,17 @@ class Approval(FrontBase):
         approved = json.loads((self.p.fe / "gates" / "observables-approved.json").read_text())
         self.assertEqual((sorted(approved["rows"]), sorted(approved["frames"])), (["Q-001"], ["FRAME-001"]))
 
+    def test_newer_decision_relocks_observables(self):
+        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
+        for g in ("fe-product", "fe-ux", "fe-ui", "fe-queue", "fe-plan"):
+            self.fe(g)
+        self.export_frames()
+        self.assertEqual(self.fe("fe-approve", "--by", "orchestrator")[0], 2)
+        because = "user 2026-11-12: 'no error codes on screen'"
+        self.assertEqual(self.fe("fe-approve", "--by", "orchestrator", "--because", because)[0], 0)
+        approved = json.loads((self.p.fe / "gates" / "observables-approved.json").read_text())
+        self.assertEqual((approved["approved_by"], approved["because"]), ("orchestrator", because))
+
     def test_scaffold_build_before_approval(self):
         r = subprocess.run([PY, str(GATE), "baseline", "--team", "frontend", "--project", str(self.p.root)],
                            capture_output=True, text=True)

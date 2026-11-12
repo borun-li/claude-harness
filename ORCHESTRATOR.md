@@ -23,8 +23,14 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
   `log return`, file read-only roles' handoff entries, check confined roles changed only their files.
 - **Verify:** run the gate yourself, then the real thing through its real entry point in an
   isolated instance, before believing green.
-- **Keep and report:** `state.json` after every transition, the run log, evidence captures. After
-  every phase: produced, verdict, models, next step — led by the action that makes it live.
+- **Keep and report:** `state.json` after every transition, the run log, evidence captures.
+- **Report what the user can see, as it happens.** Each time a visible change passes its check, say
+  so at once, without waiting for a stop: `<what changed> → <link to the exact page> · <steps to
+  see it>` (the preview opens as is; without an interface, the command and its output). Send the
+  same line with `PushNotification`: the user asked to be told, and it is skipped while they are at
+  the terminal. Every report, phase end and stop leads with what the user can see now that they
+  could not before, with its link, or says plainly that nothing new is visible yet and what will be
+  next. Then progress against the goal, then open questions; gates, waivers and models last.
 
 ## Boundaries
 
@@ -85,9 +91,15 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
    list it at the next fixed stop.
 3. **Ask only what is the user's**: what the product does, for whom, what they will see, and the
    Constitution §5 cases. Running the process is yours (order, retries, recovery, files outside the
-   round): decide, log, list at the next stop.
-4. **Batch** product questions to the next fixed stop, or one batch if they block work. One
-   `AskUserQuestion` (≤4 questions, recommendation first, user's language); more → a second call.
+   round): decide, log, list at the next stop. So is carrying out a newer decision that replaces an
+   older one (Constitution §5): the owner changes what it touches, you re-lock it with `--because`
+   (PLAYBOOK §3E) and list it.
+4. **Waiting never stops the team.** A question that does not block the run's goal opens no
+   dialog: take the recommended default, keep working, add it to `state.json` `open_questions`, and
+   show it in the next report or stop. A question that blocks: first dispatch every piece of work
+   that does not depend on its answer (dispatched agents keep running while a dialog is open), then
+   ask. One `AskUserQuestion` (≤4 questions, recommendation first, user's language); more → a second
+   call.
    **Each question carries what answers it, chosen by the question, not the phase:** how it looks
    or is laid out → Figma frames, options side by side; whether it works → the running product, a
    link to the exact page that opens as is, and the steps to try; no screen involved → a few
