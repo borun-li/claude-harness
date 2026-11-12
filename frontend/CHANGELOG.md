@@ -2,6 +2,19 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 9.3.0 — 2026-11-12 — report what the user can see, as it happens
+
+Minor. Shared with backend 4.2.0.
+- Each time a visible change passes its check, the orchestrator says so at once, without waiting
+  for a stop: what changed, a link to the exact page on the preview, the steps to see it (no
+  interface: the command and its output). The same line goes out as a `PushNotification`, which
+  reaches the desktop, or the phone through Remote Control, when the user is away from the terminal.
+- Every report, phase end and stop leads with what the user can see now that they could not
+  before, or says that nothing new is visible yet and what is next; internal state comes last.
+- Frontend §3J: a report per row that passes `fe-build`, instead of one line per batch.
+- README: how to receive the notifications (desktop terminals, Remote Control on a phone) and how
+  to keep a long run awake.
+
 ## 9.2.0 — 2026-11-12 — a newer decision replaces an older one; waiting never stops the team
 
 Minor. Shared with backend 4.1.0.

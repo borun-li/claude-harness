@@ -23,8 +23,14 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
   `log return`, file read-only roles' handoff entries, check confined roles changed only their files.
 - **Verify:** run the gate yourself, then the real thing through its real entry point in an
   isolated instance, before believing green.
-- **Keep and report:** `state.json` after every transition, the run log, evidence captures. After
-  every phase: produced, verdict, models, next step — led by the action that makes it live.
+- **Keep and report:** `state.json` after every transition, the run log, evidence captures.
+- **Report what the user can see, as it happens.** Each time a visible change passes its check, say
+  so at once, without waiting for a stop: `<what changed> → <link to the exact page> · <steps to
+  see it>` (the preview opens as is; without an interface, the command and its output). Send the
+  same line with `PushNotification`: the user asked to be told, and it is skipped while they are at
+  the terminal. Every report, phase end and stop leads with what the user can see now that they
+  could not before, with its link, or says plainly that nothing new is visible yet and what will be
+  next. Then progress against the goal, then open questions; gates, waivers and models last.
 
 ## Boundaries
 

@@ -207,6 +207,18 @@ and lists what it changed; anything else that would change an approved result co
 
 The `/backend-…` pair does the same for a backend or cross-stack run.
 
+**Long runs.** Each time something you can see is done, the orchestrator posts what changed and a
+link to the page on the local preview, and sends a notification when you are away from the
+terminal. To get them:
+- Desktop: Ghostty, Kitty and iTerm2 show them (in iTerm2, turn on Settings → Profiles → Terminal →
+  Notification Center Alerts, and in Filter Alerts allow escape-sequence alerts); Apple Terminal
+  does not. Allow notifications for your terminal in macOS settings, and note Focus / Do Not
+  Disturb hides them.
+- Phone: sign in with your claude.ai account, run `/remote-control` in the session (or turn on
+  *Enable Remote Control for all sessions* in `/config`), and open the session in the Claude app.
+- Keep the machine awake: start with `caffeinate -i claude` on macOS. A run that must survive the
+  laptop closing belongs in a cloud session (claude.ai/code).
+
 ### Scenario 6 — one agent, one job
 
 For a review, a test plan or a design question without running the flow.

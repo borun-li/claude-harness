@@ -201,8 +201,9 @@ user lets go or a newer decision replaces (`--because`).
 
 From the prototype on, keep the product running in an isolated instance and give the user its
 address. It opens as is: on the run's current code, with seeded data, signed in or with the
-credentials given, at the page in question; never a copy that needs setup. After each batch of rows, one line on what is done. Not a stop; what the user says becomes
-a DFB or an increment.
+credentials given, at the page in question; never a copy that needs setup. After each row passes
+`fe-build`, report it as `ORCHESTRATOR.md` § Capabilities says: what changed, the link to that page,
+the steps. Not a stop; what the user says becomes a DFB or an increment.
 
 ---
 
