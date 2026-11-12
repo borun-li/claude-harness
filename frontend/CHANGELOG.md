@@ -2,6 +2,22 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 9.1.0 — 2026-11-12 — show the user what answers the question
+
+Minor. Backend 4.0.1 shares the ORCHESTRATOR rule.
+- Every question to the user carries what answers it, chosen by the question rather than the
+  phase: how it looks → Figma frames side by side; whether it works → a link to the exact page of
+  the running product and the steps to try; no screen → a few lines; no interface → the real
+  command and its output. Never a long document to read.
+- UX stop: `fe-ux` draws one grey low-fidelity Figma wireframe per page and the stop shows those
+  frames. One-stop runs and terminal surfaces keep text wireframes. `fe-ux` gains the Figma tools
+  and joins the Figma budget (`--figma-left`, `figma_calls`); `per_page` 8 → 10.
+  `FE1.wireframes` requires a `- **Wireframe:**` node link when `design_stops` is 2 on a canvas.
+- A new screen or a changed look gets its Figma frame before code, also mid-build; a DFB the user
+  decides is shown as that frame.
+- The preview opens as is: the run's current code, seeded data, signed in or credentials given,
+  at the page in question.
+
 ## 9.0.0 — 2026-11-12 — a goal per run, round caps, simplest thing that works
 
 Major (`state.json` gains a required `goal`). Shared with backend 4.0.0.

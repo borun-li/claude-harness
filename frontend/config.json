@@ -1,5 +1,5 @@
 {
-  "harness_version": "9.0.0",
+  "harness_version": "9.1.0",
   "_comment": "Frontend Agent Team defaults. A project may override any top-level key in <project>/.claude/frontend.json. Model tier names live in ~/.claude/backend/config.json; roles below map this team one by one.",
   "roles": {
     "orchestrator": { "model": "opus" },
@@ -48,9 +48,9 @@
     "new_flow_means_two": true
   },
   "figma": {
-    "_comment": "PLAYBOOK §1E. Counts every Figma MCP call made by fe-ui and fe-engineer, logged on their returns.",
+    "_comment": "PLAYBOOK §1E. Counts every Figma MCP call made by fe-ux, fe-ui and fe-engineer, logged on their returns. per_page includes about 2 calls for a UX-stop wireframe.",
     "monthly_budget": 300,
-    "per_run": { "base": 20, "per_page": 8 },
+    "per_run": { "base": 20, "per_page": 10 },
     "warn_at": 0.8
   },
   "viewports": [1440, 768, 375],

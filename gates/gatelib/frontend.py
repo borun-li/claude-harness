@@ -13,6 +13,7 @@ from .common import FAIL, PASS, WAIVED, ConfigError, bad, na, ok, read_json, utc
 STATES = ("loading", "empty", "success", "error", "permission")
 EXTRA_STATES = ("offline", "partial")
 HEX = re.compile(r"#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b")
+FIGMA_NODE = re.compile(r"figma\.com/(design|file)/[\w-]+.*node-id=\d+[-:]\d+")
 NA = re.compile(r"^\s*n/?a\b", re.I)
 PANEL = ("fe-review-experience", "fe-review-accessibility", "fe-review-integration")
 UX_FLOW_FIELDS = ("Serves", "Steps", "Success", "Failure", "Cancel", "Recovery", "Boundary")
@@ -170,6 +171,8 @@ def ux(ctx):
                bad("FE1.flows", "Flows without steps or every path", owner, incomplete) if incomplete else
                ok("FE1.flows", f"{len(flows)} flows with steps, success, failure, cancel, recovery, boundary", owner))
     details = _blocks(text, "PAGE")
+    # A UX stop shows the user Figma wireframes; with no UX stop, or no canvas, a text block will do.
+    in_figma = _state_json(ctx).get("design_stops") == 2 and not _canvasless(ctx)
     gaps, no_wire = [], []
     for p in pages:
         b = details.get(p)
@@ -180,11 +183,13 @@ def ux(ctx):
         lacking = [s for s in STATES if s not in st]
         if lacking:
             gaps.append(f"{p}: state rows missing {lacking}")
-        if "```" not in b and not external:
+        if not external and not (FIGMA_NODE.search(docs.field(b, "Wireframe") or "") if in_figma else "```" in b):
             no_wire.append(p)
     res.append(bad("FE1.states", "Pages without a full state table", owner, gaps) if gaps
                else ok("FE1.states", "Every page states loading, empty, success, error, permission", owner))
-    res.append(bad("FE1.wireframes", "Pages without an ASCII wireframe (fenced block)", owner, no_wire) if no_wire
+    want = ("a Figma wireframe (`- **Wireframe:** …?node-id=12-34`), shown at the UX stop" if in_figma
+            else "a text wireframe (fenced block)")
+    res.append(bad("FE1.wireframes", f"Pages without {want}", owner, no_wire) if no_wire
                else ok("FE1.wireframes", "Every page has a wireframe", owner))
     res.append(checks._length_check(ctx, "FE1.flow-length", [(f, docs.words(b)) for f, b in flows.items()],
                                     "fe_flow_words", owner, "FLOW"))
@@ -272,7 +277,7 @@ def ui(ctx):
         if canvasless:
             if not re.search(r"mockup|§", link, re.I):
                 probs.append(f"{f}: terminal surface — point to the text mockup")
-        elif not re.search(r"figma\.com/(design|file)/[\w-]+.*node-id=\d+[-:]\d+", link):
+        elif not FIGMA_NODE.search(link):
             probs.append(f"{f}: Figma cell is not a node link (`…?node-id=12-34`)")
     if not canvasless and not (docs.field(text, "Figma file") or "").startswith("http"):
         probs.append("**Figma file:** missing")

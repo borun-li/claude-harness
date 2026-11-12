@@ -2,6 +2,12 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour or new role · major = changed phase flow or artifact contract.
 
+## 4.0.1 — 2026-11-12 — questions carry what answers them
+
+Patch. Shared ORCHESTRATOR rule with frontend 9.1.0: each question to the user carries what answers
+it (Figma frames for looks, the running product for whether it works, a few lines otherwise; the
+real command and its output without an interface), never a long document.
+
 ## 4.0.0 — 2026-11-12 — a goal per run, round caps, simplest thing that works
 
 Major (`state.json` gains a required `goal`). Shared with frontend 9.0.0.

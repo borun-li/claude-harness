@@ -38,8 +38,10 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
   where they apply), each with what the user sees, the words they read and what they can do next,
   or `n/a — <reason>`. An error row names its cause (a backend error code when one exists) and the
   way out. `[FE1.states]`
-- **One ASCII wireframe per page**: layout and priority only. A page block is at most 200 words,
-  wireframe excluded. `[FE1.wireframes · FE1.page-length]`
+- **One wireframe per page**, layout and priority only: a grey Figma frame linked as
+  `- **Wireframe:**` when the run has a UX stop on a canvas surface (it is what the user approves);
+  otherwise a text block. A page block is at most 200 words, wireframe excluded.
+  `[FE1.wireframes · FE1.page-length]`
 - No visual decision: no colour, font, icon or component styling.
 - **Intake form** (external design): flows and wireframes are not required; pages and every state
   row still are. `[FE1.pages · FE1.coverage · FE1.states]`

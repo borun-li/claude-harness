@@ -9,7 +9,7 @@ engineering makes it run with real data. Install and commands: the [root README]
 ```mermaid
 flowchart LR
     S(["/frontend"]) --> K{{kickoff ■}} --> P[be-analyst<br/>features] --> D{design input}
-    D -- new --> UX[fe-ux<br/>flows, pages, states] --> US{{UX ■<br/>2+ pages or new flow}}
+    D -- new --> UX[fe-ux<br/>flows, pages, states<br/>Figma wireframes] --> US{{UX ■<br/>2+ pages or new flow}}
     US --> UI[fe-ui<br/>design plan, Figma frames] & SC[fe-engineer<br/>scaffold]
     UI & SC --> Q[fe-engineer<br/>feasibility, queue] --> IS{{UI ■<br/>Figma}}
     D -- "confirmed design" --> IN[fe-ux ∥ fe-ui<br/>intake: gaps, frame index] --> GQ[/gap questions<br/>one batch/] --> Q2[fe-engineer<br/>feasibility, queue]
@@ -22,8 +22,8 @@ flowchart LR
     CO -. "design defect (UI or UX)" .-> UI
 ```
 
-**Your sign-offs (■):** the tier at kickoff; **UX** and **UI** for a new design (one combined
-stop for a single page); **Prototype**, the design running with fake data, plus the results you
+**Your sign-offs (■):** the tier at kickoff; **UX** (grey Figma wireframes) and **UI** (Figma
+frames) for a new design (one combined stop for a single page); **Prototype**, the design running with fake data, plus the results you
 expect from it; **Acceptance**.
 
 - **Bring your own design**: a design you already confirmed is taken in, not redrawn; only its gaps
@@ -45,7 +45,7 @@ Rules in full: [`PLAYBOOK.md`](PLAYBOOK.md). Deliverables: `<project>/docs/front
 | Agent | Role |
 |---|---|
 | `be-analyst` | Product features in frontend-only runs |
-| `fe-ux` | Flows, pages, state tables, wireframes; post-launch insights |
+| `fe-ux` | Flows, pages, state tables, wireframes (Figma when there is a UX stop); post-launch insights |
 | `fe-ui` | Visual design, tokens, components, Figma frames |
 | `fe-engineer` | Feasibility, build queue, prototype, then the build |
 | `fe-tester` | Checks each built piece against its frame and states |
