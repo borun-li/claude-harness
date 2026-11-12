@@ -142,8 +142,8 @@ ones the user picks start the next round as an increment.
 ## 3A. Design feedback
 
 Any agent may raise a `DFB-###`; you file it in `06-feedback.md` and a fresh owner decides it
-(`fe-ux` for flows, pages, states; `fe-ui` for looks). A change to something the user confirmed
-needs the user: at once if it blocks, otherwise at the next stop; until then the confirmed design
+(`fe-ux` for flows, pages, states; `fe-ui` for looks). A change to something the user confirmed,
+other than by a newer decision of theirs (Constitution §5), needs the user: at once if it blocks, otherwise at the next stop; until then the confirmed design
 stands. Smaller details the owner decides and you list. Accepted changes flow forward (UX → frames
 → rows); approved rows change only by re-approval. A new screen or a changed look gets its frame from
 `fe-ui` before any code, also mid-build; a DFB the user decides is shown as that frame. Wording-only
@@ -166,7 +166,9 @@ Run by you, never by the agent checked; reports in `docs/frontend/gates/`. Phase
 ## 3E. Approved observables
 
 A row's `observable` and its frame export are what the running interface must show. `fe-approve`
-locks both at the Prototype stop; changing either afterwards needs the user's re-approval.
+locks both at the Prototype stop; changing either afterwards needs the user's re-approval, or a
+newer decision that replaces it: re-lock with `fe-approve --by orchestrator --because "<whose
+words, date>"` and list it at the next stop.
 
 ## 3F. Human stops
 
@@ -193,7 +195,7 @@ overwritten. Frame exports (`evidence/design/FRAME-###.png`) come from `fe-ui` o
 `fe-promote` registers accepted rows as `OBS-###`, each guarded by a tagged test or a capture;
 later rounds must keep them (`FE.regression`). What a round may change comes from `fe-plan` and from
 `fe-engineer`'s `may_change`; show them as one list with a recommendation, and retire only what the
-user lets go.
+user lets go or a newer decision replaces (`--because`).
 
 ## 3J. Preview and progress
 

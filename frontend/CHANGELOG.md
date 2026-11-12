@@ -2,6 +2,21 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 9.2.0 — 2026-11-12 — a newer decision replaces an older one; waiting never stops the team
+
+Minor. Shared with backend 4.1.0.
+- Constitution §5 amended: when the user's later words, the run's goal or a harness update
+  contradict an earlier decision, an approved expected output or observable, or a test written to
+  the earlier one, the team follows the newer one without asking: change, re-lock, record whose
+  words and when, list it at the next stop. §2.5 and §5.1 point to it. Waivers stay the user's.
+- Re-locking: `fixtures-approve --reapprove FX-nnn` and `fe-approve` (including `--retire`) take
+  `--by orchestrator --because "<whose words, when>"`; `--by orchestrator` without `--because` is
+  refused. The reason is stored with the lock and in the run log.
+- A question that does not block the run's goal opens no dialog: the recommended default is taken,
+  the question goes to `state.json` `open_questions` and the next report or stop. Before a blocking
+  question, every piece of work that does not depend on it is dispatched first (dispatched agents
+  keep running while a dialog is open).
+
 ## 9.1.0 — 2026-11-12 — show the user what answers the question
 
 Minor. Backend 4.0.1 shares the ORCHESTRATOR rule.

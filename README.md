@@ -27,6 +27,8 @@ and UI sign-offs before the prototype. The team READMEs show each team's full fl
 
 Between sign-offs you are asked only when something irreversible or outward-facing is about to
 happen. Everything else is decided with a recommended default and shown to you at the next stop.
+A question that doesn't block the run waits in a list while work continues, and when your newer
+words replace an earlier decision, the team follows them without asking again.
 
 ### Scope today
 

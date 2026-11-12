@@ -435,8 +435,9 @@ def _exports(ctx):
     return out
 
 
-def approve(ctx, by, retire=()):
-    """Lock each queue row and each frame export. Only after the user's yes at the Prototype stop."""
+def approve(ctx, by, retire=(), because=None):
+    """Lock each queue row and each frame export: after the user's yes at the Prototype stop, or to
+    re-lock what a newer decision replaced (`because`; Constitution §5)."""
     p = read_json(ctx.gdir / "fe-plan-latest.json")
     if not p or p["overall"] != PASS:
         raise ConfigError("`fe-plan` has not passed; run it and get the user's confirmation first")
@@ -448,9 +449,10 @@ def approve(ctx, by, retire=()):
     rows = _queue_rows(ctx)
     locked = {q: _row_digest(b) for q, b in rows.items()}
     write_json(ctx.gdir / "observables-approved.json",
-               {"approved_by": by, "date": utc_now()[:10], "rows": locked, "frames": exports})
+               {"approved_by": by, "date": utc_now()[:10], "rows": locked, "frames": exports,
+                **({"because": because} if because else {})})
     if retire:
-        registry.retire(ctx, by, retire)
+        registry.retire(ctx, by, retire, because)
     return [ok("FEP.approve", f"Locked {len(locked)} observables and {len(exports)} frame exports, approved by {by}",
                "orchestrator", sorted(locked))], {}
 
@@ -467,7 +469,8 @@ def _observables(ctx, owner):
     now = _exports(ctx)
     probs += [f"{f}: frame export changed since approval" for f, h in (approved.get("frames") or {}).items()
               if now.get(f) != h]
-    return (bad("FE.observables", "Approved observables or frames changed (only the user re-approves)", owner, probs)
+    return (bad("FE.observables", "Approved observables or frames changed (re-lock: the user's yes, or --because "
+                "a newer decision)", owner, probs)
             if probs else ok("FE.observables", f"{len(rows)} approved observables intact", owner))
 
 

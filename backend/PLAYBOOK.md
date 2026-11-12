@@ -134,8 +134,11 @@ Real input/output pairs the user confirms, which every later test must match.
 2. At Plan the user approves, edits or rejects each; `fixtures-approve` hashes and locks them.
    Nothing is locked without their yes.
 3. Tests load the approved files and are tagged `FX-nnn`; nobody edits them (`P4/P5.fixtures`).
-4. An answer found wrong later: stop, show the user old and proposed, lock the new one with
-   `--reapprove FX-nnn`. Fixtures live in the project and accumulate into a regression suite.
+4. An answer a newer decision replaces (Constitution §5): a fresh `be-analyst` rewrites it, then
+   `p2` and `fixtures-approve --by orchestrator --reapprove FX-nnn --because "<whose words, date>"`;
+   list it at the next stop. An answer found wrong for any other reason: stop, show the user old and
+   proposed, and lock the new one with `--reapprove FX-nnn` on their yes. Fixtures live in the
+   project and accumulate into a regression suite.
 
 ## 3F. Human stops
 

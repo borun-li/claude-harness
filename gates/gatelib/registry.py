@@ -2,7 +2,8 @@
 
 Rows the user accepted become `OBS-###` entries in `docs/frontend/observables.json`. Each is guarded
 from then on by the test that proved it (kind `test`) or by a planned re-capture (kind `capture`).
-Only the user adds (`fe-promote`) or retires (`fe-approve --retire`) entries; every entry is hashed.
+Only the user adds (`fe-promote`) or retires (`fe-approve --retire`) entries, or the orchestrator
+retires one a newer decision replaces (`--because`); every entry is hashed.
 """
 import hashlib
 import json
@@ -81,16 +82,17 @@ def promote(ctx, by, exclude, rows_fn):
     return added
 
 
-def retire(ctx, by, ids):
+def retire(ctx, by, ids, because=None):
     reg = load(ctx)
     missing = [i for i in ids if i not in active(reg)]
     if missing:
         raise ConfigError(f"not active registry entries: {missing}")
     for i in ids:
         e = reg["entries"][i]
-        e.update({"retired": True, "retired_by": by, "retired_on": utc_now()[:10]})
+        e.update({"retired": True, "retired_by": by, "retired_on": utc_now()[:10]}, **({"because": because} if because else {}))
         e["hash"] = _digest(e)
-    reg["history"].append({"event": "retire", "by": by, "date": utc_now()[:10], "retired": list(ids)})
+    reg["history"].append({"event": "retire", "by": by, "date": utc_now()[:10], "retired": list(ids),
+                           **({"because": because} if because else {})})
     write_json(path(ctx), reg)
 
 
