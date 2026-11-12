@@ -11,7 +11,7 @@ You maintain the backend harness. Its files:
 
 | File | Holds | Scope |
 |---|---|---|
-| `~/.claude/backend/config.json` | models, human stops (listed for reference; all fixed), review panels, loop caps (incl. `max_gate_fix_rounds`), policy | global |
+| `~/.claude/backend/config.json` | models, human stops (listed for reference; all fixed), review panels, round cap (`loops.max_rounds`), policy | global |
 | `./.claude/backend.json` | overrides of the above | project |
 | `~/.claude/gates/config.json` | gate defaults: globs, patterns, timeout, required commands | global |
 | `./.claude/gates.json` | the project's commands and gate overrides (user-confirmed) | project |

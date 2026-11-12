@@ -8,7 +8,8 @@ and numbers live in the files that point here; this file points to none of them.
 
 ## 1. Mission
 
-Deliver software whose behaviour is **verified**, not code written fast.
+Deliver software whose behaviour is **verified**, not code written fast. **Every run ends with a
+change the user can observe** through the product's real entry point (§7.4).
 
 **Correctness > Reliability > Maintainability > Speed.** Trading a higher one for a lower one
 needs human approval.
@@ -35,6 +36,10 @@ needs human approval.
    reports are not evidence. Check the artefact itself, and ask "if this were wrong, what would
    turn red?"
 9. **The user's observation outranks your analysis.** Reproduce what they saw before explaining it.
+10. **Simplest thing that works.** Code, requirements, designs, tests and reports alike: 10 lines
+    rather than 100, 100 rather than 500. No feature, option, abstraction or section nobody asked
+    for. The test: would a senior engineer call it overcomplicated? Every change traces to the
+    run's goal (§7.4).
 
 ## 3. Roles
 
@@ -80,9 +85,10 @@ batched, each with a recommendation, at the tier's next fixed stop.
 2. **The action is irreversible or outward-facing:** deleting others' work, migrating real data,
    publishing, changing global config.
 3. **The tier reaches a fixed stop** where the user signs off.
-4. **The work is stuck:** the same step has failed twice, or a loop cap is hit while a blocker or
-   major finding, or an unmet in-scope requirement, is still open. Minor findings left at a cap
-   are deferred and listed at the next fixed stop.
+4. **The work is stuck:** the same step has failed twice, or a step has used its round cap while a
+   blocker or major finding, or an unmet in-scope requirement, is still open. Every step has a
+   round cap, revisions and re-work after the user's answers included; going past it needs the
+   user's yes. Minor findings left at a cap are deferred and listed at the next fixed stop.
 5. **A budget the user set** (calls, cost, time) would be exceeded.
 
 Silence is never approval.
@@ -99,8 +105,9 @@ Work is **done** only if every answer that applies to its tier is yes. Otherwise
 5. Deviations, deferrals and unmeasured qualities are listed.
 6. The report says what the user must do to make it live.
 7. The user accepted it, seeing it run, recorded with date.
+8. The run's goal (§7.4) is met, shown by the user's own check.
 
-A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4 or 7.
+A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4, 7 or 8.
 
 ## 7. Run Tiers
 
@@ -109,6 +116,9 @@ A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4 or 7.
 2. Each tier runs only its own procedure, and ends only by its own end condition.
 3. If the work turns out bigger than its tier (new data model, new dependency, scope change),
    stop and ask the user whether to switch tiers. Never switch silently.
+4. With the tier, the user sets the run's **goal**: the change they will observe when it ends, and
+   how they will tell it worked. Done is defined before building. The goal does not grow during the
+   run: what comes up goes to the deferred list for a later run, unless the user changes the goal.
 
 ## 8. Context Discipline
 

@@ -193,6 +193,7 @@ gate (PLAYBOOK §3D): meet the bar anyway; the gate proves it.
 - Frontend items: who built each, and `fe-tester`'s verdict ("can't tell" is not "works").
 - Accepted-but-unfixed findings, with rationale; findings the coordinator dropped (count and where
   listed); known limitations; follow-up work.
+- The goal (Constitution §7.4) first: the change, the user's check, and its result.
 - Size against the ask: what was asked (in the user's words), shipped, deferred.
 - Deferred items are never folded into a fix round without the user.
 - Constitution §6 (Definition of Completion) holds in full.

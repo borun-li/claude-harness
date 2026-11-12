@@ -176,6 +176,7 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
 - Prototype stop: the prototype running on the real surface, the queue's observables, the earlier
   approved results this round may change (each with a recommendation), the decisions taken by
   default; on approval the observables and frame exports are locked. `[FE.observables]`
+- Acceptance opens with the goal (Constitution §7.4): the change, the user's check, its result.
 - Acceptance: every active `[interface]` REQ delivered by a row verified done
   (`gates/traceability.md`). `[FEA.matrix]`
 - Every `needs user` DFB carries the user's decision. `[FEA.feedback]`

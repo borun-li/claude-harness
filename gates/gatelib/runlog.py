@@ -74,6 +74,19 @@ def append(path, event, **fields):
     return ev
 
 
+def rounds(path):
+    """({(step, agent): redo rounds used}, {step: extra caps the user granted})."""
+    used, granted = {}, {}
+    for _, ev in read(path):
+        if ev.get("event") == "dispatch" and ev.get("redo"):
+            key = (str(ev.get("phase")), ev.get("agent"))
+            used[key] = used.get(key, 0) + 1
+        elif (ev.get("event") == "human" and ev.get("stop") == "conditional"
+              and ev.get("decision") == "approved" and ev.get("phase") is not None):
+            granted[str(ev["phase"])] = granted.get(str(ev["phase"]), 0) + 1
+    return used, granted
+
+
 def timeline(path):
     """Markdown timeline of the log."""
     lines = ["# Run log", "", "| # | Time (UTC) | Event | Who | What | Result |", "|---|---|---|---|---|---|"]
@@ -83,7 +96,8 @@ def timeline(path):
         what = {"gate": ev.get("gate"), "human": f"{ev.get('stop')} stop", "mark": "snapshot",
                 "capture": f"evidence round {ev.get('round')}, {ev.get('captures')} captures",
                 "approve": ", ".join(ev.get("fixtures", []))}.get(k, "")
-        what = " · ".join(x for x in (what, f"phase {ev['phase']}" if ev.get("phase") else "", ev.get("model", ""),
+        what = " · ".join(x for x in (what, f"phase {ev['phase']}" if ev.get("phase") else "",
+                                      f"round {ev['redo']}" if ev.get("redo") else "", ev.get("model", ""),
                                       ev.get("note", "")) if x)
         result = ev.get("overall") or ev.get("status") or ev.get("decision") or ""
         fails = ev.get("fails")

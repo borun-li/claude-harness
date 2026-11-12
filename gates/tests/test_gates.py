@@ -134,7 +134,7 @@ def test_sub():
 '''
 
 STATE = {"harness_version": "2.4.0", "feature": "calc", "status": "in_progress", "current_phase": 1,
-         "phases": [], "models": {}, "loops": {}}
+         "phases": [], "models": {}, "goal": {"change": "add and sub return results", "check": "run calc"}}
 
 
 def sh(cwd, *cmd):
@@ -589,12 +589,49 @@ filler
 class LoopAndWaiver(Base):
     def test_loop_cap_exit_3(self):
         self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", "Say"))
-        codes = [self.p.gate("p1")[0] for _ in range(4)]
-        self.assertEqual(codes, [1, 1, 1, 3])
+        codes = [self.p.gate("p1")[0] for _ in range(3)]
+        self.assertEqual(codes, [1, 1, 3])  # loops.max_rounds = 2
         self.p.write("docs/backend/01-requirements.md", REQS)
         self.assertEqual(self.p.gate("p1")[0], 0)
         self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", "Say"))
         self.assertEqual(self.p.gate("p1")[0], 1)  # counter reset after a pass
+
+    def redo(self, agent="be-architect", step="2"):
+        return self.p.log("dispatch", "--agent", agent, "--model", "opus", "--step", step, "--note", "revise", "--redo")
+
+    def test_redo_rounds_capped_until_the_user_says_yes(self):
+        self.assertEqual(self.redo()[0], 0)
+        code, out = self.redo()
+        self.assertEqual(code, 0)
+        self.assertIn("round 2 of 2 at step 2", out)
+        code, out = self.redo()
+        self.assertEqual(code, 3, out)
+        self.assertIn("ROUND CAP", out)
+        self.assertEqual(sum(e.get("redo") is not None for e in self.p.events()), 2)  # refused = not logged
+        self.assertEqual(self.redo(agent="be-analyst")[0], 0)   # counted per agent
+        self.assertEqual(self.redo(step="4")[0], 0)             # and per step
+        self.assertEqual(self.p.log("human", "--stop", "conditional", "--decision", "approved", "--step", "2",
+                                    "--by", "user", "--note", "one more design pass")[0], 0)
+        code, out = self.redo()
+        self.assertEqual(code, 0, out)
+        self.assertIn("round 3 of 4", out)
+        self.assertIn("step 2 be-architect 3/4", self.p.gate("timeline")[1])
+
+    def test_first_dispatch_and_new_work_are_not_rounds(self):
+        for _ in range(4):
+            code, out = self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "4",
+                                   "--note", "another item")
+            self.assertEqual(code, 0, out)
+            self.assertNotIn("round", out)
+
+    def test_project_sets_its_own_cap(self):
+        self.p.write(".claude/backend.json", json.dumps({"loops": {"max_rounds": 3}}))
+        self.assertEqual([self.redo()[0] for _ in range(4)], [0, 0, 0, 3])
+
+    def test_redo_only_on_dispatch(self):
+        code, out = self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "x",
+                               "--redo")
+        self.assertEqual(code, 2, out)
 
     def test_waiver(self):
         self.p.write("docs/backend/01-requirements.md", REQS.replace("- **Cut:** above\n- **Fixtures:** FX-001", "- **Fixtures:** FX-001"))
@@ -920,6 +957,13 @@ class RunLog(Base):
         self._tier("huge")
         code, out, rep = self.p.gate("p1")
         self.assertEqual(self.p.status(rep, "ALL.state"), "fail")
+
+    def test_state_needs_the_users_goal(self):
+        no_goal = {k: v for k, v in STATE.items() if k != "goal"}
+        for st, want in ((no_goal, "fail"), (dict(STATE, goal={"change": "x"}), "fail"),
+                         (dict(STATE, goal="faster"), "fail"), (STATE, "pass")):
+            self.p.write("docs/backend/state.json", json.dumps(st))
+            self.assertEqual(self.p.status(self.p.gate("p1")[2], "ALL.state"), want, st.get("goal"))
 
     def test_state_risk_values(self):
         for risk, want in (("high", "pass"), ("normal", "pass"), ("medium", "fail")):

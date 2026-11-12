@@ -30,7 +30,7 @@ Loaded before you start:
 4. **Gates:** each `<run-dir>/gates/*-latest.json` result and failing owners; a `snap-*.json`
    newer than the latest gate report means unverified work.
 5. **Timeline:** the last 15 events loaded above.
-6. **Open items:** open blockers, unconfirmed assumptions, loop counters against their caps.
+6. **Open items:** the goal, open blockers, unconfirmed assumptions, the timeline's `Rounds used` line.
 7. One last line: the next action and the command that runs it.
 
 A compact terminal report, no prose.

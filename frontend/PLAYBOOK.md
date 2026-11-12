@@ -65,14 +65,16 @@ Ask only:
 - **Tier** (Constitution §7). Prototype = up to the Prototype stop. A confirmed design or prototype
   is named in the first option ("Full development, reusing the design confirmed <date>"); choosing
   it confirms the design is final. Small change → `~/.claude/commands/route.md` §4.
+- **Goal** (Constitution §7.4): what the user will observe at the end and how they will check it;
+  the round (§2.1) is what that goal needs, and nothing more.
 - Facts the project context lacks: surface, named user, the `design-taste` §1 choices. Record them
   in `project-context.md`.
 
 Design stops (`design_stop_rule`): two (UX, then UI) for a new design with 2+ pages or a new flow,
 one otherwise, none for an external design.
 
-**2.4** Write `state.json` (§8), with `requirements` pointing at the backend's
-`01-requirements.md` in a cross-stack run; an unfinished one → `/frontend-resume`.
+**2.4** Write `state.json` (§8) with the goal in the user's words, and with `requirements` pointing
+at the backend's `01-requirements.md` in a cross-stack run; an unfinished one → `/frontend-resume`.
 
 **2.5 Design input** (`design`):
 - `new` — nothing, or only reference material. Full Phases 1–2.
@@ -125,11 +127,11 @@ progress (§3J). A design problem is a DFB, never a silent deviation.
 2. A fresh `fe-reviewer` merges candidates and not-done rows into `05-review.md`. Gates `fe-review`,
    then `fe-verify` (it reruns the tests).
 3. Fix only blockers, majors and not-done rows, by fresh owners; design defects go to `fe-ux`/`fe-ui`.
-   Recapture; fresh tester and reviewer re-judge only the named defects. At `loops.max_fix_rounds`
+   Recapture; fresh tester and reviewer re-judge only the named defects. At `loops.max_rounds`
    minors are deferred; only blockers, majors and P1 rows escalate (Constitution §5.4).
 
-**Acceptance.** `fe-accept`, then show verification, review (drops and deferred), the DFB register
-and `gates/traceability.md`. On yes `status: accepted` and `fe-promote --by <user>`.
+**Acceptance.** `fe-accept`, then lead with the goal and the user running their own check; show
+verification, review (drops and deferred), the DFB register and `gates/traceability.md`. On yes `status: accepted` and `fe-promote --by <user>`.
 
 **Phase 5 — After launch.** User or user feedback → a fresh `fe-ux` writes `INS-###` entries; the
 ones the user picks start the next round as an increment.
@@ -229,6 +231,7 @@ contracts/FRONTEND_BACKEND_CONTRACT.md
 ```json
 {
   "harness_version": "x.y.z", "feature": "one line", "slug": "round-slug",
+  "goal": { "change": "what the user will observe", "check": "how they will tell it worked" },
   "started_at": "ISO-8601", "updated_at": "ISO-8601",
   "status": "in_progress | blocked | prototyping | building | verifying | accepted | fix_capped | prototype_confirmed",
   "tier": "prototype | full", "risk": "normal | high",

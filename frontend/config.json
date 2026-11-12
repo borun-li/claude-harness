@@ -1,5 +1,5 @@
 {
-  "harness_version": "8.5.0",
+  "harness_version": "9.0.0",
   "_comment": "Frontend Agent Team defaults. A project may override any top-level key in <project>/.claude/frontend.json. Model tier names live in ~/.claude/backend/config.json; roles below map this team one by one.",
   "roles": {
     "orchestrator": { "model": "opus" },
@@ -63,7 +63,8 @@
     "verify_and_review_in_parallel": true
   },
   "loops": {
-    "max_fix_rounds": 2
+    "_comment": "Rounds each step may redo its work (fixes, revisions, re-work after an answer); past it, the user decides (Constitution §5.4)",
+    "max_rounds": 2
   },
   "language": {
     "default_docs": "user",

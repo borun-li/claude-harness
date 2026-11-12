@@ -27,8 +27,11 @@ def state(ctx):
     s = read_json(ctx.run / "state.json")
     if s is None:
         return bad("ALL.state", "state.json missing", "orchestrator")
-    missing = [k for k in ("harness_version", "feature", "status", "current_phase", "phases", "models", "tier")
-               if k not in s]
+    missing = [k for k in ("harness_version", "feature", "goal", "status", "current_phase", "phases", "models",
+                           "tier") if k not in s]
+    g = s.get("goal")
+    if "goal" in s and not (isinstance(g, dict) and g.get("change") and g.get("check")):
+        missing.append("goal needs change and check, set by the user at kickoff (Constitution §7.4)")
     if "tier" in s and s["tier"] not in ("small", "prototype", "full"):
         missing.append(f"tier must be small|prototype|full, got {s['tier']!r}")
     if "risk" in s and s["risk"] not in ("normal", "high"):

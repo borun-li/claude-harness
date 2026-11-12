@@ -3,6 +3,10 @@
 - Compiled by: Orchestrator (Backend Phase 7)
 - Date: {real date}   Harness version: {x.y.z}
 
+## 0. Goal
+- **Change:** {from state.json, in the user's words}
+- **Check:** {the user's check} → {result, with evidence}
+
 ## 1. What was built
 {Plain description of the delivered system and how to run it.}
 

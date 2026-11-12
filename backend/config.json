@@ -1,5 +1,5 @@
 {
-  "harness_version": "3.8.0",
+  "harness_version": "4.0.0",
   "_comment": "Global defaults for the backend agent team. A project may override any key by creating .claude/backend.json in the project root (shallow merge, top-level keys).",
   "model_plan": {
     "_active_tier": "quality",
@@ -88,8 +88,8 @@
     "review_coordinator": "be-reviewer"
   },
   "loops": {
-    "max_gate_fix_rounds": 3,
-    "max_fix_rounds_after_review": 2
+    "_comment": "Rounds each step may redo its work (fixes, revisions, re-work after an answer); past it, the user decides (Constitution §5.4)",
+    "max_rounds": 2
   },
   "policy": {
     "require_traceability_ids": true,

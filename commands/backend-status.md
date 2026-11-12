@@ -29,13 +29,13 @@ Loaded before you start:
    near-empty.
 3. **Gates:** for each `<run-dir>/gates/<gate>-latest.json`: overall, time, failing checks with
    owners. Add the consecutive-failure counts from `gates/attempts.json` against
-   `loops.max_gate_fix_rounds`, and any `gates/waivers.json` entries. Flag a `snap-*.json` mark
+   `loops.max_rounds`, and any `gates/waivers.json` entries. Flag a `snap-*.json` mark
    newer than the latest gate report: that work has not been verified.
 4. **Counts:** requirements (active / below cut), test cases, pass/fail/blocked, open findings by
    severity.
 5. **Timeline:** the last 15 events loaded above; say whether `LOG.valid` passed in the latest
    gate report.
-6. **Open items:** open questions, unresolved findings, review loop counter against its cap.
+6. **Open items:** the goal, open questions, unresolved findings, the timeline's `Rounds used` line.
 7. One last line: the next action and the command that runs it.
 
 A compact terminal report, no prose.

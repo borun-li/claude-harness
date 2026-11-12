@@ -40,6 +40,7 @@ user which. Every gate and log command then takes `--run-dir <run dir>` when it 
 4. Read `<run-dir>/run-log.jsonl` (`gate.py timeline`). A `dispatch` with no `return` is an agent
    that never reported back: treat its work as unverified.
 5. If `state.json` and disk disagree, trust the disk, say so, and correct the state.
+6. No `goal` (a run started before it existed): ask the user for it in the confirmation below.
 
 ## Confirm before continuing
 
