@@ -82,7 +82,8 @@ Record the answers; every team reads them instead of asking again.
    as a brief in the format of `~/.claude/route/HANDOFF.md` §3; each replaces its role's section of
    `docs/handoff.md`. A change on both sides: backend first if the frontend reads what it adds.
    Tell each it is a Small change dispatch (its agent file has the rules). A failed check goes
-   to a new, fresh dispatch naming only the failure, never back to the returned agent.
+   back to that engineer while the hook allows (Constitution §8.1), else to a fresh dispatch naming
+   only the failure.
 4. Run the project's build and test commands yourself, then run the change through its real entry
    point (Constitution §6.4). Red is not done.
 5. Ask the user to accept it running (URL or command). Commit when they accept, on the run's

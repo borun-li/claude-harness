@@ -29,7 +29,8 @@ requirements, decisions and fixture answers before any code; **Acceptance**.
 - **Risk**: a `high` round (money, personal data, auth, schema, public APIs …) adds a design review
   and the full panel.
 - **Changes mid-run** join at the next sign-off as an increment; the run never restarts.
-- Every round is a fresh agent; dotted arrows are fix loops through the orchestrator.
+- Every round is a fresh agent, except that a fix goes back to its author while its context is
+  small; reviewers are always fresh. Dotted arrows are fix loops through the orchestrator.
 
 Rules in full: [`PLAYBOOK.md`](PLAYBOOK.md). Deliverables: `<project>/docs/backend/`.
 

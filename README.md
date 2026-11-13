@@ -251,8 +251,10 @@ The named agent works alone: no phases, no sign-offs, no gates.
   you will check it; the run does not grow past it, and Acceptance opens with your check.
 - **Round caps** — each step may redo its work twice by default (`loops.max_rounds`); after that
   the run asks you instead of looping.
-- **Fresh agents** — each step goes to a new agent with a written brief; a finished agent is never
-  carried into another round, so no step inherits another's blind spots.
+- **Fresh agents, continued authors** — each step goes to a new agent with a written brief. A fix
+  goes back to the agent that wrote the work while its context is small, so it does not re-read
+  the codebase; reviewers and verifiers are always new, so no review inherits the author's blind
+  spots.
 - **Code map and reading list** — a short `docs/codemap.md` and a brief that names the lines to
   read let a fresh agent start in minutes instead of rediscovering the codebase; `handoff.md`
   keeps only each role's latest note.
@@ -263,8 +265,8 @@ The named agent works alone: no phases, no sign-offs, no gates.
 - **Safety hooks** — one blocks git commands that discard uncommitted work or force and rewrite
   history, and keeps git writes to the main session (branch, commit, push the run's branch, draft
   PR), one blocks stopping
-  processes by name, pattern or port (an agent stops only a process it started), one stops a
-  finished agent from being reused. They are declared in the agent and command files, so they act
+  processes by name, pattern or port (an agent stops only a process it started), one limits
+  reusing a finished agent to the author of the work, within the round cap and a context limit. They are declared in the agent and command files, so they act
   only in harness sessions.
 
 Each team's flow and rules: [Backend team](backend/README.md) · [Frontend team](frontend/README.md).
