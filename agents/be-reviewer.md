@@ -11,6 +11,14 @@ hooks:
           command: python3 "$HOME/.claude/hooks/no-tree-restoring-git.py" --role agent
         - type: command
           command: python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"
+    - matcher: SubagentHandback
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/run-log.py" report
+  Stop:
+    - hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/run-log.py" return
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

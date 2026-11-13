@@ -47,7 +47,7 @@ finishes, but it is hard; **P3**: would not notice. Rows are built P1 first.
 
 The user's monthly cap is `figma.monthly_budget`; a run's budget is `base + per_page × pages`,
 shown at kickoff and re-shown when the page count changes. Only `fe-ux` (UX-stop wireframes),
-`fe-ui` and `fe-engineer` call Figma: each brief carries the calls left (`--figma-left` on `log dispatch`), each return's
+`fe-ui` and `fe-engineer` call Figma: each brief carries the calls left (its `Budget:` line), each return's
 `figma_calls` is logged. Warn at `warn_at`; going over needs the user's yes (`--stop Budget`).
 
 ---
@@ -91,8 +91,8 @@ any dispatch.
 
 ## 3. Phase flow
 
-A phase ends when its gate exits 0. Phase numbers are the run log's `--step`. `mark --role <agent>
---team frontend` before every dispatch (`fe-reviewer` once per panel or re-check).
+A phase ends when its gate exits 0. Phase numbers are the run log's step, named in each brief's
+first line; the hook marks each writer and the panel's coordinator.
 
 **Phase 0 — Features.** Frontend-only: `be-analyst` → `00-requirements.md`, gate `fe-product`.
 

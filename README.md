@@ -269,8 +269,10 @@ The named agent works alone: no phases, no sign-offs, no gates.
   history, and keeps git writes to the main session (branch, commit, push the run's branch, draft
   PR), one blocks stopping
   processes by name, pattern or port (an agent stops only a process it started), one limits
-  reusing a finished agent to the author of the work, within the round cap and a context limit. They are declared in the agent and command files, so they act
-  only in harness sessions.
+  reusing a finished agent to the author of the work, within the round cap and a context limit.
+  A fourth writes every dispatch and return to the run log and enforces the round cap, so the log
+  never depends on memory. They are declared in the agent and command files, so they act only in
+  harness sessions.
 
 Each team's flow and rules: [Backend team](backend/README.md) · [Frontend team](frontend/README.md).
 
@@ -290,7 +292,7 @@ claude-harness/
 ├── backend/ · frontend/  # each team's README, playbook, quality bars, templates, config, changelog
 ├── route/                # prototype procedure, handoff format, the frontend/backend line
 ├── gates/                # automatic checks, run log and evidence capture, with tests
-├── hooks/                # the three safety hooks and their tests
+├── hooks/                # the safety and run-log hooks, with their tests
 └── skills/design-taste/  # the author's interface taste; edit it to yours (a project's brand wins)
 ```
 
@@ -308,6 +310,7 @@ the matching `CHANGELOG.md`: what changed, without project names or the story be
 python3 hooks/test_no_tree_restoring_git.py
 python3 hooks/test_no_foreign_process_kill.py
 python3 hooks/test_no_agent_continuation.py
+python3 hooks/test_run_log.py
 python3 hooks/test_hook_scoping.py
 ```
 

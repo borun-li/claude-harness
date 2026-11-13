@@ -2,6 +2,25 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 12.0.0 — 2026-11-12 — the run log written by hooks
+
+Major: the orchestrator's logging steps and the brief's first line change. Shared with backend 7.0.0.
+- Hook `run-log.py` writes the run log: at each be-*/fe-* dispatch (`Agent`, or `SendMessage` to a
+  finished agent) it marks the writer, or the panel's coordinator at the first reviewer after a gate
+  run, and logs the dispatch; at each agent's handback and stop it logs the return, `blocked` when
+  the report says so, with its Figma calls. Outside an active run it does nothing. The orchestrator
+  no longer runs `mark`, `log dispatch` or `log return`; by hand only a dead agent's failed return.
+- The brief's first line is `You are <agent> #<n> — step <s>, round <r>.`; the hook refuses a
+  dispatch with no step, a round past `loops.max_rounds` (the cap is now enforced at the dispatch,
+  not self-reported with `--redo`), a Figma role without its `Budget:` line, or a writer while the
+  other team has one out, and gives the reason.
+- Writers out at the same time are checked together (`ROLE.shared`): a change fails only if none of
+  their roles may make it, instead of charging one writer with another's work.
+- `TOOL.lint`, `TOOL.typecheck`, `TOOL.test`: a failing checker that printed neither findings nor a
+  summary (it crashed or was not found) is reported as having no reading, separately from findings,
+  and cannot be waived.
+- Run-log appends are locked, so parallel dispatches keep the hash chain intact.
+
 ## 11.0.0 — 2026-11-12 — before and after at the real entry point
 
 Major: a new artifact Acceptance requires. Shared with backend 6.0.0.
