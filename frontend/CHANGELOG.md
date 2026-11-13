@@ -2,6 +2,18 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 12.1.0 — 2026-11-12 — install leaves your files alone; gates stop recounting
+
+Minor. Shared with backend 7.1.0.
+- `install.sh` no longer replaces the whole `agents/` and `commands/` folders: it writes only the
+  harness's files there, removes a file an earlier version installed once the harness stops
+  shipping it (`~/.claude/.harness-files`), and leaves your own agents and commands alone.
+- A gate counts a fix round only when the tree or the set of failing checks changed since its last
+  failure; re-running on the same tree is not a round. Reports show both numbers
+  (`consecutive_failures`, `failed_runs`).
+- A green test suite on an unchanged tree with the same command is reused for
+  `test_reuse_minutes` (default 30) instead of run again; a red one is always re-run.
+
 ## 12.0.0 — 2026-11-12 — the run log written by hooks
 
 Major: the orchestrator's logging steps and the brief's first line change. Shared with backend 7.0.0.

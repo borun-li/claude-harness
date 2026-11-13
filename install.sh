@@ -1,13 +1,20 @@
 #!/bin/sh
 # Install this harness into ~/.claude (or $CLAUDE_HOME).
-# Existing copies of the same folders are backed up first; nothing else in ~/.claude is touched.
+# Existing copies are backed up first. In agents/ and commands/ only the harness's own files are
+# written or removed; your files there and everything else in ~/.claude are left alone.
 # Usage: ./install.sh            install or update
 #        ./install.sh --check    only check prerequisites
 set -eu
 
 here=$(cd "$(dirname "$0")" && pwd)
 dest=${CLAUDE_HOME:-$HOME/.claude}
-parts="CONSTITUTION.md ORCHESTRATOR.md agents commands backend frontend route gates hooks skills/design-taste"
+# Owned: replaced whole. Shared: you may keep your own agents and commands there, so only the
+# harness's files are written, and only files an earlier harness put there are removed.
+owned="CONSTITUTION.md ORCHESTRATOR.md backend frontend route gates hooks skills/design-taste"
+shared="agents commands"
+parts="$owned $shared"
+manifest="$dest/.harness-files"
+retired="agents/fe-critic.md agents/fe-designer.md"   # shipped before the manifest existed
 
 missing=0
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing: $1 ($2)"; missing=1; }; }
@@ -31,7 +38,7 @@ if [ -n "$existing" ]; then
   echo "backed up:$existing -> $backup"
 fi
 
-for p in $parts; do
+for p in $owned; do
   mkdir -p "$dest/$(dirname "$p")"
   rm -rf "$dest/$p.tmp-install"
   cp -R "$here/$p" "$dest/$p.tmp-install"
@@ -39,6 +46,16 @@ for p in $parts; do
   rm -rf "$dest/$p"
   mv "$dest/$p.tmp-install" "$dest/$p"
 done
+
+previous=$( { [ -f "$manifest" ] && cat "$manifest"; echo $retired | tr ' ' '\n'; } | sort -u)
+for f in $previous; do
+  [ -e "$here/$f" ] || { [ -f "$dest/$f" ] && rm -f "$dest/$f" && echo "removed retired $f"; } || true
+done
+for d in $shared; do
+  mkdir -p "$dest/$d"
+  cp "$here/$d"/*.md "$dest/$d/"
+done
+(cd "$here" && for d in $shared; do ls "$d"/*.md; done) > "$manifest"
 echo "installed into $dest"
 
 # The safety hooks are declared in the harness's agent and command files, so they run only in

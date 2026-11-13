@@ -140,15 +140,39 @@ def _junit_path(ctx):
     return out / f"{ctx.gdir.parent.name}-junit.xml"
 
 
+def _test_run(ctx, cmd):
+    """(result, time it was first produced or None). The suite is the slowest reading a gate takes; a
+    green run on the same tree with the same command within `test_reuse_minutes` is reused, not
+    repeated. A red one is always re-run: the fix may have been outside the tree."""
+    books = {f"{ctx.run_rel}/{n}" for n in ("run-log.jsonl", "run-log.md", "state.json")}
+    tree = sorted((k, v) for k, v in ctx.snapshot().items() if k not in books)
+    sig = hashlib.sha256(json.dumps([cmd, ctx.cfg.get("junit"), tree]).encode()).hexdigest()
+    cache = ctx.gdir / "tests-cache.json"
+    hit = read_json(cache)
+    if hit and hit.get("sig") == sig and time.time() - hit["epoch"] < 60 * ctx.cfg.get("test_reuse_minutes", 30):
+        return hit["result"], hit["time"]
+    r = runner.run_tests(cmd, ctx.project, ctx.cfg["timeout_seconds"], ctx.log("test"),
+                         _junit_path(ctx), ctx.cfg.get("junit"))
+    c = r["counts"]
+    green = r["exit"] == 0 and not (c and (c["failed"] or c["errors"]))
+    if green:
+        write_json(cache, {"sig": sig, "time": utc_now(), "epoch": time.time(),
+                           "result": {k: v for k, v in r.items() if k != "output"}})
+    else:
+        cache.unlink(missing_ok=True)
+    return r, None
+
+
 def _tests(ctx, owner, baseline=None):
     cmd = ctx.cmd("test")
     if not cmd:
         return bad("CMD.test", "No test command configured, and it is required", "user"), None
-    r = runner.run_tests(cmd, ctx.project, ctx.cfg["timeout_seconds"], ctx.log("test"),
-                         _junit_path(ctx), ctx.cfg.get("junit"))
+    r, reused = _test_run(ctx, cmd)
     c = r["counts"]
     detail = [f"$ {r['cmd']} -> exit {r['exit']} ({r['seconds']}s), log: {r['log']}",
               f"counts: {c if c is not None else 'not parsed'}", f"per-test results: {r['junit_note']}"]
+    if reused:
+        detail.insert(0, f"reused the run of {reused}: same tree and command (test_reuse_minutes)")
     if r["exit"] != 0 and c is None:
         return bad("TOOL.test", "tests did not run: no per-test report and no summary line "
                    "(fix the runner before reading a result; not waivable)", owner, detail + r["tail"][-15:]), r
