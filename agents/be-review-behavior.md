@@ -42,7 +42,7 @@ candidates:
     evidence: <command and output, or file:line, showing it is real>
     suggested_direction: <one line; no patch>
 verdict: clean | issues_found
-handoff: |   # last, always: your entry, HANDOFF.md §4 format; <n> = your entries in that log + 1
+handoff: |   # last, always: your entry, HANDOFF.md §4 format; <n> from your brief
   ## be-review-behavior #<n> · <phase or tier, or "direct call"> · round <r> · <date -u +%FT%TZ>
 ```
 

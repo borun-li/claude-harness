@@ -94,7 +94,9 @@
     "architecture_prose_words": 800,
     "fe_page_words": 200,
     "fe_flow_words": 80,
-    "fe_row_words": 80
+    "fe_row_words": 80,
+    "codemap_lines": 200,
+    "handoff_section_lines": 20
   },
   "junit": null
 }

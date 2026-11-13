@@ -154,7 +154,8 @@ Commands in `ORCHESTRATOR.md`. `p7` checks the trail follows §3's order.
 ## 4. Rules in every phase
 
 1. No phase starts without its upstream document.
-2. The handoff log is `<run-dir>/handoff.md`.
+2. The handoff is `<run-dir>/handoff.md`, one current section per role; the code map is
+   `docs/codemap.md` (`~/.claude/route/HANDOFF.md` §1, §7).
 3. Traceability ids are mandatory; an id-less document goes back once.
 4. Reviewers have Bash but no Write: mark before each panel and re-check (not before the
    coordinator, which would hide the panel's changes); `p6` checks the tree is unchanged.

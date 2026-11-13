@@ -32,8 +32,8 @@ with `harness_version` below 7.0 is not resumed
 (PLAYBOOK §1.3): report it and offer a new round that reads its artifacts as input.
 
 1. Read `<run-dir>/state.json`. If missing, say there is no run and suggest `/frontend`.
-2. Read the last `orchestrator` entry in `<run-dir>/handoff.md` (`~/.claude/route/HANDOFF.md` §5)
-   and the entries after it; a cross-stack run keeps one log, in the Backend run dir: use
+2. Read the `orchestrator` section of `<run-dir>/handoff.md` (`~/.claude/route/HANDOFF.md` §5)
+   and any section dated after it; a cross-stack run keeps one handoff, in the Backend run dir: use
    `/backend-resume`. Then read the artifacts the next step depends on; skim the
    others (headings, ids, status) (Constitution §8).
 3. Read `<run-dir>/gates/`: latest report per gate, `attempts.json`, `waivers.json`, `observables-approved.json`

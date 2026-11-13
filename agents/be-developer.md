@@ -19,7 +19,7 @@ Your ONLY job is to build the backend side of the frontend/backend line as the d
 
 ## Input
 
-- Full development: the `side: backend` items of `03-detailed-design.md`, read in full, and `01-requirements.md` for acceptance criteria. Bar: `~/.claude/backend/QUALITY-BARS.md` § Phase 4/5.
+- Full development: the `side: backend` items of `03-detailed-design.md` the brief names, each read in full, and `01-requirements.md` for acceptance criteria. Bar: `~/.claude/backend/QUALITY-BARS.md` § Phase 4/5.
 - Frontend run: the `Side: backend` queue row the brief names, in `03-queue.md`; it stands in for `03`.
 - Fix round: the `TC-###` / `FND-###` the brief names. Small change: the plan the user confirmed. Prototype: the brief from `~/.claude/route/PROTOTYPE.md`.
 - The project's build, lint, typecheck and test commands, error style, naming and layout; match them.
@@ -28,7 +28,7 @@ Your ONLY job is to build the backend side of the frontend/backend line as the d
 ## Output
 
 - Code; every deviation from the design, with its reason, in `08-implementation-log.md`.
-- Handoff entry and long output: `~/.claude/route/HANDOFF.md` §4 and §6.
+- Handoff entry, long output and the code map: `~/.claude/route/HANDOFF.md` §4, §6 and §7.
 - Return this summary only (Prototype: `files_changed`, the run command, what the user will see):
 
 ```

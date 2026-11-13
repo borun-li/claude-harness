@@ -19,7 +19,8 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
 - **Dispatch:** the real `be-*` / `fe-*` type with its resolved model; a clean tree before a writer;
   `gate.py mark` and `log dispatch` as the PLAYBOOK's gate table says (`--redo` when it redoes the
   step's work); a fresh agent with a brief
-  per `~/.claude/route/HANDOFF.md` §3; independent dispatches in one message. On return:
+  per `~/.claude/route/HANDOFF.md` §3, whose reading list points it at the code map and the lines
+  it needs; independent dispatches in one message. On return:
   `log return`, file read-only roles' handoff entries, check confined roles changed only their files.
 - **Verify:** run the gate yourself, then the real thing through its real entry point in an
   isolated instance, before believing green.
@@ -59,9 +60,11 @@ The disk is the run's memory; your context is its most expensive resource.
    need. Long output goes to `<run-dir>/logs/`.
 2. A failure goes to its owner as a **new** fresh dispatch naming only the failing items and the
    report path. A dead agent: write its entry from the disk, then dispatch a fresh one.
-3. At every human stop: update `state.json`, append your entry (`HANDOFF.md` §5), list
+3. At every human stop: update `state.json`, replace your section (`HANDOFF.md` §5), list
    what you decided for the user since the last stop (what, why, how to undo), and tell them the run can continue in a fresh session (`/clear`, then `/backend-resume` or
-   `/frontend-resume`). A resumed session starts from your last entry.
+   `/frontend-resume`). A resumed session starts from your section.
+4. `handoff.md` holds one current section per role (`HANDOFF.md` §1). When `CTX.handoff` fails,
+   trim it yourself to each role's latest entry: it is bookkeeping, like `state.json`.
 
 ## Git
 

@@ -279,6 +279,51 @@ def log_valid(ctx):
             else ok("LOG.valid", "Run log intact", "orchestrator"))
 
 
+CODEMAP = "docs/codemap.md"
+BACKTICK = re.compile(r"`([^`\s]+)`")
+CODE_READERS = ("be-analyst", "be-architect", "be-developer", "be-tester", "fe-engineer", "fe-tester")
+
+
+def context_files(ctx):
+    """Constitution §8: the code map agents read first, and a handoff that holds only the current
+    state, one section per role (route/HANDOFF.md §1, §7). The map is owed by the latest writer that
+    reads code; designers and reviewers never write outside their own files."""
+    marks = [m for m in (read_json(p) for p in ctx.gdir.glob("snap-*.json")) if m and m["role"] in CODE_READERS]
+    owner = max(marks, key=lambda m: m["time_ns"])["role"] if marks else None
+    budget = {"codemap_lines": 200, "handoff_section_lines": 20, **ctx.cfg.get("doc_budgets", {})}
+    text, res = docs.read(ctx.project / CODEMAP), []
+    if owner is None:
+        res.append(na("CTX.codemap", f"{CODEMAP} is checked once a role that reads code has worked", "orchestrator"))
+    elif text is None:
+        res.append(bad("CTX.codemap", f"{CODEMAP} missing: the next writer creates it (route/HANDOFF.md §7)", owner))
+    else:
+        paths = {re.split(r"[:#]", p)[0].rstrip("/") for p in BACKTICK.findall(text)}
+        gone = sorted(p for p in paths if p and "*" not in p and not (ctx.project / p).exists())
+        long = len(text.splitlines()) > budget["codemap_lines"]
+        problems = [f"{p}: no such path" for p in gone] + (
+            [f"{len(text.splitlines())} lines, cap {budget['codemap_lines']}"] if long else [])
+        res.append(bad("CTX.codemap", f"{CODEMAP} out of date or too long (route/HANDOFF.md §7)", owner, problems)
+                   if problems else ok("CTX.codemap", f"{CODEMAP} paths exist, within its cap", owner))
+    text = ctx.doc("handoff.md")
+    if text is None:
+        res.append(na("CTX.handoff", "No handoff.md in this run dir yet", "orchestrator"))
+        return res
+    sections, cur = {}, None
+    for line in text.splitlines():
+        if line.startswith("## "):
+            cur = line[3:].split("·")[0].split()[0] if line[3:].strip() else "?"
+            sections.setdefault(cur, []).append(0)
+        elif cur and line.strip():
+            sections[cur][-1] += 1
+    cap = budget["handoff_section_lines"]
+    problems = [f"{r}: {len(n)} sections, keep only the latest" for r, n in sections.items() if len(n) > 1]
+    problems += [f"{r}: {max(n)} lines, cap {cap}" for r, n in sections.items() if max(n) > cap]
+    res.append(bad("CTX.handoff", "handoff.md must hold one current section per role (route/HANDOFF.md §1)",
+                   "orchestrator", problems) if problems
+               else ok("CTX.handoff", f"handoff.md: {len(sections)} current sections", "orchestrator"))
+    return res
+
+
 def _trail_common(events):
     """Every dispatch returned; every writer mark was followed by its dispatch before the next gate
     run. Several marks may precede their dispatches (backend Phase 4 marks the tester, then the

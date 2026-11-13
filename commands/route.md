@@ -79,7 +79,7 @@ Record the answers; every team reads them instead of asking again.
 2. Show the user a short plan: what changes as they will see it, the files, how you will check it.
    Ask once to confirm it. This is the written plan Constitution §4.2 requires.
 3. Dispatch one engineer per side of the written line, each fresh, with the plan and file paths,
-   as a brief in the format of `~/.claude/route/HANDOFF.md` §3; each appends its entry to
+   as a brief in the format of `~/.claude/route/HANDOFF.md` §3; each replaces its role's section of
    `docs/handoff.md`. A change on both sides: backend first if the frontend reads what it adds.
    Tell each it is a Small change dispatch (its agent file has the rules). A failed check goes
    to a new, fresh dispatch naming only the failure, never back to the returned agent.
@@ -87,5 +87,5 @@ Record the answers; every team reads them instead of asking again.
    point (Constitution §6.4). Red is not done.
 5. Ask the user to accept it running (URL or command). Commit when they accept, on the run's
    branch (`~/.claude/ORCHESTRATOR.md` § Git).
-6. No phase documents, fixtures, gates or run log; the handoff log is the only record. If the work needs a new data model, dependency
+6. No phase documents, fixtures, gates or run log; the handoff and the git history are the only record. If the work needs a new data model, dependency
    or a scope decision, stop and ask whether to switch tiers (Constitution §7).

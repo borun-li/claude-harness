@@ -32,7 +32,7 @@ Your ONLY job is to make the confirmed design work on the real surface, with rea
 - **Queue:** `03-queue.md`, one row per independently buildable, observable piece, plus the Dependencies table. If the product already has results the user approved earlier, in whatever form the project keeps them, name in your return each one this round may change, directly or indirectly, with the reason. Work it out from the code and what each row touches, not from a list; return none when there are none.
 - **Prototype:** get the confirmed design running on the real surface as early as possible, with fake data behind one replaceable layer; skip polish. Build rows will refine it, so it is product code.
 - **Build:** one row per dispatch, P1 first, to its frame and state rows at every width in `viewports`. **Fix:** only the `FND-###` or not-done rows the brief names.
-- Handoff entry and long output: `~/.claude/route/HANDOFF.md` §4 and §6.
+- Handoff entry, long output and the code map: `~/.claude/route/HANDOFF.md` §4, §6 and §7.
 - Return this summary only:
 
 ```

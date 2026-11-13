@@ -35,7 +35,7 @@ later phases and runs read them.
   output.
 - **Where:** `prototype/` at the project root, and nowhere else. Stubs in it are throwaway.
 - **Brief:** the intent answers, the must-see behaviour or flow, and the non-goals, in the format of
-  `~/.claude/route/HANDOFF.md` §3 (round 1). Paths, not pasted documents. The engineer appends
+  `~/.claude/route/HANDOFF.md` §3 (round 1). Paths, not pasted documents. The engineer writes
   its handoff entry to `<run-dir>/handoff.md`.
 - **Rules for the engineer:** rough is right. Hard-coded or fake data, no tests, no design
   documents, no ids, no polish beyond what makes the main idea readable. It must start with one

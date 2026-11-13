@@ -137,6 +137,12 @@ STATE = {"harness_version": "2.4.0", "feature": "calc", "status": "in_progress",
          "phases": [], "models": {}, "goal": {"change": "add and sub return results", "check": "run calc"}}
 
 
+CODEMAP = """# Code map
+## `calc/`
+Does: add and sub. Entry: `calc/core.py:add`. Tests: `tests/test_calc.py`
+"""
+
+
 def sh(cwd, *cmd):
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
 
@@ -151,6 +157,7 @@ class Project:
         self.write("pytest.ini", "[pytest]\npythonpath = .\n")
         self.write("requirements.txt", "requests==2.0\n")
         self.write(".gitignore", "__pycache__/\n.pytest_cache/\n")
+        self.write("docs/codemap.md", CODEMAP)
         self.write(".claude/gates.json", json.dumps({
             "commands": {"build": f"{PY} -m compileall -f -q calc", "lint": None, "typecheck": None,
                          "test": f"{PY} -m pytest -q -p no:cacheprovider"},
@@ -983,6 +990,50 @@ class RunLog(Base):
         for risk, want in (("high", "pass"), ("normal", "pass"), ("medium", "fail")):
             self.p.write("docs/backend/state.json", json.dumps(dict(STATE, risk=risk)))
             self.assertEqual(self.p.status(self.p.gate("p1")[2], "ALL.state"), want, risk)
+
+
+class ContextFiles(Base):
+    def test_green_with_map_and_current_handoff(self):
+        self.p.write("docs/backend/handoff.md", "# Handoff\n## be-analyst #1 · 1 · round 1 · t\nTask: x\n\n"
+                     "## orchestrator · 1 · stop · t\nState: x\n")
+        self.p.dispatch("be-analyst")
+        code, out, rep = self.p.gate("p1")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.p.status(rep, "CTX.codemap"), "pass")
+        self.assertEqual(self.p.status(rep, "CTX.handoff"), "pass")
+
+    def test_missing_map_goes_to_the_writer(self):
+        (self.p.root / "docs/codemap.md").unlink()
+        self.p.dispatch("be-developer")
+        code, _, rep = self.p.gate("p1")
+        self.assertEqual(code, 1)
+        c = next(c for c in rep["checks"] if c["id"] == "CTX.codemap")
+        self.assertEqual((c["status"], c["owner"]), ("fail", "be-developer"))
+
+    def test_designers_never_owe_the_map(self):
+        (self.p.root / "docs/codemap.md").unlink()
+        self.p.dispatch("fe-ux")
+        _, _, rep = self.p.gate("p1")
+        self.assertEqual(self.p.status(rep, "CTX.codemap"), "unavailable")
+
+    def test_stale_path_and_cap(self):
+        self.p.dispatch("be-architect")
+        self.p.write("docs/codemap.md", CODEMAP + "Entry: `calc/gone.py:f` · `**/*.py` · `calc/`\n")
+        code, _, rep = self.p.gate("p1")
+        c = next(c for c in rep["checks"] if c["id"] == "CTX.codemap")
+        self.assertEqual(c["details"], ["calc/gone.py: no such path"])
+        self.p.write("docs/codemap.md", CODEMAP + "x\n" * 200)
+        _, _, rep = self.p.gate("p1")
+        self.assertEqual(self.p.status(rep, "CTX.codemap"), "fail")
+
+    def test_handoff_keeps_one_short_section_per_role(self):
+        self.p.write("docs/backend/handoff.md", "## be-analyst #1 · t\nTask: a\n## be-analyst #2 · t\nTask: b\n"
+                     "## be-architect #1 · t\n" + "line\n" * 21)
+        code, _, rep = self.p.gate("p1")
+        self.assertEqual(code, 1)
+        c = next(c for c in rep["checks"] if c["id"] == "CTX.handoff")
+        self.assertEqual(c["details"], ["be-analyst: 2 sections, keep only the latest",
+                                        "be-architect: 21 lines, cap 20"])
 
 
 class IdInName(unittest.TestCase):

@@ -30,8 +30,8 @@ user which. Every gate and log command then takes `--run-dir <run dir>` when it 
 
 1. Read `<run-dir>/state.json`. If missing, say there is no run and suggest `/backend`; never
    start a new run silently.
-2. Read the last `orchestrator` entry in `<run-dir>/handoff.md` (`~/.claude/route/HANDOFF.md`
-   §5) and the entries after it: that is where the run stopped. Then read the artifacts the next
+2. Read the `orchestrator` section of `<run-dir>/handoff.md` (`~/.claude/route/HANDOFF.md`
+   §5) and any section dated after it: that is where the run stopped. Then read the artifacts the next
    step depends on; skim the others (headings, ids, status) so decisions rest on what was agreed
    without loading every document whole (Constitution §8).
 3. Read `<run-dir>/gates/`: the latest report per gate, `attempts.json`, `waivers.json` and the
