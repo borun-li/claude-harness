@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import time
 
-from . import docs, runlog, runner, snap
+from . import capture, docs, runlog, runner, snap
 from .common import (FAIL, PASS, WAIVED, ConfigError, bad, glob_match, na, ok, read_json, utc_now,
                      write_json)
 
@@ -117,6 +117,9 @@ def _command_check(ctx, name, owner):
         return na(cid, f"No {name} command configured", owner), None
     r = runner.run(cmd, ctx.project, ctx.cfg["timeout_seconds"], ctx.log(name))
     detail = [f"$ {cmd} -> exit {r['exit']} ({r['seconds']}s), log: {r['log']}"]
+    if name != "build" and runner.did_not_run(r):
+        return bad(f"TOOL.{name}", f"{name} did not run: no findings and no summary, so there is no reading "
+                   "(fix the tool before reading its result; not waivable)", owner, detail + r["tail"][-15:]), r
     if r["exit"] != 0:
         return bad(cid, f"{name} failed", owner, detail + r["tail"][-15:]), r
     return ok(cid, f"{name} passed", owner, detail), r
@@ -146,6 +149,9 @@ def _tests(ctx, owner, baseline=None):
     c = r["counts"]
     detail = [f"$ {r['cmd']} -> exit {r['exit']} ({r['seconds']}s), log: {r['log']}",
               f"counts: {c if c is not None else 'not parsed'}", f"per-test results: {r['junit_note']}"]
+    if r["exit"] != 0 and c is None:
+        return bad("TOOL.test", "tests did not run: no per-test report and no summary line "
+                   "(fix the runner before reading a result; not waivable)", owner, detail + r["tail"][-15:]), r
     problems = []
     if r["exit"] != 0 or (c and (c["failed"] or c["errors"])):
         problems.append("tests are red")
@@ -211,9 +217,56 @@ def _latest_writer(ctx):
     return max(marks, key=lambda m: m["time_ns"])
 
 
+def _out_together(ctx, role):
+    """Writers out in the same tree while `role` worked: dispatched before its latest mark and not
+    yet returned then. Their changes cannot be told apart, so none of them is charged alone (H2)."""
+    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
+    at = max((i for i, ev in enumerate(events) if ev.get("event") == "mark" and ev.get("role") == role), default=None)
+    open_ = {}
+    for ev in events[:at] if at is not None else []:
+        if ev.get("event") == "dispatch":
+            open_[ev["agent"]] = open_.get(ev["agent"], 0) + 1
+        elif ev.get("event") == "return" and open_.get(ev.get("agent")):
+            open_[ev["agent"]] -= 1
+    return sorted({a for a, n in open_.items() if n and not _is_reviewer(a)} | {role})
+
+
+def _may_change(ctx, role, path, d, plan):
+    """Whether `role` may have made this change (the rules of the single-writer checks below)."""
+    rewritten = path in d["modified"] + d["deleted"] and ctx.is_test(path)
+    free = ctx.is_test(path) or ctx.is_doc(path)
+    if role == "be-developer":
+        return not glob_match(path, ctx.cfg["frontend_globs"]) and not rewritten and (free or _mentioned(path, plan))
+    if role in ("be-tester", "fe-tester"):
+        return free
+    if role == "fe-engineer":
+        return not rewritten and (free or _mentioned(path, ctx.doc("03-queue.md") or ""))
+    if role in ("fe-ux", "fe-ui"):
+        return glob_match(path, [f"{ctx.run_rel}/**"])
+    return True
+
+
+def _shared_check(ctx, together):
+    marks = [_load_mark(ctx, r) for r in together if (ctx.gdir / f"snap-{r}.json").exists()]
+    d = snap.diff(min(marks, key=lambda m: m["time_ns"])["snapshot"], ctx.snapshot())
+    other = _other_team(ctx, together[0])
+    d = {k: [p for p in v if not glob_match(p, other)] if isinstance(v, list) else v for k, v in d.items()}
+    ch = snap.changed(d)
+    plan = "".join(ctx.doc(n) or "" for n in ("03-detailed-design.md", "08-implementation-log.md", "03-queue.md"))
+    nobody = [p for p in ch if not any(_may_change(ctx, r, p, d, plan) for r in together)]
+    names, owner = " and ".join(together), "+".join(together)
+    return [bad("ROLE.shared", f"{names} were out together; no one of them may make these changes", owner, nobody)
+            if nobody else ok("ROLE.shared", f"{names} were out together: their changes fit their roles combined",
+                              owner)], ch
+
+
 def role_checks(ctx):
-    """Role rules for the most recently marked writer, on exactly its own changes."""
+    """Role rules for the most recently marked writer, on exactly its own changes; writers out at the
+    same time are checked together."""
     m = _latest_writer(ctx)
+    together = _out_together(ctx, m["role"])
+    if len(together) > 1:
+        return _shared_check(ctx, together)
     role, before = m["role"], m["snapshot"]
     d = snap.diff(before, ctx.snapshot())
     other = _other_team(ctx, role)
@@ -277,6 +330,20 @@ def log_valid(ctx):
     found = runlog.problems(path)
     return (bad("LOG.valid", "Run log invalid or tampered", "orchestrator", found) if found
             else ok("LOG.valid", "Run log intact", "orchestrator"))
+
+
+def demo(ctx, peer=None):
+    """Constitution §1: the goal's real entry point captured before the work and after it
+    (ORCHESTRATOR.md § Demo). A cross-stack frontend run reads the demo of the backend run that
+    drives it (`peer`), unless it has its own."""
+    run = ctx.run
+    if (peer and not (run / "demo-plan.json").exists() and (peer / "demo-plan.json").exists()
+            and (read_json(peer / "state.json") or {}).get("status") != "accepted"):
+        run = peer
+    probs = capture.demo_problems(ctx, run, [ev for _, ev in runlog.read(run / "run-log.jsonl")])
+    where = run.relative_to(ctx.project)
+    return (bad("DEMO", "No before/after evidence of the goal at its real entry point", "orchestrator", probs)
+            if probs else ok("DEMO", f"Before and after in {where}/evidence/demo-*", "orchestrator"))
 
 
 CODEMAP = "docs/codemap.md"
@@ -1032,8 +1099,8 @@ def phase7(ctx):
     res.append(bad("P7.open-findings", "Blocker/major findings still open", owner, open_f) if open_f else
                ok("P7.open-findings", "No open blocker or major finding", owner))
     res.append(_log_trail(ctx))
+    res.append(demo(ctx))
     return res, {"not_machine_checked": [
-        "Constitution §6.4: delivered thing run once through its real entry point (orchestrator shows evidence)",
         "Constitution §6.6: report states what the user must do to make it live",
         "Constitution §6.7: user accepted at Acceptance, with date"]}
 

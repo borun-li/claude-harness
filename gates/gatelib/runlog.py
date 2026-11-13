@@ -1,4 +1,5 @@
 """Append-only, hash-chained run log: who did what, when, with what result, approved by whom."""
+import fcntl
 import hashlib
 import json
 
@@ -64,12 +65,13 @@ def append(path, event, **fields):
     for k, allowed in ALLOWED.items():
         if k in REQUIRED[event] and fields[k] not in allowed:
             raise ConfigError(f"{event}: {k} must be one of {sorted(allowed)}")
-    rows = read(path)
-    ev = {"seq": len(rows) + 1, "ts": utc_now(), "event": event,
-          **{k: v for k, v in fields.items() if v not in (None, "")},
-          "prev": _digest(rows[-1][0]) if rows else GENESIS}
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a", encoding="utf-8") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)  # hooks of parallel dispatches append at the same moment
+        rows = read(path)
+        ev = {"seq": len(rows) + 1, "ts": utc_now(), "event": event,
+              **{k: v for k, v in fields.items() if v not in (None, "")},
+              "prev": _digest(rows[-1][0]) if rows else GENESIS}
         f.write(json.dumps(ev, ensure_ascii=False, sort_keys=False) + "\n")
     return ev
 

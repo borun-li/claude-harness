@@ -2,8 +2,8 @@
 """安全钩子只在 harness 会话里生效。跑法：``python3 <本文件>``，退出码即结果。
 
 钩子写在 agent 和命令文件开头的 frontmatter 里，不写进全局 settings.json：
-- 每个 be-* / fe-* agent 带 git（``--role agent``，只读）和停进程两个钩子（subagent 只认自己文件里的钩子）；
-- 开启或恢复一次 run 的命令带全部三个钩子，git 钩子是 ``--role orchestrator``，调用后对本会话的主线程生效；
+- 每个 be-* / fe-* agent 带 git（``--role agent``，只读）和停进程两个钩子，结束时记返回（subagent 只认自己文件里的钩子）；
+- 开启或恢复一次 run 的命令带 git（``--role orchestrator``）、停进程、续用三个钩子，派工与续用时记日志，调用后对本会话的主线程生效；
 - install.sh 删掉旧版本写进 settings.json 的全局条目，别的设置不动。
 """
 import json
@@ -19,6 +19,7 @@ GIT_AGENT = GIT + " --role agent"
 GIT_ORCH = GIT + " --role orchestrator"
 KILL = 'python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"'
 CONT = 'python3 "$HOME/.claude/hooks/no-agent-continuation.py"'
+RUNLOG = 'python3 "$HOME/.claude/hooks/run-log.py"'
 RUN_COMMANDS = ["route", "backend", "frontend", "backend-resume", "frontend-resume"]
 
 
@@ -27,10 +28,19 @@ def frontmatter(path: pathlib.Path) -> str:
     return "\n".join(lines[1:lines.index("---", 1)])
 
 
-def hooked(fm: str, matcher: str) -> set:
-    """matcher 段下登记的命令。"""
-    m = re.search(r"- matcher: %s\n((?:\s{6,}.*\n?)*)" % re.escape(matcher), fm + "\n")
-    return set(re.findall(r"command: (.+)", m.group(1))) if m else set()
+def event(fm: str, name: str) -> str:
+    """一个事件（PreToolUse、PostToolUse、Stop）下的那一段。"""
+    m = re.search(r"^  %s:\n((?:\s{4,}.*\n?)*)" % name, fm + "\n", re.M)
+    return m.group(1) if m else ""
+
+
+def hooked(fm: str, matcher: str, ev: str = "PreToolUse") -> set:
+    """该事件里 matcher 段下登记的命令；matcher 为 None 时取整个事件的命令。"""
+    block = event(fm, ev)
+    if matcher is not None:
+        m = re.search(r"- matcher: %s\n((?:\s{6,}.*\n?)*)" % re.escape(matcher), block)
+        block = m.group(1) if m else ""
+    return set(re.findall(r"command: (.+)", block))
 
 
 def cleanup(settings: dict) -> dict:
@@ -56,11 +66,16 @@ def main() -> int:
     agents = sorted((ROOT / "agents").glob("*.md"))
     expect("16 agents", len(agents) == 16)
     for p in agents:
-        expect(p.name, hooked(frontmatter(p), "Bash") == {GIT_AGENT, KILL})
+        fm = frontmatter(p)
+        expect(p.name, hooked(fm, "Bash") == {GIT_AGENT, KILL})
+        expect(p.name + " handback", hooked(fm, "SubagentHandback") == {RUNLOG + " report"})
+        expect(p.name + " Stop", hooked(fm, None, "Stop") == {RUNLOG + " return"})
     for n in RUN_COMMANDS:
         fm = frontmatter(ROOT / "commands" / f"{n}.md")
         expect(n + " Bash", hooked(fm, "Bash") == {GIT_ORCH, KILL})
         expect(n + " SendMessage", hooked(fm, "SendMessage") == {CONT})
+        expect(n + " Agent", hooked(fm, "Agent") == {RUNLOG + " dispatch"})
+        expect(n + " SendMessage after", hooked(fm, "SendMessage", "PostToolUse") == {RUNLOG + " dispatch"})
 
     def entry(matcher, cmd):
         return {"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]}
@@ -82,7 +97,7 @@ def main() -> int:
     untouched = {"hooks": {"PreToolUse": [other]}}
     expect("nothing to remove", cleanup(untouched) == untouched)
 
-    print("%d cases, %d failures" % (1 + len(agents) + 2 * len(RUN_COMMANDS) + 4, failures))
+    print("%d cases, %d failures" % (1 + 3 * len(agents) + 4 * len(RUN_COMMANDS) + 4, failures))
     return 1 if failures else 0
 
 

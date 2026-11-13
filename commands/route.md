@@ -15,6 +15,15 @@ hooks:
       hooks:
         - type: command
           command: python3 "$HOME/.claude/hooks/no-agent-continuation.py"
+    - matcher: Agent
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/run-log.py" dispatch
+  PostToolUse:
+    - matcher: SendMessage
+      hooks:
+        - type: command
+          command: python3 "$HOME/.claude/hooks/run-log.py" dispatch
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**
@@ -77,7 +86,9 @@ Record the answers; every team reads them instead of asking again.
 
 1. Read the code the change touches and its callers (Constitution §4.1).
 2. Show the user a short plan: what changes as they will see it, the files, how you will check it.
-   Ask once to confirm it. This is the written plan Constitution §4.2 requires.
+   Ask once to confirm it. This is the written plan Constitution §4.2 requires. Then capture that
+   check at its real entry point as it is now (screenshot or command output), kept outside the
+   project: the before.
 3. Dispatch one engineer per side of the written line, each fresh, with the plan and file paths,
    as a brief in the format of `~/.claude/route/HANDOFF.md` §3; each replaces its role's section of
    `docs/handoff.md`. A change on both sides: backend first if the frontend reads what it adds.
@@ -86,7 +97,7 @@ Record the answers; every team reads them instead of asking again.
    only the failure.
 4. Run the project's build and test commands yourself, then run the change through its real entry
    point (Constitution §6.4). Red is not done.
-5. Ask the user to accept it running (URL or command). Commit when they accept, on the run's
-   branch (`~/.claude/ORCHESTRATOR.md` § Git).
+5. Ask the user to accept it running (URL or command), showing the same capture before and after.
+   Commit when they accept, on the run's branch (`~/.claude/ORCHESTRATOR.md` § Git).
 6. No phase documents, fixtures, gates or run log; the handoff and the git history are the only record. If the work needs a new data model, dependency
    or a scope decision, stop and ask whether to switch tiers (Constitution §7).

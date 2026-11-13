@@ -152,7 +152,7 @@ For a change that needs no new data model, dependency or scope decision.
 
 You get a short plan (what you will see change, the files, how it will be checked) and say yes
 once. One engineer per side makes the change, the orchestrator runs the build and tests, and you
-accept it running. The only record is `docs/handoff.md` and the git history. If the work turns out bigger, it stops and
+accept it running, with a capture of it before and after. The only record is `docs/handoff.md` and the git history. If the work turns out bigger, it stops and
 asks whether to switch tiers.
 
 ### Scenario 2 — try an idea
@@ -258,6 +258,9 @@ The named agent works alone: no phases, no sign-offs, no gates.
 - **Code map and reading list** — a short `docs/codemap.md` and a brief that names the lines to
   read let a fresh agent start in minutes instead of rediscovering the codebase; `handoff.md`
   keeps only each role's latest note.
+- **Before and after** — at kickoff the run captures your check at its real entry point (a
+  screenshot, or a command's output and time), and again on the final code; Acceptance opens with
+  the two side by side, and its gate fails if either is missing or nothing changed.
 - **Automatic gates** — between phases, `gates/gate.py` checks documents, traceability, tests and
   the working tree; the agent being checked never runs its own gate.
 - **Run log** — every dispatch, gate and sign-off goes to a hash-chained log on disk, which status,
@@ -266,8 +269,10 @@ The named agent works alone: no phases, no sign-offs, no gates.
   history, and keeps git writes to the main session (branch, commit, push the run's branch, draft
   PR), one blocks stopping
   processes by name, pattern or port (an agent stops only a process it started), one limits
-  reusing a finished agent to the author of the work, within the round cap and a context limit. They are declared in the agent and command files, so they act
-  only in harness sessions.
+  reusing a finished agent to the author of the work, within the round cap and a context limit.
+  A fourth writes every dispatch and return to the run log and enforces the round cap, so the log
+  never depends on memory. They are declared in the agent and command files, so they act only in
+  harness sessions.
 
 Each team's flow and rules: [Backend team](backend/README.md) · [Frontend team](frontend/README.md).
 
@@ -287,7 +292,7 @@ claude-harness/
 ├── backend/ · frontend/  # each team's README, playbook, quality bars, templates, config, changelog
 ├── route/                # prototype procedure, handoff format, the frontend/backend line
 ├── gates/                # automatic checks, run log and evidence capture, with tests
-├── hooks/                # the three safety hooks and their tests
+├── hooks/                # the safety and run-log hooks, with their tests
 └── skills/design-taste/  # the author's interface taste; edit it to yours (a project's brand wins)
 ```
 
@@ -305,6 +310,7 @@ the matching `CHANGELOG.md`: what changed, without project names or the story be
 python3 hooks/test_no_tree_restoring_git.py
 python3 hooks/test_no_foreign_process_kill.py
 python3 hooks/test_no_agent_continuation.py
+python3 hooks/test_run_log.py
 python3 hooks/test_hook_scoping.py
 ```
 

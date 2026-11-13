@@ -42,7 +42,7 @@ The Backend team's run drives; the Frontend team runs inside it.
 | Phase 4 build | Phase 3 build: frontend rows refine the prototype; a row replaces fake data once its seam's backend half exists |
 | Phase 5 verification | Phase 4 verify: `fe-tester` verifies the frontend rows; `be-tester` tests each seam from the backend side |
 | Phase 6 review | Phase 4 review: the frontend panel reviews the frontend diff, the backend panel the backend diff; their findings make one fix list |
-| Phase 7 acceptance | one Acceptance for both |
+| Phase 7 acceptance | one Acceptance for both, with one demo in the backend run dir |
 
 Frontend artifacts stay in `docs/frontend/`; `state.json` (backend) records which `DES` went to
 the Frontend team (`frontend_items`).

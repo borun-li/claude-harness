@@ -56,6 +56,18 @@ def parse_counts(output):
     return None
 
 
+# A lint or type checker that ran prints findings or a summary; one that did not prints neither.
+_RAN = re.compile(r"^Found \d+ errors?|^Success: no issues|^All checks passed|\d+ errors?, \d+ warnings?|"
+                  r"\u2716 \d+ problems?|error TS\d+:|^[^\s:]+:\d+(:\d+)?:\s|-->\s+\S+:\d+:\d+", re.M)
+_STOPPED = re.compile(r"errors prevented further checking|command not found|No such file or directory", re.I)
+
+
+def did_not_run(r):
+    """True when a failing lint or type check produced no reading: it crashed, or was never found."""
+    out = r["output"]
+    return r["exit"] != 0 and (r["exit"] in (124, 126, 127) or bool(_STOPPED.search(out)) or not _RAN.search(out))
+
+
 def junit(paths):
     """[(classname, name, status)] from one or more JUnit XML files, or None if there are none."""
     paths = [pathlib.Path(p) for p in ([paths] if isinstance(paths, (str, pathlib.Path)) else paths)]

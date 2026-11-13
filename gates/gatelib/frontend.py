@@ -749,6 +749,7 @@ def accept(ctx):
                if waiting else ok("FEA.feedback", "Every DFB that needs the user carries their decision", owner))
     res.append(_figma(ctx, owner))
     res.append(_trail(ctx))
+    res.append(checks.demo(ctx, peer=ctx.project / "docs" / "backend"))
     return res, {"not_machine_checked": ["Constitution §6.6: what the user must do to make it live",
                                          "Constitution §6.7: user accepted, with date"]}
 

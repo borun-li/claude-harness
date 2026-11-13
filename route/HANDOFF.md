@@ -31,13 +31,13 @@ section over 20 lines.
 About 10–15 lines. Ids and paths, never pasted documents, logs or earlier conversation.
 
 ```
-You are <agent> #<n> — <phase or tier>, round <r>[, increment <i>].
+You are <agent> #<n> — step <s>, round <r>[, increment <i>].
 Task: <one sentence: what is done when you return>
 Increment: <i — append only to the `## Increment <i>` section of your documents; omit if none>
 Only: <TC-014, FND-003, Q-5 … — the items of this round>
 Evidence: <report path#entry for each failing item>
 Feedback: <DFB-### to decide, or "raise a DFB for what you cannot build or draw as given"; omit if none>
-Budget: <Figma calls left this run, the number given to `log dispatch --figma-left`; omit for agents without Figma>
+Budget: <Figma calls left this run; omit for agents without Figma>
 Read: docs/codemap.md, then <file:line this item touches, from its design item, queue row or finding>;
       handoff sections: <roles>
 Code map: <"create it (§7)" when docs/codemap.md is missing and the role reads code; omit otherwise>
@@ -47,6 +47,9 @@ Handoff: replace your role's section of <handoff path> before returning (~/.clau
          a role without Write puts it in its return instead.
 Return: your agent file's output contract, plus `handoff: <entry header>`.
 ```
+
+The first line is read by `hooks/run-log.py`: `step` is the run log's step (the PLAYBOOK's phase
+number, e.g. `4` or `2b`), `round` is 1 for a step's first dispatch and higher for each redo.
 
 A continued author (Constitution §8.1) gets only the first line, `Only`, `Evidence` and the files
 changed since it returned; it already has the rest. Name only the sections the agent needs (usually its own role's and the one that reported the

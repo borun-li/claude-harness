@@ -17,11 +17,12 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
   you can recommend from evidence (models, risk, budgets) is previewed and stands unless changed. Read `<project>/.claude/project-context.md` and the merged config
   (PLAYBOOK §1), never memory. Then the run's branch (§ Git).
 - **Dispatch:** the real `be-*` / `fe-*` type with its resolved model; a clean tree before a writer;
-  `gate.py mark` and `log dispatch` as the PLAYBOOK's gate table says (`--redo` when it redoes the
-  step's work); a fresh agent with a brief
-  per `~/.claude/route/HANDOFF.md` §3, whose reading list points it at the code map and the lines
-  it needs; independent dispatches in one message. On return:
-  `log return`, file read-only roles' handoff entries, check confined roles changed only their files.
+  a fresh agent with a brief per `~/.claude/route/HANDOFF.md` §3, whose first line names the step
+  and round and whose reading list points it at the code map and the lines it needs; independent
+  dispatches in one message. `hooks/run-log.py` marks the writer and logs the dispatch and its
+  return; it refuses a brief with no step, a round past the cap, or a writer while the other team
+  has one out, and says why. On return: file read-only roles' handoff entries, check confined
+  roles changed only their files.
 - **Verify:** run the gate yourself, then the real thing through its real entry point in an
   isolated instance, before believing green.
 - **Keep and report:** `state.json` after every transition, the run log, evidence captures.
@@ -39,7 +40,7 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
   assigns to the orchestrator.
 - A missing agent type → stop and ask for a restart; never a `general-purpose` stand-in.
 - Continue a returned agent only as Constitution §8.1 allows. A fix or revision goes back to its
-  author by `SendMessage`, still logged `log dispatch --redo`, with only the round, the items, their
+  author by `SendMessage` (logged as a round by the hook), with only the first line, the items, their
   evidence and the files changed since it returned (`git diff --stat`).
   `~/.claude/hooks/no-agent-continuation.py` refuses a judge's second continuation, an author past
   `loops.max_rounds` continuations, or one whose context is over `loops.continue_max_context`;
@@ -63,12 +64,30 @@ The disk is the run's memory; your context is its most expensive resource.
 1. Read gate verdicts and agent summaries, not whole reports or logs; `grep` for the entry you
    need. Long output goes to `<run-dir>/logs/`.
 2. A failure goes to its owner: its author continued (§ Boundaries) or, when the hook refuses, a
-   fresh dispatch naming only the failing items and the report path. A dead agent: write its entry from the disk, then dispatch a fresh one.
+   fresh dispatch naming only the failing items and the report path. A dead agent (no return in the log): write its entry from the disk, log its return `--status failed`, then dispatch a fresh one.
 3. At every human stop: update `state.json`, replace your section (`HANDOFF.md` §5), list
    what you decided for the user since the last stop (what, why, how to undo), and tell them the run can continue in a fresh session (`/clear`, then `/backend-resume` or
    `/frontend-resume`). A resumed session starts from your section.
 4. `handoff.md` holds one current section per role (`HANDOFF.md` §1). When `CTX.handoff` fails,
    trim it yourself to each role's latest entry: it is bookkeeping, like `state.json`.
+
+## Demo
+
+The user sees the goal's difference without reading a report (Constitution §1, §7.4): its real
+entry point, captured by a script, before the work and after it.
+
+1. **Before** — at kickoff of a Prototype or Full development run, before the first dispatch:
+   write `<run-dir>/demo-plan.json` from the goal's check, shaped like a capture plan (frontend
+   PLAYBOOK §3H) without `row` and `state`: `web` (the page and the steps the user would take),
+   `terminal` (the command; output, exit code and seconds are kept) or `manual` (files an
+   instrument produced). Then `gate.py demo before`. A step that cannot run yet is the point: the
+   page is captured as it is.
+2. **After** — on the final code, before the Acceptance gate: `gate.py demo after`, again whenever
+   the product changes.
+3. The Acceptance gate (`DEMO`) fails when either is missing, the before was taken after work
+   started, the product changed after the after, an entry point captured before is missing after,
+   or the two are byte-identical. A cross-stack run keeps one demo, in the backend run dir.
+4. The Acceptance stop opens with the two side by side, with their paths.
 
 ## Git
 
@@ -113,8 +132,8 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
    lines. Without an interface: the real command and its output. Never ask the user to read a long
    document to answer.
 5. **Rounds.** A dispatch that redoes its step's work (a fix, a revision, re-work after the user's
-   answer) is a round: log it with `--redo`. Each agent gets `loops.max_rounds` rounds per step;
-   past that `log dispatch` exits `3`. A step failed twice, gate exit `3`, or a cap with a blocker,
+   answer) is a round: its brief says `round <r>` with r > 1. Each agent gets `loops.max_rounds`
+   rounds per step; past that the hook refuses the dispatch. A step failed twice, gate exit `3`, or a cap with a blocker,
    major or unmet requirement open → ask the user with each survivor's history whether to give the
    step more rounds, change the goal, or stop; on yes `log human --stop conditional --decision
    approved --step <s>`. Minors left at a cap are deferred (Constitution §5.4).
@@ -122,12 +141,14 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
 ## Key information
 
 - **Gates:** `python3 ~/.claude/gates/gate.py <gate> --project <root>` (`--run-dir docs/<team>/<slug>`
-  for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` round cap → the user · `2` config error · `4` busy: the other team has a writer out — wait for it. Cross-stack runs keep one team's
+  for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` round cap → the user · `2` config error · `4` busy: the other team has a writer out — wait for it.
+  `TOOL.*` means a checker produced no reading (it crashed or was not found): fix the tool, then
+  read its result; it cannot be waived. `ROLE.shared` checks writers that were out together
+  against their roles combined. Cross-stack runs keep one team's
   writers out at a time.
-- **Run log** (`<run-dir>/run-log.jsonl`, hash-chained; add `--team frontend` in Frontend runs):
-  `log dispatch --agent <a> --model <m> --step <phase> --note "<task>"` (a round: add `--redo`; `fe-ux`/`fe-ui`/`fe-engineer` with a Figma budget: add `--figma-left <n>`) ·
-  `log return --agent <a> --step <phase> --status ok|blocked|failed --note "<result>"` (add
-  `--figma-calls <n>` for an agent that reports Figma calls) ·
+- **Run log** (`<run-dir>/run-log.jsonl`, hash-chained; add `--team frontend` in Frontend runs).
+  Dispatches, returns and marks are written by the hooks. By hand only: a dead agent's
+  `log return --agent <a> --step <phase> --status failed --note "<what is on disk>"` ·
   `log human --stop Prototype|Plan|UX|UI|Acceptance|Budget|conditional --decision approved|changes|rejected|answered --by <user> --note "<what>"` ·
   `log decision --agent <a> --note "<what and why>"`.
 - **Discipline:** verify a count before relaying it · to test "does not depend on X", change X ·
