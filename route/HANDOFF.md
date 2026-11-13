@@ -48,7 +48,8 @@ Handoff: replace your role's section of <handoff path> before returning (~/.clau
 Return: your agent file's output contract, plus `handoff: <entry header>`.
 ```
 
-Name only the sections the agent needs (usually its own role's and the one that reported the
+A continued author (Constitution §8.1) gets only the first line, `Only`, `Evidence` and the files
+changed since it returned; it already has the rest. Name only the sections the agent needs (usually its own role's and the one that reported the
 failure). **The reading list** comes from the design item, queue row or finding, and from the last
 entry's `Next agent reads`. The agent starts from the map and the list, reads named items of a
 document rather than the whole document, and opens anything else only when it needs it, naming it

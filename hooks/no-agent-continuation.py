@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
-"""PreToolUse(SendMessage) —— 不许把一个已返回的 be-* / fe-* 代理续用到下一轮。
+"""PreToolUse(SendMessage) —— 已返回的 be-* / fe-* 代理，只按 Constitution §8.1 续用。
 
-**为什么是钩子而不是一句提示。** 一个被续用多轮的代理，上下文越积越大，成本和出错率
-随之上升；「每轮新开」写成句子，仍然要靠调度者记得。Constitution §8.1 是规则，
-这个文件是承载它的结构。
+**为什么是钩子而不是一句提示。** 续用多轮的代理上下文越积越大；新开的代理又要从头
+重读代码。§8.1 在两者之间划了线，这个文件是承载它的结构。
 
 **判据。** SendMessage 的 ``to`` 是代理名或 agentId，本身看不出角色。Claude Code
-为每个子代理写一份 ``<会话记录目录>/subagents/agent-<id>.meta.json``，其中有
-``agentType`` 与 ``finished``。钩子据此判断：
+为每个子代理写一份 ``<会话记录目录>/subagents/agent-<id>.meta.json``（``agentType``、
+``finished``），旁边是它的记录 ``agent-<id>.jsonl``。钩子据此判断：
 
 - 目标不是 be-* / fe-*（或查不到） → 放行。钩子只管本 harness 的团队。
 - 目标仍在运行（``finished`` 不为 true） → 放行。同一轮内给活着的代理补一句话不是续用。
-- 目标已返回，且从未被续用过 → 放行一次并记账。这是 §8.1 唯一的例外：
-  代理因一个问题而 blocked，同一轮内把答案带给它。
-- 目标已返回，且已经续用过一次 → 拒绝：新开一个代理，按 HANDOFF.md 写简短说明。
+- 目标是**作者**（写被返工的那份东西的角色，``AUTHORS``） → 续用次数到 ``loops.max_rounds``
+  为止放行，且它最后一次请求的上下文不超过 ``loops.continue_max_context``；否则拒绝。
+  它已经读过的东西不必重读，这正是续用的意义。
+- 目标是**评判者**（审查员、``fe-tester``） → 只放行一次：因一个问题而 blocked，
+  同一轮内把答案带给它。评判永远由没见过这份工作的新代理做。
 
 读不懂输入、找不到文件，一律放行 —— 钩子不该成为新的故障源。
 """
@@ -23,13 +24,41 @@ import re
 import sys
 
 HARNESS_TYPE = re.compile(r"^(be|fe)-")
+AUTHORS = {"be-analyst", "be-architect", "be-developer", "be-tester", "fe-ux", "fe-ui", "fe-engineer"}
+HERE = pathlib.Path(__file__).resolve().parent
 
 REASON = (
-    "Constitution §8.1：这个 {kind} 已经返回，并且已经续用过一次。不要再续用它。\n"
+    "Constitution §8.1：这个 {kind} 已经返回，{why}。不要再续用它。\n"
     "新开一个 {kind}（Agent 工具，subagent_type={kind}），按 ~/.claude/route/HANDOFF.md §3 "
-    "写一份 10–15 行的说明：第几个 {kind}、第几轮、任务、条目、证据路径、要读的交接条目、"
-    "已知陷阱。上一轮学到的东西在交接日志里，不在它的上下文里。"
+    "写简报：第几个 {kind}、第几轮、任务、条目、证据路径、阅读清单（代码地图和要读的 file:line）、"
+    "已知陷阱。上一轮学到的东西在交接和代码地图里，不在它的上下文里。"
 )
+
+
+def loops(kind, cwd):
+    """团队配置的 loops，项目的 .claude/<team>.json 可整体覆盖（与 gate.loop_cap 同序）。"""
+    team = "backend" if kind.startswith("be-") else "frontend"
+    out = {"max_rounds": 2, "continue_max_context": 200000}
+    for f in (HERE.parent / team / "config.json", pathlib.Path(cwd or ".") / ".claude" / f"{team}.json"):
+        try:
+            out.update(json.loads(f.read_text()).get("loops") or {})
+        except Exception:
+            continue
+    return out
+
+
+def last_context(transcript):
+    """代理最后一次请求送进模型的 token 数（输入 + 缓存写 + 缓存读）。"""
+    size = 0
+    try:
+        for line in transcript.read_text().splitlines():
+            u = (json.loads(line).get("message") or {}).get("usage") if '"usage"' in line else None
+            if u:
+                size = sum(u.get(k, 0) for k in
+                           ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
+    except Exception:
+        return 0
+    return size
 
 
 def find_meta(subagents: pathlib.Path, to: str):
@@ -74,12 +103,22 @@ def main() -> int:
         used = int(ledger.read_text().strip() or 0) if ledger.exists() else 0
     except Exception:
         used = 0
-    if used >= 1:
+    why = None
+    if kind in AUTHORS:
+        cfg = loops(kind, payload.get("cwd"))
+        size = last_context(meta_path.with_name(meta_path.name.replace(".meta.json", ".jsonl")))
+        if used >= max(1, int(cfg["max_rounds"])):
+            why = f"已经续用了 {used} 次（loops.max_rounds = {cfg['max_rounds']}）"
+        elif size > int(cfg["continue_max_context"]):
+            why = f"上下文已有 {size} token（loops.continue_max_context = {cfg['continue_max_context']}）"
+    elif used >= 1:
+        why = "已经续用过一次；评判者每一轮都要新开"
+    if why:
         print(json.dumps({
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "deny",
-                "permissionDecisionReason": REASON.format(kind=kind),
+                "permissionDecisionReason": REASON.format(kind=kind, why=why),
             }
         }))
         return 0

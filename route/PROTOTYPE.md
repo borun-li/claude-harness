@@ -48,8 +48,9 @@ later phases and runs read them.
 1. Run it yourself through its one command (Constitution §6.4), on a free port, never the user's.
 2. Give the user the URL or the command and a two-line summary of what it shows.
 3. Ask: **confirm**, **change** (what), or **stop**.
-4. **Change:** a new, fresh dispatch with a short brief listing only the changes, the next round
-   number, and the pitfalls from the previous engineer's handoff entry. After 3 rounds,
+4. **Change:** back to the engineer (Constitution §8.1), or a fresh dispatch when the hook refuses,
+   with a short brief listing only the changes, the next round number, and the pitfalls from the
+   previous engineer's handoff entry. After 3 rounds,
    ask the user whether to continue.
 5. **Confirm:** log `gate.py log human --stop Prototype --decision approved --by <user> --note "<what was confirmed>"`.
    Write `<run-dir>/01b-prototype.md`: what the user confirmed, what changed against step 1, how to

@@ -2,6 +2,20 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour or new role · major = changed phase flow or artifact contract.
 
+## 5.1.0 — 2026-11-12 — a fix goes back to its author
+
+Minor. Shared with frontend 10.1.0.
+- Constitution §8.1 amended: the author of work being fixed or revised may be continued into that
+  step's next rounds while its context is still small, so it does not re-read what it already
+  knows. Whoever judges the work (reviewers, verifiers) is always a fresh agent. The exception for
+  an agent blocked on a question stays.
+- The orchestrator sends a fix back to its author by `SendMessage`, still logged `log dispatch
+  --redo`, with only the round, the items, their evidence and the files changed since it returned.
+- `no-agent-continuation.py`: authors (`be-analyst`, `be-architect`, `be-developer`, `be-tester`,
+  `fe-ux`, `fe-ui`, `fe-engineer`) may be continued up to `loops.max_rounds` times while their last
+  request was at most `loops.continue_max_context` tokens (default 200000); judges once, to receive
+  an answer. Refused → a fresh agent with the reading list.
+
 ## 5.0.0 — 2026-11-12 — a code map, a reading list, a handoff of the current state
 
 Major: `handoff.md` changes from an append-only log to one section per role. Shared with frontend 10.0.0.
