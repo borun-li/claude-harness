@@ -22,6 +22,7 @@ Frontend team (run dir docs/frontend; pass --team frontend to baseline, mark, lo
     gate.py fe-promote --by <who> [--exclude Q-…]   after Acceptance: register accepted rows as OBS-###
     gate.py fe-approve --by <who> [--retire OBS-…]  also retires registered observables the user drops
     gate.py capture --round <n>          capture evidence per docs/frontend/capture-plan.json
+    gate.py demo before|after [--team]   capture the goal's entry point per <run-dir>/demo-plan.json
 
     gate.py log dispatch ... --redo     the dispatch redoes its step's work (a fix, a revision, re-work
                                          after an answer); refused past the round cap (loops.max_rounds)
@@ -43,8 +44,9 @@ from gatelib.common import ConfigError, FAIL, PASS, UNAVAILABLE, WAIVED, read_js
 
 
 def load_cfg(project, need_profile=True):
-    """Harness gate config merged with the project's confirmed profile. `log` and `timeline` run no
-    check, so they pass need_profile=False and work before a profile exists (route/PROTOTYPE.md)."""
+    """Harness gate config merged with the project's confirmed profile. `log`, `timeline` and `demo`
+    run no check, so they pass need_profile=False and work before a profile exists (route/PROTOTYPE.md;
+    the demo's before is taken at kickoff)."""
     cfg = read_json(HERE / "config.json")
     cfg.pop("_comment", None)
     proj = read_json(project / ".claude" / "gates.json")
@@ -131,13 +133,13 @@ def apply_waivers(results, gdir):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("phase", choices=["profile", "mark", "fixtures-approve", "fe-approve", "fe-promote", "capture", "log",
+    ap.add_argument("phase", choices=["profile", "mark", "fixtures-approve", "fe-approve", "fe-promote", "capture", "demo", "log",
                                       "timeline", *PHASES])
     ap.add_argument("--round")
     ap.add_argument("--exclude", nargs="*", default=[])
     ap.add_argument("--retire", nargs="*", default=[])
     ap.add_argument("--team", choices=["backend", "frontend"], default="backend")
-    ap.add_argument("event", nargs="?", help="log: dispatch | return | human | decision")
+    ap.add_argument("event", nargs="?", help="log: dispatch | return | human | decision; demo: before | after")
     for f in ("agent", "model", "step", "status", "stop", "decision", "note"):
         ap.add_argument(f"--{f}")
     ap.add_argument("--figma-calls", type=int, help="log return: Figma MCP calls the agent made")
@@ -164,7 +166,7 @@ def main():
 
     team = "frontend" if a.phase.startswith("fe-") or a.phase == "capture" else a.team
     ctx = checks.Ctx(project, resolve_run_dir(project, a.run_dir, team),
-                     load_cfg(project, need_profile=a.phase not in ("log", "timeline")))
+                     load_cfg(project, need_profile=a.phase not in ("log", "timeline", "demo")))
     log = ctx.run / "run-log.jsonl"
     if a.phase == "log":
         if a.event in ("gate", "mark", "approve"):
@@ -200,7 +202,7 @@ def main():
             (ctx.run / "run-log.md").write_text(md, encoding="utf-8")
         print(md)
         return 0
-    if a.phase in ("mark", "capture", *PHASES):
+    if a.phase in ("mark", "capture", "demo", *PHASES):
         ensure_not_busy(project, team)
     if a.phase == "mark":
         if not a.role:
@@ -219,6 +221,18 @@ def main():
         bad_n = sum(1 for e in entries if not e["ok"])
         print(f"[gate] captured {len(entries)} ({bad_n} failed) into {out.relative_to(project)}/manifest.md")
         return 1 if bad_n else 0
+    if a.phase == "demo":
+        if a.event not in capture.DEMO_KINDS:
+            raise ConfigError("demo needs before | after")
+        entries, out = capture.demo(ctx, a.event)
+        runlog.append(log, "capture", round=f"demo-{a.event}", captures=len(entries),
+                      failed=[f"{e['id']}@{e.get('size')}" for e in entries if not e["ok"]] or None)
+        failed = [e for e in entries if not e["ok"]]
+        print(f"[gate] demo {a.event}: {len(entries)} captured ({len(failed)} failed) into "
+              f"{out.relative_to(project)}/manifest.md")
+        for e in failed:
+            print(f"  {e['id']}@{e.get('size')}: {e.get('error', '?')}")
+        return 1 if failed and a.event == "after" else 0
     if a.phase == "fe-promote":
         if not a.by:
             raise ConfigError("fe-promote needs --by <who accepted>")

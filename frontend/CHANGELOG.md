@@ -2,6 +2,24 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 11.0.0 — 2026-11-12 — before and after at the real entry point
+
+Major: a new artifact Acceptance requires. Shared with backend 6.0.0.
+- Every Prototype and Full development run captures its goal at the real entry point before the
+  first dispatch (`gate.py demo before`) and on the final code (`gate.py demo after`), from
+  `<run-dir>/demo-plan.json`: a page and its steps (screenshot, DOM), a command (output, exit code,
+  seconds) or files an instrument produced. The before is taken once; the after is retaken when the
+  product changes.
+- New Acceptance check `DEMO` in `p7` and `fe-accept`: fails when either capture is missing, the
+  before was logged after the first dispatch, the product changed after the after, an entry point
+  captured before is missing after, or the two are byte-identical. A cross-stack run keeps one demo
+  in the backend run dir. Acceptance opens with the two side by side.
+- Small change: the orchestrator captures its check before dispatching and shows it before and
+  after when the user accepts.
+- Web captures keep a screenshot of the page even when a step fails; terminal captures record
+  seconds.
+- Runs started before this version have no before; their `DEMO` needs the user's waiver.
+
 ## 10.1.0 — 2026-11-12 — a fix goes back to its author
 
 Minor. Shared with backend 5.1.0.

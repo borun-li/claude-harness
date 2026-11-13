@@ -31,6 +31,8 @@ later phases and runs read them.
 
 ## 3. Build the prototype — one engineer, one fresh dispatch
 
+First the demo's before (`~/.claude/ORCHESTRATOR.md` § Demo), unless the run already took it.
+
 - **Who:** `be-developer`. It shows the behaviour through a runnable command with sample input and
   output.
 - **Where:** `prototype/` at the project root, and nowhere else. Stubs in it are throwaway.

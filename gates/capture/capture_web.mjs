@@ -47,6 +47,10 @@ try {
       } catch (e) {
         entry.ok = false
         entry.error = String(e.message || e).split('\n')[0]
+        try {  // what the page showed when it failed: a demo's "before" is often a step that cannot run yet
+          await page.screenshot({ path: path.join(job.out_dir, `${stem}.png`), fullPage: true })
+          entry.files['png'] = `${stem}.png`
+        } catch {}
       }
       results.push(entry)
       await ctx.close()

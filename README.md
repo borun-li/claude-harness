@@ -152,7 +152,7 @@ For a change that needs no new data model, dependency or scope decision.
 
 You get a short plan (what you will see change, the files, how it will be checked) and say yes
 once. One engineer per side makes the change, the orchestrator runs the build and tests, and you
-accept it running. The only record is `docs/handoff.md` and the git history. If the work turns out bigger, it stops and
+accept it running, with a capture of it before and after. The only record is `docs/handoff.md` and the git history. If the work turns out bigger, it stops and
 asks whether to switch tiers.
 
 ### Scenario 2 — try an idea
@@ -258,6 +258,9 @@ The named agent works alone: no phases, no sign-offs, no gates.
 - **Code map and reading list** — a short `docs/codemap.md` and a brief that names the lines to
   read let a fresh agent start in minutes instead of rediscovering the codebase; `handoff.md`
   keeps only each role's latest note.
+- **Before and after** — at kickoff the run captures your check at its real entry point (a
+  screenshot, or a command's output and time), and again on the final code; Acceptance opens with
+  the two side by side, and its gate fails if either is missing or nothing changed.
 - **Automatic gates** — between phases, `gates/gate.py` checks documents, traceability, tests and
   the working tree; the agent being checked never runs its own gate.
 - **Run log** — every dispatch, gate and sign-off goes to a hash-chained log on disk, which status,

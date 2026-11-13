@@ -55,7 +55,7 @@ migration, schema changes, new external dependencies or public APIs. **Gate prof
 detected command once, confirm the ones that work yourself (logged), ask only about the rest.
 
 **2.4** Write `state.json` (§8) with the goal in the user's words; an unfinished one →
-`/backend-resume`. A reused prototype: log `--stop Prototype --decision approved --note "reused <path>, confirmed <date>"`.
+`/backend-resume`. Then the demo's before (`ORCHESTRATOR.md` § Demo), before any dispatch. A reused prototype: log `--stop Prototype --decision approved --note "reused <path>, confirmed <date>"`.
 
 ---
 
@@ -102,8 +102,9 @@ tester. Gate `p5`. Never relax a test.
    and set each FND's `**Status:**` to `fixed in round <n>` or leave it `open` (back to step 3).
    At `loops.max_rounds` minors are deferred (Constitution §5.4).
 
-**Phase 7 — Acceptance.** Write `07-acceptance.md` (QUALITY-BARS § Phase 7), gate `p7`, stop: lead
-with the goal and the user running their own check. On yes `status: accepted`.
+**Phase 7 — Acceptance.** `gate.py demo after`, write `07-acceptance.md` (QUALITY-BARS § Phase 7),
+gate `p7`, stop: lead with the goal, the demo's before and after, and the user running their own
+check. On yes `status: accepted`.
 
 ## 3B. Increments
 

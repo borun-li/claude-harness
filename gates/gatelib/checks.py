@@ -7,7 +7,7 @@ import shutil
 import tempfile
 import time
 
-from . import docs, runlog, runner, snap
+from . import capture, docs, runlog, runner, snap
 from .common import (FAIL, PASS, WAIVED, ConfigError, bad, glob_match, na, ok, read_json, utc_now,
                      write_json)
 
@@ -277,6 +277,20 @@ def log_valid(ctx):
     found = runlog.problems(path)
     return (bad("LOG.valid", "Run log invalid or tampered", "orchestrator", found) if found
             else ok("LOG.valid", "Run log intact", "orchestrator"))
+
+
+def demo(ctx, peer=None):
+    """Constitution §1: the goal's real entry point captured before the work and after it
+    (ORCHESTRATOR.md § Demo). A cross-stack frontend run reads the demo of the backend run that
+    drives it (`peer`), unless it has its own."""
+    run = ctx.run
+    if (peer and not (run / "demo-plan.json").exists() and (peer / "demo-plan.json").exists()
+            and (read_json(peer / "state.json") or {}).get("status") != "accepted"):
+        run = peer
+    probs = capture.demo_problems(ctx, run, [ev for _, ev in runlog.read(run / "run-log.jsonl")])
+    where = run.relative_to(ctx.project)
+    return (bad("DEMO", "No before/after evidence of the goal at its real entry point", "orchestrator", probs)
+            if probs else ok("DEMO", f"Before and after in {where}/evidence/demo-*", "orchestrator"))
 
 
 CODEMAP = "docs/codemap.md"
@@ -1032,8 +1046,8 @@ def phase7(ctx):
     res.append(bad("P7.open-findings", "Blocker/major findings still open", owner, open_f) if open_f else
                ok("P7.open-findings", "No open blocker or major finding", owner))
     res.append(_log_trail(ctx))
+    res.append(demo(ctx))
     return res, {"not_machine_checked": [
-        "Constitution §6.4: delivered thing run once through its real entry point (orchestrator shows evidence)",
         "Constitution §6.6: report states what the user must do to make it live",
         "Constitution §6.7: user accepted at Acceptance, with date"]}
 

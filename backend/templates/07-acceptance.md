@@ -6,6 +6,7 @@
 ## 0. Goal
 - **Change:** {from state.json, in the user's words}
 - **Check:** {the user's check} → {result, with evidence}
+- **Before / after:** `evidence/demo-before/manifest.md` · `evidence/demo-after/manifest.md` — {what differs, in a line}
 
 ## 1. What was built
 {Plain description of the delivered system and how to run it.}

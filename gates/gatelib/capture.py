@@ -3,6 +3,9 @@
 The plan (`<run-dir>/capture-plan.json`) lists what must be captured; `gate.py capture` produces it
 into `<run-dir>/evidence/verify-<round>/` with `manifest.json` and `manifest.md`. Every entry records
 the instrument, the time and a fingerprint of the source tree, so evidence older than the build shows.
+
+The demo (`<run-dir>/demo-plan.json`, same shape, no rows) captures the run's goal at its real entry
+point twice: `demo before` ahead of the first dispatch, `demo after` on the final code.
 """
 import hashlib
 import json
@@ -11,6 +14,7 @@ import pathlib
 import shutil
 import subprocess
 import tempfile
+import time
 
 from . import snap
 from .common import ConfigError, read_json, utc_now, write_json
@@ -69,6 +73,10 @@ def run(ctx, round_no):
     out = ctx.run / "evidence" / f"verify-{round_no}"
     if out.exists() and any(out.iterdir()):
         raise ConfigError(f"{out.relative_to(ctx.project)} is not empty: use a new round number, never overwrite evidence")
+    return _capture(ctx, plan, out, f"Evidence — round {round_no}", round=round_no)
+
+
+def _capture(ctx, plan, out, title, **head):
     out.mkdir(parents=True, exist_ok=True)
     surface = plan["surface"]
     if surface == "web":
@@ -80,8 +88,8 @@ def run(ctx, round_no):
     stamp = {"time": utc_now(), "fingerprint": source_fingerprint(ctx), "surface": surface}
     for e in entries:
         e.update(stamp)
-    write_json(out / "manifest.json", {"round": round_no, **stamp, "entries": entries})
-    lines = [f"# Evidence — round {round_no}", "",
+    write_json(out / "manifest.json", {**head, **stamp, "entries": entries})
+    lines = [f"# {title}", "",
              f"- Captured {stamp['time']} · surface {surface} · source fingerprint `{stamp['fingerprint']}`", "",
              "| Capture | Row | State | Size | Instrument | Files | OK |", "|---|---|---|---|---|---|---|"]
     for e in entries:
@@ -89,6 +97,31 @@ def run(ctx, round_no):
                      f"{', '.join(f'`{f}`' for f in e['files'].values())} | {'yes' if e['ok'] else 'NO: ' + e.get('error', '')} |")
     (out / "manifest.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return entries, out
+
+
+DEMO_KINDS = ("before", "after")
+
+
+def demo_dir(run, kind):
+    return run / "evidence" / f"demo-{kind}"
+
+
+def demo(ctx, kind):
+    """Capture the goal's entry point (Constitution §1, §7.4). `before` is taken once and never
+    overwritten; `after` is retaken whenever the product changes, so it always shows the final code."""
+    plan = read_json(ctx.run / "demo-plan.json")
+    if plan is None:
+        raise ConfigError(f"no {ctx.run_rel}/demo-plan.json: write it from the goal's check (ORCHESTRATOR.md § Demo)")
+    plan = {**plan, "captures": [{"row": "goal", "state": kind, **c} for c in plan.get("captures", [])]}
+    probs = plan_problems(plan, []) + ([] if plan["captures"] else ["no captures"])
+    if probs:
+        raise ConfigError("demo-plan.json: " + "; ".join(probs))
+    out = demo_dir(ctx.run, kind)
+    if out.exists() and any(out.iterdir()):
+        if kind == "before":
+            raise ConfigError(f"{out.relative_to(ctx.project)} exists: the before is taken once, never overwritten")
+        shutil.rmtree(out)
+    return _capture(ctx, plan, out, f"Demo — {kind}", demo=kind)
 
 
 def find_chrome():
@@ -132,13 +165,15 @@ def _terminal(ctx, plan, out):
     for c in plan["captures"]:
         cols, lines = int(c.get("columns", 80)), int(c.get("lines", 24))
         env = {**os.environ, "COLUMNS": str(cols), "LINES": str(lines), "TERM": "xterm-256color"}
+        t0 = time.monotonic()
         p = subprocess.run(c["command"], shell=True, cwd=str(ctx.project), capture_output=True, env=env,
                            timeout=int(c.get("timeout", 120)), executable="/bin/bash")
+        seconds = round(time.monotonic() - t0, 3)
         stem = f"{c['id']}@{cols}x{lines}"
         (out / f"{stem}.stdout").write_bytes(p.stdout)
         (out / f"{stem}.stderr").write_bytes(p.stderr)
         entries.append({"id": c["id"], "row": c["row"], "state": c["state"], "size": f"{cols}x{lines}",
-                        "command": c["command"], "exit": p.returncode, "ok": True,
+                        "command": c["command"], "exit": p.returncode, "seconds": seconds, "ok": True,
                         "files": {"stdout": f"{stem}.stdout", "stderr": f"{stem}.stderr"},
                         "instrument": f"subprocess, raw bytes, COLUMNS={cols} LINES={lines}"})
     return entries
@@ -188,4 +223,45 @@ def evidence_problems(ctx, round_dir, plan, build_time):
         probs.append(f"captured {manifest['time']}, before the last fe-build {build_time}")
     if manifest["fingerprint"] != source_fingerprint(ctx):
         probs.append("the product's source changed after capture: recapture")
+    return probs
+
+
+def demo_problems(ctx, run, events):
+    """Problems with a run's demo: both captures present, the before logged ahead of the run's first
+    dispatch, the after on today's code, the same entry points, and a difference between them. A
+    before may show a step failing: that is what "not yet" looks like."""
+    got, probs = {}, []
+    for kind in DEMO_KINDS:
+        d = demo_dir(run, kind)
+        m = read_json(d / "manifest.json")
+        if m is None:
+            probs.append(f"no {kind}: `gate.py demo {kind}`")
+            continue
+        got[kind] = (d, m, {(e["id"], e.get("size")): e for e in m["entries"]})
+        for key, e in got[kind][2].items():
+            files = [d / f for f in e.get("files", {}).values()]
+            if not any(f.is_file() and f.stat().st_size for f in files):
+                probs.append(f"{kind} {key[0]}@{key[1]}: nothing captured ({e.get('error', 'empty files')})")
+            elif kind == "after" and not e.get("ok"):
+                probs.append(f"after {key[0]}@{key[1]}: capture failed ({e.get('error', '?')})")
+    first = next((e["seq"] for e in events if e.get("event") == "dispatch"), None)
+    logged = [e["seq"] for e in events if e.get("event") == "capture" and e.get("round") == "demo-before"]
+    if "before" in got and not logged:
+        probs.append("before not in the run log: take it with `gate.py demo before`")
+    elif "before" in got and first is not None and logged[-1] > first:
+        probs.append(f"before logged at #{logged[-1]}, after work started (dispatch #{first})")
+    if "after" in got and got["after"][1]["fingerprint"] != source_fingerprint(ctx):
+        probs.append("the product changed after the after was captured: `gate.py demo after` again")
+    if len(got) == 2:
+        (bd, _, before), (ad, _, after) = got["before"], got["after"]
+        probs += [f"{i}@{s}: captured before but not after" for i, s in sorted(set(before) - set(after), key=str)]
+
+        def same(key):
+            fb, fa = before[key].get("files", {}), after[key].get("files", {})
+            return fb.keys() == fa.keys() and all(
+                (bd / fb[k]).is_file() and (ad / fa[k]).is_file()
+                and (bd / fb[k]).read_bytes() == (ad / fa[k]).read_bytes() for k in fb)
+        shared = set(before) & set(after)
+        if shared and all(same(k) for k in shared):
+            probs.append("after is byte-identical to before: nothing changed at the entry point")
     return probs

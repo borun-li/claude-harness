@@ -75,6 +75,8 @@ one otherwise, none for an external design.
 
 **2.4** Write `state.json` (§8) with the goal in the user's words, and with `requirements` pointing
 at the backend's `01-requirements.md` in a cross-stack run; an unfinished one → `/frontend-resume`.
+Then the demo's before (`ORCHESTRATOR.md` § Demo; cross-stack: the backend run takes it), before
+any dispatch.
 
 **2.5 Design input** (`design`):
 - `new` — nothing, or only reference material. Full Phases 1–2.
@@ -133,7 +135,8 @@ progress (§3J). A design problem is a DFB, never a silent deviation.
    Recapture; fresh tester and reviewer re-judge only the named defects. At `loops.max_rounds`
    minors are deferred; only blockers, majors and P1 rows escalate (Constitution §5.4).
 
-**Acceptance.** `fe-accept`, then lead with the goal and the user running their own check; show
+**Acceptance.** `gate.py demo after --team frontend` (cross-stack: the backend's), `fe-accept`, then
+lead with the goal, the demo's before and after, and the user running their own check; show
 verification, review (drops and deferred), the DFB register and `gates/traceability.md`. On yes `status: accepted` and `fe-promote --by <user>`.
 
 **Phase 5 — After launch.** User or user feedback → a fresh `fe-ux` writes `INS-###` entries; the

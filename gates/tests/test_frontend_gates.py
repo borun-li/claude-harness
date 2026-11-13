@@ -178,6 +178,8 @@ REVIEW = """# Review
 TERMINAL_PLAN = {"surface": "terminal", "captures": [
     {"id": "Q-001-dup", "row": "Q-001", "state": "duplicate", "command": "cat web/notice.html"}]}
 
+FE_DEMO = {"surface": "terminal", "captures": [{"id": "D-1", "command": "cat web/notice.html"}]}
+
 FE_STATE = {"harness_version": "7.0.0", "feature": "dup", "status": "in_progress", "tier": "full",
             "risk": "normal", "design_stops": 2, "current_phase": 1, "phases": [], "models": {},
             "goal": {"change": "the list page shows rows", "check": "open the list page"}}
@@ -194,6 +196,8 @@ class FrontBase(Base):
         for n, t in DOCS:
             p.write(f"docs/frontend/{n}", t + FILL)
         p.write("contracts/FRONTEND_BACKEND_CONTRACT.md", CONTRACT)
+        p.write("docs/frontend/demo-plan.json", json.dumps(FE_DEMO))
+        assert self.fe_demo("before")[0] == 0
         self.fe_log("dispatch", "--agent", "fe-ux", "--model", "opus", "--step", "1", "--note", "ux")
         self.fe_log("return", "--agent", "fe-ux", "--step", "1", "--status", "ok", "--note", "ux")
 
@@ -204,6 +208,11 @@ class FrontBase(Base):
 
     def capture(self, round_no="1"):
         r = subprocess.run([PY, str(GATE), "capture", "--round", round_no, "--project", str(self.p.root)],
+                           capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def fe_demo(self, kind):
+        r = subprocess.run([PY, str(GATE), "demo", kind, "--team", "frontend", "--project", str(self.p.root)],
                            capture_output=True, text=True)
         return r.returncode, r.stdout + r.stderr
 
@@ -466,10 +475,25 @@ class BuildVerifyAccept(FrontBase):
         self.assertEqual(code, 0, out)
         code, out, _ = self.review_ok()
         self.assertEqual(code, 0, out)
+        self.assertEqual(self.st(self.fe("fe-accept")[2], "DEMO"), "fail")
+        assert self.fe_demo("after")[0] == 0
         code, out, rep = self.fe("fe-accept")
         self.assertEqual(code, 0, out)
         self.assertIn("| REQ-001 | FLOW-001 | PAGE-001 | Q-001 done | yes |",
                       (self.p.fe / "gates" / "traceability.md").read_text())
+
+    def test_cross_stack_reads_the_backend_demo(self):
+        """Route/FRONTEND_BACKEND_LINE.md §4: the backend run drives, and holds the one demo."""
+        self._verify_setup()
+        assert self.fe("fe-verify")[0] == 0 and self.review_ok()[0] == 0
+        import shutil
+        (self.p.fe / "demo-plan.json").unlink()
+        shutil.rmtree(self.p.fe / "evidence" / "demo-before")
+        self.p.write("tests/test_seam.py", "def test_seam():\n    assert True\n")
+        assert self.p.demo("after")[0] == 0
+        rep = self.fe("fe-accept")[2]
+        self.assertEqual(self.st(rep, "DEMO"), "pass")
+        self.assertIn("docs/backend", next(c for c in rep["checks"] if c["id"] == "DEMO")["message"])
 
     def test_accept_needs_review(self):
         self._verify_setup()
@@ -970,6 +994,7 @@ class Registry(FrontBase):
         assert code == 0, out
         code, out, _ = self.review_ok()
         assert code == 0, out
+        assert self.fe_demo("after")[0] == 0
         code, out, _ = self.fe("fe-accept")
         assert code == 0, out
 

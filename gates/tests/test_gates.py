@@ -147,6 +147,9 @@ def sh(cwd, *cmd):
     return subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
 
 
+DEMO_PLAN = {"surface": "terminal", "captures": [{"id": "D-1", "command": "ls tests"}]}
+
+
 class Project:
     def __init__(self):
         self.root = pathlib.Path(tempfile.mkdtemp(prefix="gatetest-"))
@@ -169,11 +172,17 @@ class Project:
         sh(self.root, "git", "init", "-q")
         sh(self.root, "git", "-c", "user.email=t@t", "-c", "user.name=t", "add", "-A")
         sh(self.root, "git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
+        self.write("docs/backend/demo-plan.json", json.dumps(DEMO_PLAN))
+        assert self.demo("before")[0] == 0
         self.log("dispatch", "--agent", "be-analyst", "--model", "opus", "--step", "1", "--note", "requirements")
         self.log("return", "--agent", "be-analyst", "--step", "1", "--status", "ok", "--note", "3 REQs")
 
     def log(self, *args):
         r = subprocess.run([PY, str(GATE), "log", *args, "--project", str(self.root)], capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def demo(self, kind):
+        r = subprocess.run([PY, str(GATE), "demo", kind, "--project", str(self.root)], capture_output=True, text=True)
         return r.returncode, r.stdout + r.stderr
 
     def dispatch(self, role):
@@ -553,6 +562,7 @@ filler
         for ph in ("p1", "p2"):
             assert self.p.gate(ph)[0] == 0, ph
         self.p.write("docs/backend/07-acceptance.md", "\n".join(["accepted"] * 12))
+        assert self.p.demo("after")[0] == 0
         return self.p.gate("p7")
 
     def test_full_tier_run_in_3_2_order(self):
@@ -576,6 +586,7 @@ filler
             q.write("docs/backend/06-review-report.md", self.FINDINGS.format(status="fixed in round 1"))
             self.assertEqual(q.gate("p6")[0], 0, q.gate("p6")[1])
             q.write("docs/backend/07-acceptance.md", "\n".join(["accepted"] * 12))
+            assert q.demo("after")[0] == 0
             code, out, rep = q.gate("p7")
             self.assertEqual(code, 0, out)
             self.assertEqual(q.status(rep, "LOG.trail"), "pass")
@@ -591,6 +602,40 @@ filler
         self.assertEqual(code, 0, out)
         self.assertIn("| REQ-001 | DES-001 | TC-001 passed | FX-001 passed | yes |",
                       (self.p.run / "gates" / "traceability.md").read_text())
+
+
+class Demo(Base):
+    """Constitution §1: the goal's entry point captured before the work and after it."""
+    def details(self, rep):
+        return " ".join(next(c for c in rep["checks"] if c["id"] == "DEMO")["details"])
+
+    def test_after_missing_stale_or_unchanged(self):
+        self.p.to_p5()
+        self.assertIn("no after", self.details(self.p.gate("p7")[2]))
+        assert self.p.demo("after")[0] == 0
+        self.assertEqual(self.p.status(self.p.gate("p7")[2], "DEMO"), "pass")
+        self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# later\n")
+        self.assertIn("changed after the after", self.details(self.p.gate("p7")[2]))
+        self.p.write("calc/core.py", self.p.read("calc/core.py").replace("\n# later\n", ""))
+        (self.p.run / "evidence" / "demo-before" / "D-1@80x24.stdout").write_bytes(
+            (self.p.run / "evidence" / "demo-after" / "D-1@80x24.stdout").read_bytes())
+        self.assertIn("byte-identical", self.details(self.p.gate("p7")[2]))
+
+    def test_before_is_taken_once_and_ahead_of_the_work(self):
+        code, out = self.p.demo("before")
+        self.assertNotEqual(code, 0)
+        self.assertIn("taken once", out)
+        import shutil
+        shutil.rmtree(self.p.run / "evidence" / "demo-before")
+        self.assertEqual(self.p.demo("before")[0], 0)  # retaken after the analyst's dispatch
+        self.p.demo("after")
+        self.assertIn("after work started", self.details(self.p.gate("p7")[2]))
+
+    def test_no_plan(self):
+        (self.p.run / "demo-plan.json").unlink()
+        code, out = self.p.demo("after")
+        self.assertNotEqual(code, 0)
+        self.assertIn("demo-plan.json", out)
 
 
 class LoopAndWaiver(Base):
@@ -842,14 +887,14 @@ class RunLog(Base):
         self.p.gate("p1")
         self.p.dispatch("be-tester")
         kinds = [e["event"] for e in self.p.events()]
-        self.assertEqual(kinds, ["dispatch", "return", "gate", "mark", "dispatch", "return"])
-        self.assertEqual(self.p.events()[2]["gate"], "p1")
+        self.assertEqual(kinds, ["capture", "dispatch", "return", "gate", "mark", "dispatch", "return"])
+        self.assertEqual(self.p.events()[3]["gate"], "p1")
 
     def test_tampering_breaks_the_chain(self):
         self.p.gate("p1")
         p = self.p.run / "run-log.jsonl"
         lines = p.read_text().splitlines()
-        p.write_text("\n".join([lines[0].replace("requirements", "something else")] + lines[1:]) + "\n")
+        p.write_text("\n".join(lines[:1] + [lines[1].replace("requirements", "something else")] + lines[2:]) + "\n")
         rep = self.p.gate("p1")[2]
         self.assertEqual(self.p.status(rep, "LOG.valid"), "fail")
         p.write_text("\n".join(lines[1:]) + "\n")  # deleting a line also breaks it

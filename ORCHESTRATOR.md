@@ -70,6 +70,24 @@ The disk is the run's memory; your context is its most expensive resource.
 4. `handoff.md` holds one current section per role (`HANDOFF.md` §1). When `CTX.handoff` fails,
    trim it yourself to each role's latest entry: it is bookkeeping, like `state.json`.
 
+## Demo
+
+The user sees the goal's difference without reading a report (Constitution §1, §7.4): its real
+entry point, captured by a script, before the work and after it.
+
+1. **Before** — at kickoff of a Prototype or Full development run, before the first dispatch:
+   write `<run-dir>/demo-plan.json` from the goal's check, shaped like a capture plan (frontend
+   PLAYBOOK §3H) without `row` and `state`: `web` (the page and the steps the user would take),
+   `terminal` (the command; output, exit code and seconds are kept) or `manual` (files an
+   instrument produced). Then `gate.py demo before`. A step that cannot run yet is the point: the
+   page is captured as it is.
+2. **After** — on the final code, before the Acceptance gate: `gate.py demo after`, again whenever
+   the product changes.
+3. The Acceptance gate (`DEMO`) fails when either is missing, the before was taken after work
+   started, the product changed after the after, an entry point captured before is missing after,
+   or the two are byte-identical. A cross-stack run keeps one demo, in the backend run dir.
+4. The Acceptance stop opens with the two side by side, with their paths.
+
 ## Git
 
 One run, one branch, one pull request; the user reviews and merges it on the host. Git writes are
