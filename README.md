@@ -105,10 +105,11 @@ It backs up what it will replace to `~/.claude/backup-harness-<date>.tgz`, copie
 `~/.claude` and installs `playwright-core` for the gates. You should see
 `done. Restart Claude Code, then run /route in a project.`
 
-**What install changes.** Files in `~/.claude` with the same names (`CONSTITUTION.md`,
-`ORCHESTRATOR.md`, and the folders `agents/`, `commands/`, `backend/`, `frontend/`, `route/`,
-`gates/`, `hooks/`, `skills/design-taste/`) are replaced after the backup; nothing else there is
-touched; `settings.json` is not changed (an update removes the hook entries earlier versions put
+**What install changes.** After the backup, `CONSTITUTION.md`, `ORCHESTRATOR.md` and the folders
+`backend/`, `frontend/`, `route/`, `gates/`, `hooks/`, `skills/design-taste/` in `~/.claude` are
+replaced. In `agents/` and `commands/` only the harness's own files are written, and a file an
+earlier version installed is removed when the harness no longer ships it (listed in
+`~/.claude/.harness-files`); your own agents and commands there stay. Nothing else is touched; `settings.json` is not changed (an update removes the hook entries earlier versions put
 there).
 
 **Where the safety hooks apply.** Only in harness sessions: inside every `be-*` and `fe-*` agent,

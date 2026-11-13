@@ -33,6 +33,7 @@ dispatched and not returned; `mark`, `capture` and every check gate wait for it 
 Reports: <run-dir>/gates/<phase>-<utc>.json and <phase>-latest.json.
 """
 import argparse
+import hashlib
 import json
 import pathlib
 import re
@@ -377,8 +378,21 @@ def main():
     apply_waivers(results, ctx.gdir)
     overall = FAIL if any(r["status"] == FAIL for r in results) else PASS
 
+    # A fix round is a failure on a different tree or with different failures; re-running the gate
+    # on the same tree (to look again, or after a waiver) is not another round (H12).
     attempts = read_json(ctx.gdir / "attempts.json", {})
-    attempts[a.phase] = attempts.get(a.phase, 0) + 1 if overall == FAIL else 0
+    last, runs = attempts.setdefault("_last", {}), attempts.setdefault("_runs", {})
+    if overall == FAIL:
+        failing = sorted(r["id"] for r in results if r["status"] == FAIL)
+        books = {f"{ctx.run_rel}/{n}" for n in ("run-log.jsonl", "run-log.md", "state.json")}  # written by the run itself
+        tree = sorted((k, v) for k, v in ctx.snapshot().items() if k not in books)
+        sig = hashlib.sha256(json.dumps([failing, tree]).encode()).hexdigest()[:16]
+        if sig != last.get(a.phase):
+            attempts[a.phase] = attempts.get(a.phase, 0) + 1
+        last[a.phase], runs[a.phase] = sig, runs.get(a.phase, 0) + 1
+    else:
+        attempts[a.phase], runs[a.phase] = 0, 0
+        last.pop(a.phase, None)
     write_json(ctx.gdir / "attempts.json", attempts)
     cap = loop_cap(project, team)
     capped = overall == FAIL and attempts[a.phase] > cap
@@ -388,7 +402,8 @@ def main():
         if r["status"] == FAIL:
             by_owner.setdefault(r["owner"], []).append(r["id"])
     report = {"phase": a.phase, "time": utc_now(), "project": str(project), "run_dir": ctx.run_rel,
-              "overall": overall, "consecutive_failures": attempts[a.phase], "fix_round_cap": cap,
+              "overall": overall, "consecutive_failures": attempts[a.phase], "failed_runs": runs[a.phase],
+              "fix_round_cap": cap,
               "escalate": capped, "fail_by_owner": by_owner, "checks": results, "data": data}
     write_json(ctx.gdir / f"{a.phase}-{stamp()}.json", report)
     write_json(ctx.gdir / f"{a.phase}-latest.json", report)
@@ -409,7 +424,8 @@ def main():
         if capped:
             print(f"[gate] LOOP CAP: {attempts[a.phase] - 1} fix rounds used (cap {cap}). Escalate to the user.")
             return 3
-        print(f"[gate] fix round {attempts[a.phase]} of {cap}: send each failure to its owner, then re-run.")
+        print(f"[gate] fix round {attempts[a.phase]} of {cap} ({runs[a.phase]} failed runs on "
+              f"{attempts[a.phase]} distinct trees): send each failure to its owner, then re-run.")
         return 1
     return 0
 

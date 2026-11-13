@@ -640,13 +640,23 @@ class Demo(Base):
 
 class LoopAndWaiver(Base):
     def test_loop_cap_exit_3(self):
-        self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", "Say"))
-        codes = [self.p.gate("p1")[0] for _ in range(3)]
+        codes = []
+        for word in ("Say", "Tell", "Ask"):  # three fix attempts, each on a different tree
+            self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", word))
+            codes.append(self.p.gate("p1")[0])
         self.assertEqual(codes, [1, 1, 3])  # loops.max_rounds = 2
         self.p.write("docs/backend/01-requirements.md", REQS)
         self.assertEqual(self.p.gate("p1")[0], 0)
         self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", "Say"))
         self.assertEqual(self.p.gate("p1")[0], 1)  # counter reset after a pass
+
+    def test_rerun_on_the_same_tree_is_not_a_round(self):
+        """H12: looking again, or re-running after a waiver, does not push the step toward its cap."""
+        self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", "Say"))
+        codes = [self.p.gate("p1")[0] for _ in range(4)]
+        self.assertEqual(codes, [1, 1, 1, 1])
+        rep = json.loads((self.p.run / "gates" / "p1-latest.json").read_text())
+        self.assertEqual((rep["consecutive_failures"], rep["failed_runs"]), (1, 4))
 
     def redo(self, agent="be-architect", step="2"):
         return self.p.log("dispatch", "--agent", agent, "--model", "opus", "--step", step, "--note", "revise", "--redo")
@@ -970,6 +980,25 @@ class AutoLog(Base):
         self.p.write("web/app.js", "x")  # neither role may
         rep = self.p.gate("p4")[2]
         self.assertEqual(self.p.status(rep, "ROLE.shared"), "fail")
+
+
+class TestReuse(Base):
+    """H11: a green suite on an unchanged tree is not run again."""
+    def test_reused_until_the_tree_changes(self):
+        self.p.to_p4()
+        first = self.p.gate("p4")[2]
+        detail = lambda rep: " ".join(next(c for c in rep["checks"] if c["id"] == "CMD.test")["details"])
+        self.assertNotIn("reused", detail(first))
+        self.assertIn("reused the run of", detail(self.p.gate("p4")[2]))
+        self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# changed\n")
+        self.assertNotIn("reused", detail(self.p.gate("p4")[2]))
+
+    def test_red_is_always_rerun(self):
+        self.p.to_p4()
+        self.p.write("tests/test_calc.py", TESTS + "\n\ndef test_red():\n    assert False\n")
+        self.p.gate("p4")
+        rep = self.p.gate("p4")[2]
+        self.assertNotIn("reused", " ".join(next(c for c in rep["checks"] if c["id"] == "CMD.test")["details"]))
 
 
 class ToolDidNotRun(Base):

@@ -142,6 +142,9 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
 
 - **Gates:** `python3 ~/.claude/gates/gate.py <gate> --project <root>` (`--run-dir docs/<team>/<slug>`
   for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` round cap → the user · `2` config error · `4` busy: the other team has a writer out — wait for it.
+  A fix round is a failure on a changed tree or with changed failures: re-running a gate to look
+  again, or after a waiver, is not a round, and a green suite on an unchanged tree is reused
+  (`test_reuse_minutes`).
   `TOOL.*` means a checker produced no reading (it crashed or was not found): fix the tool, then
   read its result; it cannot be waived. `ROLE.shared` checks writers that were out together
   against their roles combined. Cross-stack runs keep one team's
