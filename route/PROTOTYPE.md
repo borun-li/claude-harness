@@ -42,8 +42,8 @@ First the demo's before (`~/.claude/ORCHESTRATOR.md` § Demo), unless the run al
 - **Rules for the engineer:** rough is right. Hard-coded or fake data, no tests, no design
   documents, no ids, no polish beyond what makes the main idea readable. It must start with one
   command, written at the top of `prototype/README.md` along with "throwaway, not product code".
-- Log it: `gate.py log dispatch --agent be-developer --model <m> --step 1b --note "prototype"` and its return.
-  No `mark` and no gate run for this phase.
+- Its brief's first line says `step 1b`; the hook logs it and its return. No gate runs for this
+  phase.
 
 ## 4. Show it and get confirmation
 

@@ -62,8 +62,8 @@ detected command once, confirm the ones that work yourself (logged), ask only ab
 ## 3. Phase flow
 
 A phase ends when its gate exits 0; phase numbers are the run log's `--step` (there is no Phase 3:
-it was merged into 2). `mark --role <agent>` before every writer; `mark --role be-reviewer` before
-each panel and re-check (§4.4). After any code change, `p4` then `p5`.
+it was merged into 2), named in each brief's first line; the hook marks each writer and the
+panel's coordinator (§4.4). After any code change, `p4` then `p5`.
 
 **Phase 1 — Requirements.** `be-analyst` takes a recommended default for every open question and
 declares fixtures (§3E). Its blocking questions go out with the prototype's intent questions; a fresh
@@ -158,8 +158,8 @@ Commands in `ORCHESTRATOR.md`. `p7` checks the trail follows §3's order.
 2. The handoff is `<run-dir>/handoff.md`, one current section per role; the code map is
    `docs/codemap.md` (`~/.claude/route/HANDOFF.md` §1, §7).
 3. Traceability ids are mandatory; an id-less document goes back once.
-4. Reviewers have Bash but no Write: mark before each panel and re-check (not before the
-   coordinator, which would hide the panel's changes); `p6` checks the tree is unchanged.
+4. Reviewers have Bash but no Write: the hook marks `be-reviewer` at the first reviewer dispatched
+   after a gate run, so the mark covers the whole panel; `p6` checks the tree is unchanged.
 
 ## 6. Risk and review panel
 

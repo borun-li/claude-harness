@@ -878,6 +878,126 @@ class TemplateExamples(Base):
         self.assertEqual(docs_failing, [])
 
 
+class AutoLog(Base):
+    """hooks/run-log.py → gate.py auto: dispatches and returns logged by hook, not by memory."""
+    def auto(self, event, payload):
+        payload = {"cwd": str(self.p.root), **payload}
+        r = subprocess.run([PY, str(GATE), "auto", event, "--project", str(self.p.root)],
+                           input=json.dumps(payload), capture_output=True, text=True)
+        return r.returncode, r.stdout + r.stderr
+
+    def dispatch(self, agent, first="You are {a} #1 — step 4, round 1.", **extra):
+        return self.auto("dispatch", {"hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {
+            "subagent_type": agent, "prompt": first.format(a=agent) + "\nTask: build the add function", **extra}})
+
+    def give_back(self, agent, report):
+        t = self.p.root / f"{agent}-transcript.jsonl"
+        t.write_text(json.dumps({"message": {"role": "assistant", "content": [
+            {"type": "tool_use", "name": "SubagentHandback", "input": {"message": report}}]}}) + "\n")
+        return self.auto("return", {"hook_event_name": "SubagentStop", "agent_type": agent,
+                                    "agent_transcript_path": str(t)})
+
+    def test_dispatch_marks_and_logs_then_return_closes_it(self):
+        self.assertEqual(self.dispatch("be-developer", model="sonnet")[0], 0)
+        ev = self.p.events()
+        self.assertEqual([e["event"] for e in ev[-2:]], ["mark", "dispatch"])
+        self.assertEqual((ev[-1]["agent"], ev[-1]["phase"], ev[-1]["model"], ev[-1]["note"]),
+                         ("be-developer", "4", "sonnet", "build the add function"))
+        self.assertTrue((self.p.run / "gates" / "snap-be-developer.json").exists())
+        self.give_back("be-developer", "files_changed: [calc/core.py]\nblocked_on: []\nhandoff: be-developer #1")
+        self.assertEqual({k: self.p.events()[-1][k] for k in ("event", "agent", "phase", "status", "note")},
+                         {"event": "return", "agent": "be-developer", "phase": "4", "status": "ok",
+                          "note": "be-developer #1"})
+        self.dispatch("be-architect")
+        self.give_back("be-architect", "blocked_on: [REQ-002 is ambiguous]")
+        self.assertEqual(self.p.events()[-1]["status"], "blocked")
+
+    def test_refusals(self):
+        code, out = self.dispatch("be-developer", first="Please build it.")
+        self.assertEqual(code, 2)
+        self.assertIn("step", out)
+        for _ in range(2):
+            self.assertEqual(self.dispatch("be-developer", first="You are {a} #2 — step 4, round 2.")[0], 0)
+        code, out = self.dispatch("be-developer", first="You are {a} #3 — step 4, round 3.")
+        self.assertEqual(code, 2)
+        self.assertIn("ROUND CAP", out)
+
+    def test_outside_a_run_nothing_is_logged(self):
+        n = len(self.p.events())
+        self.assertEqual(self.dispatch("general-purpose")[0], 0)
+        self.p.write("docs/backend/state.json", json.dumps(dict(STATE, status="accepted")))
+        self.assertEqual(self.dispatch("be-developer")[0], 0)
+        self.assertEqual(self.give_back("be-developer", "done")[0], 0)
+        self.assertEqual(len(self.p.events()), n)
+
+    def test_return_without_its_dispatch_is_ignored(self):
+        n = len(self.p.events())
+        self.give_back("be-tester", "tests written")  # e.g. one agent, one job, outside the flow
+        self.assertEqual(len(self.p.events()), n)
+
+    def test_continued_author_is_logged_as_a_redo(self):
+        self.dispatch("be-developer")
+        self.give_back("be-developer", "done")
+        session = self.p.root / "session.jsonl"
+        sub = self.p.root / "session" / "subagents"
+        sub.mkdir(parents=True)
+        (sub / "agent-a1.meta.json").write_text(json.dumps({"agentType": "be-developer", "finished": True}))
+        code, _ = self.auto("dispatch", {"hook_event_name": "PostToolUse", "tool_name": "SendMessage",
+                                         "transcript_path": str(session), "tool_input": {
+                                             "to": "a1", "message": "You are be-developer #1 — step 4, round 2."}})
+        self.assertEqual(code, 0)
+        ev = self.p.events()[-1]
+        self.assertEqual((ev["event"], ev["redo"], ev.get("continued")), ("dispatch", 1, True))
+
+    def test_panel_marks_its_coordinator_once(self):
+        for agent in ("be-review-behavior", "be-review-security", "be-reviewer"):
+            self.dispatch(agent, first="You are {a} #1 — step 6, round 1.")
+        marks = [e["role"] for e in self.p.events() if e["event"] == "mark"]
+        self.assertEqual(marks, ["be-reviewer"])
+
+    def test_writers_out_together_share_the_charge(self):
+        """H2: a tester and a developer dispatched in one message: neither is charged with the other's work."""
+        self.p.approve()
+        assert self.p.gate("baseline")[0] == 0
+        self.p.write("docs/backend/04-test-plan.md", PLAN)
+        self.dispatch("be-tester")
+        self.dispatch("be-developer")
+        self.p.write("tests/test_calc.py", TESTS + "\n\ndef test_more():\n    assert True\n")  # the tester's
+        self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# the developer's\n")
+        rep = self.p.gate("p4")[2]
+        self.assertEqual(self.p.status(rep, "ROLE.shared"), "pass")
+        self.assertNotIn("ROLE.tests", [c["id"] for c in rep["checks"]])
+        self.p.write("web/app.js", "x")  # neither role may
+        rep = self.p.gate("p4")[2]
+        self.assertEqual(self.p.status(rep, "ROLE.shared"), "fail")
+
+
+class ToolDidNotRun(Base):
+    """H6: a checker that crashed is not a checker that found something."""
+    def set_cmd(self, **cmds):
+        g = json.loads(self.p.read(".claude/gates.json"))
+        g["commands"].update(cmds)
+        self.p.write(".claude/gates.json", json.dumps(g))
+
+    def test_no_reading_is_its_own_failure_and_cannot_be_waived(self):
+        self.p.to_p4()
+        self.set_cmd(typecheck="echo 'a.py: error: Duplicate module named a'; "
+                               "echo 'Found 1 error in 1 file (errors prevented further checking)'; exit 2")
+        self.p.write("docs/backend/gates/waivers.json", json.dumps(
+            [{"check": "TOOL.typecheck", "approved_by": "user", "date": "2026-11-12", "reason": "x"}]))
+        rep = self.p.gate("p4")[2]
+        self.assertEqual(self.p.status(rep, "TOOL.typecheck"), "fail")
+        self.set_cmd(typecheck="echo 'calc/core.py:1: error: Missing return type'; echo 'Found 1 error in 1 file'; exit 1")
+        rep = self.p.gate("p4")[2]
+        self.assertEqual(self.p.status(rep, "CMD.typecheck"), "fail")
+        self.assertNotIn("TOOL.typecheck", [c["id"] for c in rep["checks"]])
+
+    def test_tests_that_never_ran(self):
+        self.p.to_p4()
+        self.set_cmd(test="echo 'ModuleNotFoundError: pytest'; exit 1")
+        self.assertEqual(self.p.status(self.p.gate("p4")[2], "TOOL.test"), "fail")
+
+
 class RunLog(Base):
     def test_every_gate_needs_the_log(self):
         (self.p.run / "run-log.jsonl").unlink()
