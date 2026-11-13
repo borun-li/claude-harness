@@ -27,7 +27,7 @@ Your ONLY job is to plan tests from the requirements and design, then show with 
 ## Output
 
 - Plan → `04-test-plan.md`; execute → test code and `05-test-report.md`.
-- Handoff entry and long output: `~/.claude/route/HANDOFF.md` §4 and §6.
+- Handoff entry, long output and the code map: `~/.claude/route/HANDOFF.md` §4, §6 and §7.
 - Return this summary only, with the fields of your job:
 
 ```

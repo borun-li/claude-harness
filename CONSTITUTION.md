@@ -132,8 +132,11 @@ A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4, 7 or 
 Knowledge lives on disk, not in an agent's context.
 
 1. **One dispatch, one fresh agent.** Every round, fix round and retry is a new agent. A returned
-   agent is never continued into another round. The one exception: an agent that returned
-   blocked on a question may be continued once, in the same round, to receive the answer.
+   agent is never continued into another round, with two exceptions: an agent that returned
+   blocked on a question may be continued once, in the same round, to receive the answer; and the
+   author of work being fixed or revised may be continued into that step's next rounds while its
+   context is still small, so it does not re-read what it already knows. Whoever judges the work
+   (reviewers, verifiers) is always a fresh agent.
 2. **Short briefs.** A dispatch names the task, the items, the evidence and the files by id and
    path. It never pastes documents, logs or earlier conversation.
 3. **Handoff notes.** Before returning, every agent leaves a dated handoff entry: who it is (role

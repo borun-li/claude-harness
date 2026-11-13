@@ -247,6 +247,7 @@ def main():
 
     results, data = PHASES[a.phase](ctx)
     results.append(checks.log_valid(ctx))
+    results += checks.context_files(ctx)
     apply_waivers(results, ctx.gdir)
     overall = FAIL if any(r["status"] == FAIL for r in results) else PASS
 

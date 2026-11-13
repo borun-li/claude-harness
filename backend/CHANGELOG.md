@@ -2,6 +2,40 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour or new role · major = changed phase flow or artifact contract.
 
+## 5.1.0 — 2026-11-12 — a fix goes back to its author
+
+Minor. Shared with frontend 10.1.0.
+- Constitution §8.1 amended: the author of work being fixed or revised may be continued into that
+  step's next rounds while its context is still small, so it does not re-read what it already
+  knows. Whoever judges the work (reviewers, verifiers) is always a fresh agent. The exception for
+  an agent blocked on a question stays.
+- The orchestrator sends a fix back to its author by `SendMessage`, still logged `log dispatch
+  --redo`, with only the round, the items, their evidence and the files changed since it returned.
+- `no-agent-continuation.py`: authors (`be-analyst`, `be-architect`, `be-developer`, `be-tester`,
+  `fe-ux`, `fe-ui`, `fe-engineer`) may be continued up to `loops.max_rounds` times while their last
+  request was at most `loops.continue_max_context` tokens (default 200000); judges once, to receive
+  an answer. Refused → a fresh agent with the reading list.
+
+## 5.0.0 — 2026-11-12 — a code map, a reading list, a handoff of the current state
+
+Major: `handoff.md` changes from an append-only log to one section per role. Shared with frontend 10.0.0.
+- A code map, `docs/codemap.md`: one per project, shared by both teams, at most 200 lines; per
+  module what it does, its entry, users, invariants, tests and traps. Every agent reads it before
+  opening code. The first role that reads code creates it when it is missing; a role that adds,
+  moves or renames a file, or changes a module's entry or invariants, updates it in the same round.
+  It is a pointer, not evidence: the code wins and the agent fixes the map.
+- The brief's reading list: `Read:` names the code map, then the `file:line` this item touches,
+  from its design item, queue row or finding, and the last entry's `Next agent reads`. Agents read
+  the items a brief names rather than whole documents, and name what they read beyond the list.
+- `handoff.md` keeps the current state only: one section per role, that role's latest entry, plus
+  the orchestrator's; a returning agent replaces its section, and the history is in git and the
+  run log. Entries gain `Read beyond the list` and `Next agent reads`, at most 20 lines. The
+  orchestrator trims a run still on the old append-only log.
+- New gate checks on every gate run, both teams: `CTX.codemap` (every backticked path exists, within
+  its cap; owed by the latest role that reads code, never by designers or reviewers) and
+  `CTX.handoff` (one section per role, each within 20 lines). Caps: `doc_budgets.codemap_lines`,
+  `doc_budgets.handoff_section_lines`.
+
 ## 4.2.0 — 2026-11-12 — report what the user can see, as it happens
 
 Minor. Shared with frontend 9.3.0.

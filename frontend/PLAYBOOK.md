@@ -210,7 +210,8 @@ the steps. Not a stop; what the user says becomes a DFB or an increment.
 ## 4. Rules in every phase
 
 1. No phase starts without its upstream artifact.
-2. The handoff log is `<run-dir>/handoff.md` (cross-stack: the backend run dir's).
+2. The handoff is `<run-dir>/handoff.md` (cross-stack: the backend run dir's), one current section
+   per role; the code map is `docs/codemap.md` (`~/.claude/route/HANDOFF.md` §1, §7).
 3. Reviewers hold Bash: `fe-review` checks the tree is unchanged outside the run dir and tests;
    role checks ignore the other team's run dir.
 

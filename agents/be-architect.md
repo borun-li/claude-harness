@@ -19,7 +19,7 @@ Your ONLY job is to decide how the requirements are built — components, data m
 
 ## Input
 
-- `01-requirements.md` in full, then the codebase: structure, conventions, dependencies, build.
+- `01-requirements.md` in full, then the code map and the code the requirements touch: structure, conventions, dependencies, build.
 - For a revision: the design-review points. For an amendment: the REQ the analyst says the design misses, or the developer's report that it cannot be built.
 - Bar: `~/.claude/backend/QUALITY-BARS.md` § Phase 2. Structure: templates `02` and `03` in `~/.claude/backend/templates/`; imitate `templates/examples/`.
 - Called directly, outside a team run: the user's words set the scope.
@@ -27,7 +27,7 @@ Your ONLY job is to decide how the requirements are built — components, data m
 ## Output
 
 - `02-architecture.md`, then `03-detailed-design.md`, in the same dispatch, at the paths the dispatch names.
-- Handoff entry and long output: `~/.claude/route/HANDOFF.md` §4 and §6.
+- Handoff entry, long output and the code map: `~/.claude/route/HANDOFF.md` §4, §6 and §7.
 - Return this summary only:
 
 ```

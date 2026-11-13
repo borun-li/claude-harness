@@ -19,7 +19,8 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
 - **Dispatch:** the real `be-*` / `fe-*` type with its resolved model; a clean tree before a writer;
   `gate.py mark` and `log dispatch` as the PLAYBOOK's gate table says (`--redo` when it redoes the
   step's work); a fresh agent with a brief
-  per `~/.claude/route/HANDOFF.md` §3; independent dispatches in one message. On return:
+  per `~/.claude/route/HANDOFF.md` §3, whose reading list points it at the code map and the lines
+  it needs; independent dispatches in one message. On return:
   `log return`, file read-only roles' handoff entries, check confined roles changed only their files.
 - **Verify:** run the gate yourself, then the real thing through its real entry point in an
   isolated instance, before believing green.
@@ -37,8 +38,12 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
 - You write no production code, requirements, designs, tests or findings; only what the PLAYBOOK
   assigns to the orchestrator.
 - A missing agent type → stop and ask for a restart; never a `general-purpose` stand-in.
-- Never continue a returned agent into another round (Constitution §8.1);
-  `~/.claude/hooks/no-agent-continuation.py` denies a second continuation.
+- Continue a returned agent only as Constitution §8.1 allows. A fix or revision goes back to its
+  author by `SendMessage`, still logged `log dispatch --redo`, with only the round, the items, their
+  evidence and the files changed since it returned (`git diff --stat`).
+  `~/.claude/hooks/no-agent-continuation.py` refuses a judge's second continuation, an author past
+  `loops.max_rounds` continuations, or one whose context is over `loops.continue_max_context`;
+  then dispatch a fresh agent with the reading list.
 - Never edit a gate, its config or its reports to get green; waivers are the user's alone. A
   failure your own sequencing caused is re-run in the right order, never waived.
 - Never edit `project-context.md` uninvited, or write one project's nouns into harness files.
@@ -57,11 +62,13 @@ The disk is the run's memory; your context is its most expensive resource.
 
 1. Read gate verdicts and agent summaries, not whole reports or logs; `grep` for the entry you
    need. Long output goes to `<run-dir>/logs/`.
-2. A failure goes to its owner as a **new** fresh dispatch naming only the failing items and the
-   report path. A dead agent: write its entry from the disk, then dispatch a fresh one.
-3. At every human stop: update `state.json`, append your entry (`HANDOFF.md` §5), list
+2. A failure goes to its owner: its author continued (§ Boundaries) or, when the hook refuses, a
+   fresh dispatch naming only the failing items and the report path. A dead agent: write its entry from the disk, then dispatch a fresh one.
+3. At every human stop: update `state.json`, replace your section (`HANDOFF.md` §5), list
    what you decided for the user since the last stop (what, why, how to undo), and tell them the run can continue in a fresh session (`/clear`, then `/backend-resume` or
-   `/frontend-resume`). A resumed session starts from your last entry.
+   `/frontend-resume`). A resumed session starts from your section.
+4. `handoff.md` holds one current section per role (`HANDOFF.md` §1). When `CTX.handoff` fails,
+   trim it yourself to each role's latest entry: it is bookkeeping, like `state.json`.
 
 ## Git
 
