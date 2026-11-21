@@ -14,7 +14,9 @@ REQUIRED = {
     "mark": ("role",),
     "approve": ("by", "fixtures"),
     "capture": ("round", "captures"),
+    "void": ("voids", "by", "note"),  # the log is append-only: a wrong entry is voided, never edited
 }
+VOIDABLE = ("dispatch", "return", "human", "decision")
 ALLOWED = {"status": {"ok", "blocked", "failed"},
            "stop": {"Prototype", "Plan", "Acceptance", "conditional", "UX", "UI", "Budget"},
            "decision": {"approved", "changes", "rejected", "answered"}}
@@ -39,9 +41,16 @@ def read(path):
     return out
 
 
+def events(path):
+    """The log's events as the gates count them: voided entries and the voids themselves left out."""
+    evs = [ev for _, ev in read(path)]
+    gone = {ev.get("voids") for ev in evs if ev.get("event") == "void"}
+    return [ev for ev in evs if ev.get("event") != "void" and ev.get("seq") not in gone]
+
+
 def problems(path):
     """Schema and hash-chain problems; empty list means the log is intact."""
-    found, prev = [], GENESIS
+    found, prev, seen = [], GENESIS, set()
     for i, (raw, ev) in enumerate(read(path), 1):
         kind = ev.get("event")
         if kind not in REQUIRED:
@@ -50,6 +59,10 @@ def problems(path):
             found += [f"line {i} ({kind}): missing {k}" for k in REQUIRED[kind] if ev.get(k) in (None, "")]
             found += [f"line {i} ({kind}): {k}={ev[k]!r} not in {sorted(v)}" for k, v in ALLOWED.items()
                       if kind in ("return", "human") and k in ev and k in REQUIRED[kind] and ev[k] not in v]
+            if kind == "void" and ev.get("voids") not in seen:
+                found.append(f"line {i} (void): voids #{ev.get('voids')}, which is not an earlier voidable entry")
+        if kind in VOIDABLE:
+            seen.add(ev.get("seq"))
         if ev.get("prev") != prev or ev.get("seq") != i:
             found.append(f"line {i}: chain broken (edited, removed or reordered)")
         prev = _digest(raw)
@@ -79,7 +92,7 @@ def append(path, event, **fields):
 def rounds(path):
     """({(step, agent): redo rounds used}, {step: extra caps the user granted})."""
     used, granted = {}, {}
-    for _, ev in read(path):
+    for ev in events(path):
         if ev.get("event") == "dispatch" and ev.get("redo"):
             key = (str(ev.get("phase")), ev.get("agent"))
             used[key] = used.get(key, 0) + 1
@@ -92,16 +105,21 @@ def rounds(path):
 def timeline(path):
     """Markdown timeline of the log."""
     lines = ["# Run log", "", "| # | Time (UTC) | Event | Who | What | Result |", "|---|---|---|---|---|---|"]
-    for _, ev in read(path):
+    rows = [ev for _, ev in read(path)]
+    gone = {ev.get("voids") for ev in rows if ev.get("event") == "void"}
+    for ev in rows:
         k = ev["event"]
         who = ev.get("agent") or ev.get("role") or ev.get("by") or ("gate" if k == "gate" else "")
         what = {"gate": ev.get("gate"), "human": f"{ev.get('stop')} stop", "mark": "snapshot",
+                "void": f"voids #{ev.get('voids')}",
                 "capture": f"evidence round {ev.get('round')}, {ev.get('captures')} captures",
                 "approve": ", ".join(ev.get("fixtures", []))}.get(k, "")
         what = " · ".join(x for x in (what, f"phase {ev['phase']}" if ev.get("phase") else "",
                                       f"round {ev['redo']}" if ev.get("redo") else "", ev.get("model", ""),
                                       ev.get("note", "")) if x)
         result = ev.get("overall") or ev.get("status") or ev.get("decision") or ""
+        if ev["seq"] in gone:
+            result = f"~~{result or k}~~ voided"
         fails = ev.get("fails")
         if fails:
             result += " — " + "; ".join(f"{o}: {', '.join(ids)}" for o, ids in fails.items())

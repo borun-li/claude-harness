@@ -75,7 +75,7 @@ def main() -> int:
         expect(n + " Bash", hooked(fm, "Bash") == {GIT_ORCH, KILL})
         expect(n + " SendMessage", hooked(fm, "SendMessage") == {CONT})
         expect(n + " Agent", hooked(fm, "Agent") == {RUNLOG + " dispatch"})
-        expect(n + " SendMessage after", hooked(fm, "SendMessage", "PostToolUse") == {RUNLOG + " dispatch"})
+        expect(n + " no PostToolUse", hooked(fm, "SendMessage", "PostToolUse") == set())  # logged by CONT
 
     def entry(matcher, cmd):
         return {"matcher": matcher, "hooks": [{"type": "command", "command": cmd}]}

@@ -19,11 +19,6 @@ hooks:
       hooks:
         - type: command
           command: python3 "$HOME/.claude/hooks/run-log.py" dispatch
-  PostToolUse:
-    - matcher: SendMessage
-      hooks:
-        - type: command
-          command: python3 "$HOME/.claude/hooks/run-log.py" dispatch
 ---
 
 > **Read `~/.claude/CONSTITUTION.md` first. It overrides this file; on conflict, follow it and report the conflict.**

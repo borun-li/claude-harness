@@ -58,13 +58,7 @@ def _blocks(text, prefix):
     return {k: v[0] for k, v in docs.id_blocks(text or "", prefix).items()}
 
 
-def _role_if(ctx, role):
-    """Role rules when `role` is the most recent dispatch; nothing otherwise."""
-    try:
-        latest = checks._latest_writer(ctx)
-    except ConfigError:
-        return []
-    return checks.role_checks(ctx)[0] if latest["role"] == role else []
+_role_if = checks.role_if
 
 
 def _prose(ctx, cid, text, owner):
@@ -217,7 +211,7 @@ def _figma(ctx, owner):
     """Figma calls logged on returns vs. the run budget (PLAYBOOK §1E)."""
     s = _state_json(ctx)
     budget = (s.get("figma") or {}).get("budget")
-    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
+    events = runlog.events(ctx.run / "run-log.jsonl")
     used = sum(int(ev.get("figma_calls") or 0) for ev in events if ev["event"] == "return")
     if budget is None:
         return (na("FE.figma", f"No Figma budget set; {used} calls logged", owner) if not used else
@@ -491,7 +485,7 @@ def build(ctx):
     one_stop = _state_json(ctx).get("design_stops") in (0, 1)
     code = [p for p in changed if not ctx.is_doc(p) and not ctx.is_test(p)]
     ui_ok = any(ev["event"] == "human" and ev["stop"] == "UI" and ev["decision"] == "approved"
-                for _, ev in runlog.read(ctx.run / "run-log.jsonl"))
+                for ev in runlog.events(ctx.run / "run-log.jsonl"))
     early = (bad("FE.observables", "No product code before the design is confirmed (Constitution §4.2; "
                  "PLAYBOOK Phase 2)", "orchestrator", code) if one_stop and code and not ui_ok
              else na("FE.observables", "Before the Prototype stop: scaffold and prototype only", "fe-engineer"))
@@ -682,7 +676,7 @@ def _matrix(ctx, verdicts):
 
 def _trail(ctx):
     """Frontend run-log trail (PLAYBOOK §3G)."""
-    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
+    events = runlog.events(ctx.run / "run-log.jsonl")
     problems = checks._trail_common(events)
 
     def first(pred):

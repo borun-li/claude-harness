@@ -79,6 +79,18 @@ def main() -> int:
         run("dispatch", agent("You are be-developer #2 — step 4, round 2."))
         expect("settled run: nothing logged", len(events()) == n)
 
+    with tempfile.TemporaryDirectory() as d:  # the log cannot be written: say so, never stay silent
+        (pathlib.Path(d) / "docs" / "backend").mkdir(parents=True)
+        (pathlib.Path(d) / "docs" / "backend" / "state.json").write_text(json.dumps({"status": "in_progress"}))
+        (pathlib.Path(d) / "docs" / "backend" / "run-log.jsonl").mkdir()
+        code, out = run("dispatch", {"cwd": d, "hook_event_name": "PreToolUse", "tool_name": "Agent", "tool_input": {
+            "subagent_type": "be-tester", "prompt": "You are be-tester #1 — step 4, round 1."}})
+        o = json.loads(out) if out.strip() else {}
+        expect("unlogged dispatch: allowed, reported to user and orchestrator",
+               code == 0 and "NOT written" in o.get("systemMessage", "")
+               and "NOT written" in o.get("hookSpecificOutput", {}).get("additionalContext", "")
+               and "permissionDecision" not in o.get("hookSpecificOutput", {}))
+
     print("%d cases, %d failures" % (cases, failures))
     return 1 if failures else 0
 

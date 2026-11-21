@@ -2,6 +2,32 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour or new role · major = changed phase flow or artifact contract.
 
+## 8.0.0 — 2026-11-21 — no false greens, a run log that follows the run
+
+Major: `waivers.json` gains `tests` for test-reporting checks. Shared with frontend 13.0.0.
+- **Waivers name their tests.** A waiver of a check that reports failing tests (`CMD.test`,
+  `P5.tc-results`) lists them in `tests`; it covers only those, so a new failure, a fallen test
+  total or more skips still fails. A waiver without `tests` no longer covers such a check.
+- **Not checked is not passed.** Every gate ends with its pass / fail / waived / not-checked counts
+  and names each `N/A` check. `P5.report-honest` is `N/A` when the run observed no per-test
+  results, instead of accepting every reported pass. A reused green test run is shown on a pass too,
+  with the time it ran.
+- **Subagents cannot run the gates.** The git hook denies an agent any command that executes
+  `gate.py`; marks, rounds and approvals are the orchestrator's.
+- **Analysts and architects have a file scope** (`ROLE.doc-scope`): documents, plus fixture
+  candidates for the analyst; checked at `p1`, `p2` and `fe-product`. A role with no rules no longer
+  lets every change through when writers are out together.
+- **The run log follows the run.** Hook entries go to the open run, also a second feature's
+  `docs/<team>/<slug>/`; two open runs of one team refuse the dispatch until one is closed. A `be-*`
+  agent working in a frontend-only run (Phase 0, backend-side rows) logs in the frontend run, and a
+  return goes to the run that holds its dispatch.
+- **Continuations are logged** before the message is sent, by the continuation hook, and count
+  against the round cap like any dispatch; the `PostToolUse(SendMessage)` hook is gone.
+- **An event the hook could not log is reported** to the orchestrator and the user at once.
+- **`log void --seq <n>`** takes a wrong entry out of every count (the log stays append-only). A
+  manual `log dispatch` that copies an open one is refused (`--parallel` for a second agent out on
+  purpose), and so is a `log return` with no open dispatch.
+
 ## 7.1.0 — 2026-11-12 — install leaves your files alone; gates stop recounting
 
 Minor. Shared with frontend 12.1.0.

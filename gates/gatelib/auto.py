@@ -16,10 +16,6 @@ COORDINATORS = {"be": "be-reviewer", "fe": "fe-reviewer"}
 FIRST_LINE = "You are <agent> #<n> — step <s>, round <r>."
 
 
-def team(agent):
-    return "backend" if agent.startswith("be-") else "frontend"
-
-
 def coordinator(agent):
     """The review coordinator whose mark guards the tree for this reviewer, or None."""
     if agent in COORDINATORS.values() or agent.startswith(("be-review-", "fe-review-")):

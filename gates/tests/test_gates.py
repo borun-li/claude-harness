@@ -659,7 +659,10 @@ class LoopAndWaiver(Base):
         self.assertEqual((rep["consecutive_failures"], rep["failed_runs"]), (1, 4))
 
     def redo(self, agent="be-architect", step="2"):
-        return self.p.log("dispatch", "--agent", agent, "--model", "opus", "--step", step, "--note", "revise", "--redo")
+        r = self.p.log("dispatch", "--agent", agent, "--model", "opus", "--step", step, "--note", "revise", "--redo")
+        if r[0] == 0:  # each round returns before the next is dispatched
+            self.p.log("return", "--agent", agent, "--step", step, "--status", "ok", "--note", "revised")
+        return r
 
     def test_redo_rounds_capped_until_the_user_says_yes(self):
         self.assertEqual(self.redo()[0], 0)
@@ -685,6 +688,7 @@ class LoopAndWaiver(Base):
                                    "--note", "another item")
             self.assertEqual(code, 0, out)
             self.assertNotIn("round", out)
+            self.p.log("return", "--agent", "be-developer", "--step", "4", "--status", "ok", "--note", "built")
 
     def test_project_sets_its_own_cap(self):
         self.p.write(".claude/backend.json", json.dumps({"loops": {"max_rounds": 3}}))
@@ -980,6 +984,46 @@ class AutoLog(Base):
         self.p.write("web/app.js", "x")  # neither role may
         rep = self.p.gate("p4")[2]
         self.assertEqual(self.p.status(rep, "ROLE.shared"), "fail")
+
+
+    def test_second_feature_run_gets_its_own_log(self):
+        """G1: a run in docs/backend/<slug>/ is found once the root run is accepted."""
+        self.p.write("docs/backend/state.json", json.dumps(dict(STATE, status="accepted")))
+        self.p.write("docs/backend/feat2/state.json", json.dumps(STATE))
+        self.assertEqual(self.dispatch("be-developer")[0], 0)
+        self.give_back("be-developer", "handoff: be-developer #1")
+        slug = self.p.root / "docs/backend/feat2/run-log.jsonl"
+        evs = [json.loads(l) for l in slug.read_text().splitlines()]
+        self.assertEqual([e["event"] for e in evs], ["mark", "dispatch", "return"])
+
+    def test_two_open_runs_of_a_team_are_refused(self):
+        self.p.write("docs/backend/feat2/state.json", json.dumps(STATE))
+        code, out = self.dispatch("be-developer")
+        self.assertEqual(code, 2)
+        self.assertIn("several backend runs are open", out)
+
+    def test_backend_agent_in_a_frontend_only_run(self):
+        """G1: be-analyst (Phase 0) and be-developer (backend-side rows) of a frontend run log there."""
+        self.p.write("docs/backend/state.json", json.dumps(dict(STATE, status="accepted")))
+        self.p.write("docs/frontend/state.json", json.dumps({"status": "building", "goal": STATE["goal"]}))
+        n = len(self.p.events())
+        self.assertEqual(self.dispatch("be-analyst", first="You are {a} #1 — step 0, round 1.")[0], 0)
+        self.give_back("be-analyst", "handoff: be-analyst #1")
+        fe = [json.loads(l) for l in (self.p.root / "docs/frontend/run-log.jsonl").read_text().splitlines()]
+        self.assertEqual([(e["event"], e.get("agent") or e.get("role")) for e in fe],
+                         [("mark", "be-analyst"), ("dispatch", "be-analyst"), ("return", "be-analyst")])
+        self.assertEqual(len(self.p.events()), n)
+
+    def test_continuation_named_by_the_continuation_hook(self):
+        """The continuation hook passes the agent type it read while the agent was still finished."""
+        self.dispatch("be-developer")
+        self.give_back("be-developer", "done")
+        code, _ = self.auto("dispatch", {"hook_event_name": "PreToolUse", "tool_name": "SendMessage",
+                                         "harness_agent_type": "be-developer", "tool_input": {
+                                             "to": "a1", "message": "You are be-developer #1 — step 4, round 2."}})
+        self.assertEqual(code, 0)
+        ev = self.p.events()[-1]
+        self.assertEqual((ev["event"], ev["redo"], ev.get("continued")), ("dispatch", 1, True))
 
 
 class TestReuse(Base):
@@ -1327,3 +1371,93 @@ if __name__ == "__main__":
     res = unittest.main(exit=False, verbosity=1).result
     print(f"{res.testsRun} cases, {len(res.failures) + len(res.errors)} failures")
     sys.exit(0 if res.wasSuccessful() else 1)
+
+
+class SessionDFixes(Base):
+    """False greens, scoped waivers, role scope of document writers, the void entry."""
+    def set_cmd(self, **cmds):
+        g = json.loads(self.p.read(".claude/gates.json"))
+        g["commands"].update(cmds)
+        self.p.write(".claude/gates.json", json.dumps(g))
+
+    def waive(self, check, **extra):
+        self.p.write("docs/backend/gates/waivers.json", json.dumps(
+            [{"check": check, "approved_by": "user", "date": "2026-11-21", "reason": "known red", **extra}]))
+
+    def test_waiver_covers_only_the_tests_it_names(self):
+        self.p.to_p4()
+        self.p.write("tests/test_red.py", "def test_red_one():\n    assert False\n")
+        self.waive("CMD.test")
+        rep = self.p.gate("p4")[2]
+        self.assertEqual(self.p.status(rep, "CMD.test"), "fail")
+        self.assertIn("lists no tests", " ".join(next(c for c in rep["checks"] if c["id"] == "CMD.test")["details"]))
+        self.waive("CMD.test", tests=["test_red_one"])
+        self.assertEqual(self.p.status(self.p.gate("p4")[2], "CMD.test"), "waived")
+        self.p.write("tests/test_red.py", "def test_red_one():\n    assert False\n\n\ndef test_red_two():\n    assert False\n")
+        rep = self.p.gate("p4")[2]
+        self.assertEqual(self.p.status(rep, "CMD.test"), "fail")
+        self.assertIn("test_red_two", " ".join(next(c for c in rep["checks"] if c["id"] == "CMD.test")["details"]))
+
+    def test_not_checked_is_counted_and_reuse_is_shown_on_pass(self):
+        self.p.to_p4()
+        code, out, rep = self.p.gate("p4")
+        self.assertEqual(code, 0, out)
+        self.assertIn("not checked (N/A) is not a pass: ", out)
+        self.assertIn("CMD.lint", out.split("not checked (N/A) is not a pass: ")[1])
+        out = self.p.gate("p4")[1]
+        self.assertIn("reused the run of", out)
+
+    def test_report_honest_without_per_test_results_is_not_a_pass(self):
+        self.p.to_p5()
+        self.set_cmd(test="echo '4 passed in 0.01s'")
+        rep = self.p.gate("p5")[2]
+        self.assertEqual(self.p.status(rep, "P5.tc-results"), "unavailable")
+        self.assertEqual(self.p.status(rep, "P5.report-honest"), "unavailable")
+
+    def test_analyst_writes_documents_only(self):
+        self.p.dispatch("be-analyst")
+        self.p.write("docs/backend/notes.md", "x")
+        self.p.write("tests/fixtures/candidates/FX-001/input.json", "{}")
+        self.assertEqual(self.p.status(self.p.gate("p1")[2], "ROLE.doc-scope"), "pass")
+        self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# analyst\n")
+        self.p.write("tests/fixtures/approved/FX-001/expected.json", "{}")
+        rep = self.p.gate("p1")[2]
+        self.assertEqual(self.p.status(rep, "ROLE.doc-scope"), "fail")
+        bad = next(c for c in rep["checks"] if c["id"] == "ROLE.doc-scope")["details"]
+        self.assertEqual(sorted(bad), ["calc/core.py", "tests/fixtures/approved/FX-001/expected.json"])
+
+    def test_architect_out_with_a_developer_is_no_free_pass(self):
+        self.p.approve()
+        assert self.p.gate("baseline")[0] == 0
+        self.p.write("docs/backend/04-test-plan.md", PLAN)
+        for role, step in (("be-architect", "2"), ("be-developer", "4")):
+            self.p.gate("mark", "--role", role)
+            self.p.log("dispatch", "--agent", role, "--model", "opus", "--step", step, "--note", "work")
+        self.p.write("web/app.js", "x")  # neither an architect nor a developer may
+        self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.shared"), "fail")
+
+    def test_manual_log_refuses_copies_of_hook_entries(self):
+        base = ("--agent", "be-developer", "--model", "opus", "--step", "4", "--note", "build")
+        self.assertEqual(self.p.log("dispatch", *base)[0], 0)
+        code, out = self.p.log("dispatch", *base)
+        self.assertEqual(code, 2)
+        self.assertIn("already has an open dispatch", out)
+        self.assertEqual(self.p.log("dispatch", *base, "--parallel")[0], 0)
+        code, out = self.p.log("return", "--agent", "be-tester", "--step", "4", "--status", "ok", "--note", "x")
+        self.assertEqual(code, 2)
+        self.assertIn("no open dispatch", out)
+
+    def test_void_takes_an_entry_out_of_every_count(self):
+        self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "4", "--note", "copy")
+        seq = self.p.events()[-1]["seq"]
+        code, out = self.p.log("void", "--seq", str(seq), "--by", "orchestrator", "--note", "duplicate of the hook's")
+        self.assertEqual(code, 0, out)
+        self.assertEqual(self.p.log("void", "--seq", str(seq), "--by", "o", "--note", "again")[0], 2)
+        gate_seq = next(e["seq"] for e in self.p.events() if e["event"] == "capture")
+        self.assertEqual(self.p.log("void", "--seq", str(gate_seq), "--by", "o", "--note", "x")[0], 2)
+        rep = self.p.gate("p1")[2]
+        self.assertEqual(self.p.status(rep, "LOG.valid"), "pass")
+        self.assertIn("voided", self.p.gate("timeline")[1])
+        # the voided dispatch leaves no writer out, so a fresh dispatch at that step is not a copy
+        self.assertEqual(self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "4",
+                                    "--note", "real")[0], 0)

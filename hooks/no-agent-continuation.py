@@ -16,11 +16,14 @@
 - 目标是**评判者**（审查员、``fe-tester``） → 只放行一次：因一个问题而 blocked，
   同一轮内把答案带给它。评判永远由没见过这份工作的新代理做。
 
+放行的续用由这里交给 ``run-log.py dispatch`` 记进运行日志（它拒绝时照样拒绝）。
+
 读不懂输入、找不到文件，一律放行 —— 钩子不该成为新的故障源。
 """
 import json
 import pathlib
 import re
+import subprocess
 import sys
 
 HARNESS_TYPE = re.compile(r"^(be|fe)-")
@@ -122,11 +125,30 @@ def main() -> int:
             }
         }))
         return 0
+    # 放行的续用也是一次派工：此刻 meta 里还是 finished，查得出角色，就在这里记日志
+    # （等 PostToolUse 时代理已恢复运行，角色查不出来，续用就漏记了）。run-log 拒绝时照样拒绝。
+    out = log_dispatch({**payload, "harness_agent_type": kind})
+    if (out.get("hookSpecificOutput") or {}).get("permissionDecision") == "deny":
+        print(json.dumps(out))
+        return 0
     try:
         ledger.write_text(str(used + 1))
     except Exception:
         pass
+    if out:
+        print(json.dumps(out))
     return 0
+
+
+def log_dispatch(payload) -> dict:
+    """交给 run-log.py dispatch，返回它的 JSON 输出（没有则为空）。"""
+    try:
+        p = subprocess.run([sys.executable, str(HERE / "run-log.py"), "dispatch"], input=json.dumps(payload),
+                           capture_output=True, text=True, timeout=150)
+        return json.loads(p.stdout) if p.stdout.strip() else {}
+    except Exception as e:
+        msg = f"run-log: this continuation was NOT written to the run log ({e}). Log it by hand: gate.py log dispatch …"
+        return {"systemMessage": msg, "hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": msg}}
 
 
 if __name__ == "__main__":

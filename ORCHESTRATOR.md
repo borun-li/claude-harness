@@ -46,7 +46,11 @@ and every dispatch goes through you. Team agents do not dispatch agents; their t
   `loops.max_rounds` continuations, or one whose context is over `loops.continue_max_context`;
   then dispatch a fresh agent with the reading list.
 - Never edit a gate, its config or its reports to get green; waivers are the user's alone. A
-  failure your own sequencing caused is re-run in the right order, never waived.
+  failure your own sequencing caused is re-run in the right order, never waived. On the user's yes
+  you write the waiver into `<run-dir>/gates/waivers.json`: `check`, `approved_by`, `date`,
+  `reason`, and for a check that names failing tests, `tests` (the ones they accepted). A new
+  failure is not covered.
+- Subagents never run `gate.py` (the git hook denies it): its marks, rounds and approvals are yours.
 - Never edit `project-context.md` uninvited, or write one project's nouns into harness files.
 - Git is guarded by `~/.claude/hooks/no-tree-restoring-git.py` (§ Git). Restore one file
   with `git show HEAD:<path> > <path>`; a clean baseline with `git worktree add <tmp> HEAD`; undo
@@ -144,13 +148,19 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
   for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` round cap → the user · `2` config error · `4` busy: the other team has a writer out — wait for it.
   A fix round is a failure on a changed tree or with changed failures: re-running a gate to look
   again, or after a waiver, is not a round, and a green suite on an unchanged tree is reused
-  (`test_reuse_minutes`).
+  (`test_reuse_minutes`; the report says so): start what the tests need outside the tree (a service,
+  a model) before the gate. `N/A` means not checked, never passed: the summary lists them; say so
+  when you report the gate.
   `TOOL.*` means a checker produced no reading (it crashed or was not found): fix the tool, then
   read its result; it cannot be waived. `ROLE.shared` checks writers that were out together
   against their roles combined. Cross-stack runs keep one team's
   writers out at a time.
 - **Run log** (`<run-dir>/run-log.jsonl`, hash-chained; add `--team frontend` in Frontend runs).
-  Dispatches, returns and marks are written by the hooks. By hand only: a dead agent's
+  Dispatches (continuations included), returns and marks are written by the hooks; one they could
+  not write is reported to you at once (`run-log: … NOT written`): log that one by hand. The gate
+  refuses a copy of an open dispatch (`--parallel` when a second one is out on purpose) and a return
+  with no open dispatch. A wrong entry is voided, never edited:
+  `log void --seq <n> --by <you> --note "<why>"`. By hand otherwise only: a dead agent's
   `log return --agent <a> --step <phase> --status failed --note "<what is on disk>"` ·
   `log human --stop Prototype|Plan|UX|UI|Acceptance|Budget|conditional --decision approved|changes|rejected|answered --by <user> --note "<what>"` ·
   `log decision --agent <a> --note "<what and why>"`.
