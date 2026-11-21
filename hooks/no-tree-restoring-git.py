@@ -17,6 +17,10 @@
 推本轮分支、开草稿 PR。子代理（agent frontmatter，``--role agent``）只读。
 推送和 PR 是对外动作，还要项目 ``.claude/gates.json`` 里有用户设的 ``"git": {"push": true}``。
 
+**门禁只归协调者。** 子代理不许运行 ``gate.py``：它写的是本轮的账本（标记、尝试次数、
+用户批准、夹具锁定），代理自己跑一次红的就耗掉一轮，跑 ``mark`` 还能让自己的改动躲过角色检查。
+读 gate.py 的源码不拦，只拦执行它。
+
 **这是防失误，不是防恶意。** 它靠解析命令行；刻意绕过（变量拼命令、脚本里调 git）
 拦不住。main 的最终保护是服务器端规则。没有 ``--role`` 时按 agent 处理（最严）。
 """
@@ -393,6 +397,26 @@ FOOTER = ("\n\n只读的 git 一律放行：status / diff / log / show / ls-file
           "如果你确实需要被拦的那一条，**说出来让人来跑**（在提示里打 `! <命令>`），不要绕过。")
 
 
+GATE_DENIED = ("门禁只由协调者运行（PLAYBOOK §3D）：gate.py 写的是本轮的账本（标记、轮次、批准），"
+               "子代理运行它会耗掉修复轮次、打乱角色检查。照你的 agent 文件交回结果和证据，"
+               "由协调者跑门禁。")
+_PYTHON = re.compile(r"(?:^|/)python[\d.]*$")
+_HEREDOC_BODY = re.compile(r"<<-?\s*[\"\']?(\w+)[\"\']?.*?\n\1\s*$", re.S | re.M)
+
+
+def runs_gate(command: str) -> bool:
+    """命令里有没有执行 gate.py：作为命令本身，或交给 python。引号去掉但内容保留
+    （``python3 "$HOME/.claude/gates/gate.py"`` 也算），heredoc 体不算。"""
+    for cmd in [command, *shell_payloads(command)]:
+        text = _HEREDOC_BODY.sub(" ", cmd).replace('"', " ").replace("'", " ")
+        for seg in _SPLIT.split(text):
+            toks = seg.split()
+            i = find_tool(toks, "gate.py")
+            if i is not None and (i == 0 or any(_PYTHON.search(t) for t in toks[:i])):
+                return True
+    return False
+
+
 def decide(command: str, cwd: str) -> str | None:
     for cmd in [command, *shell_payloads(command)]:
         for toks, d in segments(strip_data(cmd), cwd):
@@ -418,6 +442,11 @@ def main() -> int:
     if payload.get("tool_name") != "Bash":
         return 0
     command = str(payload.get("tool_input", {}).get("command", ""))
+    if ROLE == "agent" and runs_gate(command):
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": f"[agent] {GATE_DENIED}"}}, ensure_ascii=False))
+        return 0
     reason = decide(command, str(payload.get("cwd") or os.getcwd()))
     if reason:
         print(json.dumps({"hookSpecificOutput": {

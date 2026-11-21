@@ -172,7 +172,8 @@ def _tests(ctx, owner, baseline=None):
     detail = [f"$ {r['cmd']} -> exit {r['exit']} ({r['seconds']}s), log: {r['log']}",
               f"counts: {c if c is not None else 'not parsed'}", f"per-test results: {r['junit_note']}"]
     if reused:
-        detail.insert(0, f"reused the run of {reused}: same tree and command (test_reuse_minutes)")
+        detail.insert(0, f"reused the run of {reused}, not run now: same tree and command (test_reuse_minutes); "
+                         "anything outside the tree (a service, a model, a port) may differ")
     if r["exit"] != 0 and c is None:
         return bad("TOOL.test", "tests did not run: no per-test report and no summary line "
                    "(fix the runner before reading a result; not waivable)", owner, detail + r["tail"][-15:]), r
@@ -188,7 +189,10 @@ def _tests(ctx, owner, baseline=None):
         if skipped_now > skipped_then:
             problems.append(f"skipped/xfailed rose from {skipped_then} to {skipped_now}")
     if problems:
-        return bad("CMD.test", "; ".join(problems), owner, detail), r
+        res = bad("CMD.test", "; ".join(problems), owner, detail)
+        # What a waiver must name (gate.py apply_waivers): the failing tests, and nothing else wrong.
+        res["failed_tests"], res["other_problems"] = r["failed_tests"], [p for p in problems if p != "tests are red"]
+        return res, r
     return ok("CMD.test", "tests green", owner, detail), r
 
 
@@ -244,7 +248,7 @@ def _latest_writer(ctx):
 def _out_together(ctx, role):
     """Writers out in the same tree while `role` worked: dispatched before its latest mark and not
     yet returned then. Their changes cannot be told apart, so none of them is charged alone (H2)."""
-    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
+    events = runlog.events(ctx.run / "run-log.jsonl")
     at = max((i for i, ev in enumerate(events) if ev.get("event") == "mark" and ev.get("role") == role), default=None)
     open_ = {}
     for ev in events[:at] if at is not None else []:
@@ -267,7 +271,17 @@ def _may_change(ctx, role, path, d, plan):
         return not rewritten and (free or _mentioned(path, ctx.doc("03-queue.md") or ""))
     if role in ("fe-ux", "fe-ui"):
         return glob_match(path, [f"{ctx.run_rel}/**"])
-    return True
+    if role in DOC_WRITERS:
+        return _doc_writer_may(ctx, role, path)
+    return False
+
+
+# Analysts and architects write documents (the analyst also fixture candidates), never code or tests.
+DOC_WRITERS = ("be-analyst", "be-architect")
+
+
+def _doc_writer_may(ctx, role, path):
+    return ctx.is_doc(path) or (role == "be-analyst" and glob_match(path, [f"{_fx_cand(ctx)}/**"]))
 
 
 def _shared_check(ctx, together):
@@ -330,7 +344,21 @@ def role_checks(ctx):
         outside = [p for p in ch if not glob_match(p, [f"{ctx.run_rel}/**"])]
         return [bad("ROLE.designer-scope", f"{role} changed files outside {ctx.run_rel}/", role, outside)
                 if outside else ok("ROLE.designer-scope", f"{role} changed only design documents", role)], ch
+    if role in DOC_WRITERS:
+        outside = [p for p in ch if not _doc_writer_may(ctx, role, p)]
+        what = "documents and fixture candidates" if role == "be-analyst" else "documents"
+        return [bad("ROLE.doc-scope", f"{role} changed files other than {what}", role, outside) if outside
+                else ok("ROLE.doc-scope", f"{role} changed only {what}", role)], ch
     return [na("ROLE.none", f"No role rules for {role}", role)], ch
+
+
+def role_if(ctx, role):
+    """Role rules when `role` is the most recently marked writer; nothing otherwise."""
+    try:
+        latest = _latest_writer(ctx)
+    except ConfigError:
+        return []
+    return role_checks(ctx)[0] if latest["role"] == role else []
 
 
 def _baseline(ctx):
@@ -364,7 +392,7 @@ def demo(ctx, peer=None):
     if (peer and not (run / "demo-plan.json").exists() and (peer / "demo-plan.json").exists()
             and (read_json(peer / "state.json") or {}).get("status") != "accepted"):
         run = peer
-    probs = capture.demo_problems(ctx, run, [ev for _, ev in runlog.read(run / "run-log.jsonl")])
+    probs = capture.demo_problems(ctx, run, runlog.events(run / "run-log.jsonl"))
     where = run.relative_to(ctx.project)
     return (bad("DEMO", "No before/after evidence of the goal at its real entry point", "orchestrator", probs)
             if probs else ok("DEMO", f"Before and after in {where}/evidence/demo-*", "orchestrator"))
@@ -448,7 +476,7 @@ def open_writers(log_paths):
     out = []
     for path in log_paths:
         open_ = {}
-        for _, ev in runlog.read(path):
+        for ev in runlog.events(path):
             if ev.get("event") == "dispatch":
                 open_[ev["agent"]] = open_.get(ev["agent"], 0) + 1
             elif ev.get("event") == "return" and open_.get(ev.get("agent")):
@@ -476,7 +504,7 @@ def _log_trail(ctx, design_phases=("2", "3")):
     """Backend trail: the common checks, then the Plan approved before build and (full tier) the
     Prototype approved before design. design_phases: Phase 2 since 3.2.0, Phase 3 in older runs.
     The Frontend team has its own trail (frontend._trail)."""
-    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
+    events = runlog.events(ctx.run / "run-log.jsonl")
     owner, problems = "orchestrator", _trail_common(events)
     plan = next((e["seq"] for e in events if e["event"] == "human" and e["stop"] == "Plan"
                  and e["decision"] == "approved"), None)
@@ -514,6 +542,7 @@ def phase1(ctx, name="01-requirements.md"):
     res = [state(ctx), upstream(ctx, [name], owner)]
     if res[-1]["status"] == FAIL:
         return res, {}
+    res += role_if(ctx, owner)
     reqs = docs.requirements(text)
     live = {r: v for r, v in reqs.items() if not v["retired"]}
     dups = [r for r, v in reqs.items() if v["blocks"] > 1]
@@ -598,7 +627,7 @@ def _detailed_design(ctx):
 def phase2(ctx):
     """Phase 2 — Design: architecture, detailed design and fixture answers; writes the Plan review sheet."""
     res, data = [], {}
-    events = [ev for _, ev in runlog.read(ctx.run / "run-log.jsonl")]
+    events = runlog.events(ctx.run / "run-log.jsonl")
     early = _prototype_first(ctx, events, ("2", "3"))
     res.append(bad("P2.prototype-first", "Design started without an approved Prototype (route/PROTOTYPE.md §5)",
                    "orchestrator", early) if early else
@@ -1018,6 +1047,7 @@ def phase5(ctx):
         not_green = [f"{t}: {s}" for t, s in observed.items() if s != "passed"]
         res.append(bad("P5.tc-results", "Automated TCs not passing in this run", "be-tester", not_green)
                    if not_green else ok("P5.tc-results", "Every automated TC passed in this run", "be-tester"))
+        res[-1]["failed_tests"] = [t for t, st in observed.items() if st != "passed"]
     else:
         res.append(na("P5.tc-results", "Per-test results need a JUnit report (pytest, vitest, playwright, jest-junit, or gates.json junit)", "be-tester"))
 
@@ -1028,9 +1058,14 @@ def phase5(ctx):
                ok("P5.report-complete", "Every TC has a verdict in the report", "be-tester"))
     false_pass = [f"{t}: reported pass, observed {observed[t]}" for t, v in reported.items()
                   if v == "pass" and observed.get(t) not in (None, "passed")]
+    unseen = sorted(t for t, v in reported.items() if v == "pass" and tcs.get(t, {}).get("mode") == "automated"
+                    and t not in observed)
     res.append(bad("P5.report-honest", "Report claims passes this run did not observe (Constitution §2.3)",
                    "be-tester", false_pass) if false_pass else
-               ok("P5.report-honest", "Reported passes match observed results", "be-tester"))
+               na("P5.report-honest", "Reported passes could not be compared: this run observed no result for "
+                  "them (no per-test report)", "be-tester", unseen) if unseen and not observed else
+               ok("P5.report-honest", "Reported passes match observed results", "be-tester",
+                  [f"not observed this run: {t}" for t in unseen]))
     res.append(_fixture_integrity(ctx, "P5.fixtures", "be-tester"))
     use, fx_observed = _fixture_use(ctx, r.get("cases") if r else None)
     res.append(use)

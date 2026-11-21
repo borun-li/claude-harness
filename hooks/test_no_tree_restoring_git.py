@@ -114,6 +114,14 @@ CASES: list[tuple[str, bool, bool]] = [
     ('git -C "some dir" reset --hard', D, D),          # 引号目录不能让子命令漏掉
     ("echo hi && git reset --hard", D, D),
     ("ls; git clean -fd", D, D),
+    # —— 门禁只归协调者 ——
+    ("python3 ~/.claude/gates/gate.py p4 --project .", A, D),
+    ('python3 "$HOME/.claude/gates/gate.py" mark --role be-developer', A, D),
+    ("cd gates && python3 -u gate.py p1", A, D),
+    ('bash -c "python3 gate.py p5"', A, D),
+    ("cat ~/.claude/gates/gate.py", A, A),                  # 读源码不是运行
+    ("grep -n gate.py README.md", A, A),
+    ("cat > d.md <<'EOF'\npython3 gate.py p4\nEOF", A, A),
     ("", A, A),
 ]
 

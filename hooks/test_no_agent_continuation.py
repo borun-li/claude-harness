@@ -86,6 +86,40 @@ def main() -> int:
         expect("main", run(transcript, "main"), False)
         expect("other tool", run(transcript, "a1", tool="Bash"), False)
 
+        # 在一个进行中的 run 里：放行的续用当场记进运行日志（PreToolUse，此时 meta 还是 finished）
+        proj2 = pathlib.Path(d) / "proj2"
+        (proj2 / "docs" / "backend").mkdir(parents=True)
+        (proj2 / "docs" / "backend" / "state.json").write_text(json.dumps({"status": "in_progress", "goal": {}}))
+        (sub / "agent-a8.meta.json").write_text(json.dumps({"agentType": "be-developer", "finished": True}))
+
+        def cont(msg):
+            return subprocess.run([sys.executable, str(HOOK)], capture_output=True, text=True, check=True, input=json.dumps({
+                "hook_event_name": "PreToolUse", "tool_name": "SendMessage", "transcript_path": str(transcript),
+                "cwd": str(proj2), "tool_input": {"to": "a8", "message": msg}})).stdout.strip()
+
+        out = cont("You are be-developer #1 — step 4, round 2.\nOnly: TC-001")
+        log = proj2 / "docs" / "backend" / "run-log.jsonl"
+        evs = [json.loads(l) for l in log.read_text().splitlines()] if log.exists() else []
+        expect("continuation in a run: allowed", bool(out), False)
+        cases += 1
+        if not (evs and evs[-1]["event"] == "dispatch" and evs[-1].get("continued") and evs[-1].get("redo") == 1):
+            failures += 1
+            print("FAIL continuation in a run: not logged as a continued round", evs[-1:] if evs else evs)
+        out = cont("Please fix it.")  # no step: an answer to a blocked agent, same step
+        expect("continuation without step: allowed", bool(out) and "deny" in out, False)
+        # 轮次用满（另一个 be-developer 已在第 4 步做了一轮返工）：run-log 拒绝，续用账本不记
+        (sub / "agent-a9.meta.json").write_text(json.dumps({"agentType": "be-developer", "finished": True}))
+        gate = HOOK.parent.parent / "gates" / "gate.py"
+        done = ["return", "--status", "ok", "--note", "x"]  # a8's two continued rounds returned
+        for ev in (done, done, ["dispatch", "--model", "opus", "--note", "fix", "--redo"], done):
+            subprocess.run([sys.executable, str(gate), "log", ev[0], "--agent", "be-developer", "--step", "4", *ev[1:],
+                            "--project", str(proj2)], capture_output=True, check=True)
+        out = subprocess.run([sys.executable, str(HOOK)], capture_output=True, text=True, check=True, input=json.dumps({
+            "hook_event_name": "PreToolUse", "tool_name": "SendMessage", "transcript_path": str(transcript),
+            "cwd": str(proj2), "tool_input": {"to": "a9", "message": "You are be-developer #2 — step 4, round 3."}})).stdout
+        expect("continuation past the round cap: run-log denies", "ROUND CAP" in out, True)
+        expect("denied continuation not counted", (sub / "agent-a9.continuations").exists(), False)
+
     # 读不懂的输入
     out = subprocess.run([sys.executable, str(HOOK)], input="not json",
                          capture_output=True, text=True, check=True).stdout.strip()

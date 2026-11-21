@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Computational gates for the backend team.
+"""Computational gates for the backend and frontend teams.
 
     gate.py profile                      draft <project>/.claude/gates.json (user confirms it)
     gate.py p1                           after Phase 1 (requirements)
@@ -10,7 +10,10 @@
     gate.py mark --role <agent>          snapshot before dispatching a writing agent or reviewers
     gate.py p4 | p5 | p6 | p7            gates after build, verification, review, acceptance
     gate.py log <event> [--agent --model --step --status --stop --decision --by --note]
-                                         append to the run log (dispatch | return | human | decision)
+                                         append to the run log (dispatch | return | human | decision);
+                                         the hooks log dispatches and returns, so by hand only what they missed
+    gate.py log void --seq <n> --by <who> --note "<why>"
+                                         void a wrong entry (the log is append-only; the gates skip it)
     gate.py timeline                     write <run-dir>/run-log.md and print it
 
 Frontend team (run dir docs/frontend; pass --team frontend to baseline, mark, log, timeline):
@@ -125,13 +128,26 @@ def ensure_not_busy(project, team):
 
 
 def apply_waivers(results, gdir):
+    """The user's waivers (`<run-dir>/gates/waivers.json`: check, approved_by, date, reason). A check that
+    names failing tests is waived only for the tests the waiver lists (`tests`: ids or parts of names):
+    a new failure, or anything else wrong with it, is not waived."""
     waivers = {w["check"]: w for w in (read_json(gdir / "waivers.json") or [])
                if w.get("approved_by") and w.get("date")}
     for r in results:  # a tool that did not run has no reading to waive (TOOL.*)
-        if r["status"] == FAIL and r["id"] in waivers and not r["id"].startswith("TOOL."):
-            w = waivers[r["id"]]
-            r["status"] = WAIVED
-            r["details"].append(f"waived by {w['approved_by']} on {w['date']}: {w.get('reason', '')}")
+        if r["status"] != FAIL or r["id"] not in waivers or r["id"].startswith("TOOL."):
+            continue
+        w = waivers[r["id"]]
+        if "failed_tests" in r:
+            listed = [str(t) for t in w.get("tests") or []]
+            beyond = [t for t in r["failed_tests"] if not any(x in t for x in listed)]
+            if not listed or beyond or r.get("other_problems"):
+                why = ("the waiver lists no tests; add \"tests\": [the failing tests it covers]" if not listed
+                       else f"not covered by the waiver: {', '.join(beyond[:10] or r['other_problems'])}")
+                r["details"].insert(0, f"waiver of {w['date']} does not apply: {why}")
+                continue
+        r["status"] = WAIVED
+        r["details"].append(f"waived by {w['approved_by']} on {w['date']}: {w.get('reason', '')}"
+                            + (f" (tests: {', '.join(w['tests'])})" if w.get("tests") else ""))
 
 
 FIGMA_ROLES = ("fe-ux", "fe-ui", "fe-engineer")
@@ -156,21 +172,45 @@ def _continued_type(payload):
     return None
 
 
+def open_runs(project, team):
+    """The team's run dirs whose state is not settled: its root and every `<root>/<slug>/`."""
+    base = project / resolve_run_dir(project, None, team)
+    dirs = [base, *sorted(p.parent for p in base.glob("*/state.json"))]
+    states = {d: read_json(d / "state.json") for d in dirs}
+    return [d for d in dirs if states[d] is not None and states[d].get("status") not in SETTLED]
+
+
+def _ctx(project, run):
+    return checks.Ctx(project, run.relative_to(project).as_posix(), load_cfg(project, need_profile=False))
+
+
 def _active_run(project, agent):
-    team = auto.team(agent)
-    ctx = checks.Ctx(project, resolve_run_dir(project, None, team), load_cfg(project, need_profile=False))
-    st = read_json(ctx.run / "state.json")
-    return (ctx, team, st) if st and st.get("status") not in SETTLED else (None, team, st)
+    """(ctx, team, state) of the run a dispatch of `agent` belongs to, or (None, team, None) outside a
+    run. `fe-*` work in the Frontend run. `be-*` work in the Backend run when one is open (it drives a
+    cross-stack run), otherwise in the Frontend run (Phase 0 features, backend-side queue rows)."""
+    if agent.startswith("fe-") or (not open_runs(project, "backend") and open_runs(project, "frontend")):
+        team = "frontend"
+    else:
+        team = "backend"
+    runs = open_runs(project, team)
+    if not runs:
+        return None, team, None
+    if len(runs) > 1:
+        names = ", ".join(r.relative_to(project).as_posix() for r in runs)
+        raise Refused(f"several {team} runs are open ({names}): set the finished one's state.json status "
+                      f"to accepted, so the log goes to the right run")
+    return _ctx(project, runs[0]), team, read_json(runs[0] / "state.json")
 
 
 def auto_dispatch(payload):
-    """PreToolUse(Agent) and PostToolUse(SendMessage) in a harness session: mark, then log the dispatch."""
+    """PreToolUse(Agent), and PreToolUse(SendMessage) through no-agent-continuation.py: mark, then log the dispatch."""
     tool, ti = payload.get("tool_name"), payload.get("tool_input") or {}
     project = pathlib.Path(payload.get("cwd") or ".").resolve()
     if tool == "Agent":
         agent, text = str(ti.get("subagent_type") or ""), str(ti.get("prompt") or "")
     elif tool == "SendMessage":
-        agent, text = _continued_type(payload) or "", str(ti.get("message") or ti.get("content") or "")
+        agent = str(payload.get("harness_agent_type") or _continued_type(payload) or "")
+        text = str(ti.get("message") or ti.get("content") or "")
     else:
         return 0
     if not auto.HARNESS.match(agent):
@@ -179,7 +219,7 @@ def auto_dispatch(payload):
     if ctx is None:
         return 0
     log = ctx.run / "run-log.jsonl"
-    events = [ev for _, ev in runlog.read(log)]
+    events = runlog.events(log)
     step, rnd, budget = auto.parse_brief(text)
     if tool == "SendMessage" and step is None:  # an answer to a blocked agent, same step and round
         step = next((ev.get("phase") for ev in reversed(events)
@@ -192,7 +232,7 @@ def auto_dispatch(payload):
     n = allowed = None
     if rnd and rnd > 1:
         n, allowed = redo_round(log, step, agent, loop_cap(project, team))
-        if n > allowed and tool == "Agent":
+        if n > allowed:  # a continued author too: its rounds count the same (Constitution §5.4)
             raise Refused(f"ROUND CAP: {agent} at step {step} has used {allowed} of {allowed} rounds. Ask the user; "
                           f"on yes: gate.py log human --stop conditional --decision approved --step {step} "
                           f"--by <user> --note \"<why more rounds>\"")
@@ -222,13 +262,20 @@ def auto_return(payload):
     agent = str(payload.get("agent_type") or "")
     if not auto.HARNESS.match(agent):
         return 0
-    ctx, team, _ = _active_run(pathlib.Path(payload.get("cwd") or ".").resolve(), agent)
-    if ctx is None:
+    project = pathlib.Path(payload.get("cwd") or ".").resolve()
+    # The return goes where its dispatch went: the open run holding this agent's oldest open dispatch.
+    found = []
+    for team in ("backend", "frontend"):
+        for run in open_runs(project, team):
+            evs = runlog.events(run / "run-log.jsonl")
+            open_at = [ev.get("ts", "") for ev in evs if ev.get("event") == "dispatch" and ev.get("agent") == agent]
+            steps = auto.open_dispatches(evs).get(agent)
+            if steps:
+                found.append((open_at[-len(steps)], team, run, steps))
+    if not found:
         return 0
-    log = ctx.run / "run-log.jsonl"
-    steps = auto.open_dispatches([ev for _, ev in runlog.read(log)]).get(agent)
-    if not steps:
-        return 0
+    _, team, run, steps = min(found, key=lambda f: f[0])
+    log = run / "run-log.jsonl"
     text = auto.take_report(payload.get("agent_id"), payload.get("agent_transcript_path") or "")
     status, figma, note = auto.parse_report(text) if text else ("failed", None, "ended without a report")
     runlog.append(log, "return", agent=agent, phase=steps[0], status=status, note=note,
@@ -244,13 +291,16 @@ def main():
     ap.add_argument("--exclude", nargs="*", default=[])
     ap.add_argument("--retire", nargs="*", default=[])
     ap.add_argument("--team", choices=["backend", "frontend"], default="backend")
-    ap.add_argument("event", nargs="?", help="log: dispatch | return | human | decision; demo: before | after; "
+    ap.add_argument("event", nargs="?", help="log: dispatch | return | human | decision | void; demo: before | after; "
                     "auto (hooks/run-log.py, payload on stdin): dispatch | return")
     for f in ("agent", "model", "step", "status", "stop", "decision", "note"):
         ap.add_argument(f"--{f}")
     ap.add_argument("--figma-calls", type=int, help="log return: Figma MCP calls the agent made")
     ap.add_argument("--figma-left", type=int, help="log dispatch: Figma calls left for fe-ux / fe-ui / fe-engineer")
     ap.add_argument("--redo", action="store_true", help="log dispatch: this dispatch redoes its step's work")
+    ap.add_argument("--parallel", action="store_true",
+                    help="log dispatch: another agent of this type is already out at this step, on purpose")
+    ap.add_argument("--seq", type=int, help="log void: the entry to void")
     ap.add_argument("--project", default=".")
     ap.add_argument("--run-dir")
     ap.add_argument("--role")
@@ -291,6 +341,18 @@ def main():
                               "the brief's Budget line gives (PLAYBOOK §1E)")
         if a.redo and a.event != "dispatch":
             raise ConfigError("--redo goes with `log dispatch`")
+        if a.event == "void":
+            rows = {ev["seq"]: ev for _, ev in runlog.read(log)}
+            target = rows.get(a.seq)
+            if not (a.seq and a.by and a.note):
+                raise ConfigError("log void needs --seq <n> --by <who> --note \"<why it is wrong>\"")
+            if not target or target["event"] not in runlog.VOIDABLE:
+                raise ConfigError(f"#{a.seq} is not a {' / '.join(runlog.VOIDABLE)} entry of this log")
+            if any(ev.get("voids") == a.seq for ev in rows.values()):
+                raise ConfigError(f"#{a.seq} is already voided")
+            ev = runlog.append(log, "void", voids=a.seq, by=a.by, note=a.note)
+            print(f"[gate] logged #{ev['seq']}: voids #{a.seq} ({target['event']} {target.get('agent', '')})")
+            return 0
         n = allowed = None
         if a.redo:
             n, allowed = redo_round(log, a.step, a.agent, loop_cap(project, team))
@@ -299,6 +361,15 @@ def main():
                       f"not logged. Ask the user; on yes: log human --stop conditional --decision approved "
                       f"--step {a.step} --by <user> --note \"<why more rounds>\"")
                 return 3
+        # By hand only what the hooks missed: a copy of a hook's entry would count twice.
+        open_ = auto.open_dispatches(runlog.events(log))
+        if a.event == "dispatch" and str(a.step) in map(str, open_.get(a.agent, [])) and not a.parallel:
+            raise ConfigError(f"{a.agent} already has an open dispatch at step {a.step} (see `gate.py timeline`); "
+                              "a second copy would never be returned. Another one out on purpose: add --parallel. "
+                              "A wrong entry: `log void` it first")
+        if a.event == "return" and not open_.get(a.agent):
+            raise ConfigError(f"{a.agent} has no open dispatch: its return is already logged, or its dispatch is "
+                              "missing (log that first)")
         ev = runlog.append(log, a.event or "", agent=a.agent, model=a.model, phase=a.step, status=a.status,
                            stop=a.stop, decision=a.decision, by=a.by, note=a.note, redo=n,
                            figma_calls=a.figma_calls if a.event == "return" else None,
@@ -416,7 +487,15 @@ def main():
         if r["status"] in (FAIL, WAIVED, UNAVAILABLE):
             for d in r["details"][:12]:
                 print(f"         {d}")
-    print(f"\n[gate] {a.phase}: {overall.upper()}  report: {ctx.run_rel}/gates/{a.phase}-latest.json")
+        elif r["details"] and r["details"][0].startswith("reused"):  # a green read from an earlier run
+            for d in r["details"][:3]:
+                print(f"         {d}")
+    count = {k: sum(1 for r in results if r["status"] == k) for k in mark_of}
+    print(f"\n[gate] {a.phase}: {overall.upper()} — {count[PASS]} pass, {count[FAIL]} fail, "
+          f"{count[WAIVED]} waived, {count[UNAVAILABLE]} not checked  report: {ctx.run_rel}/gates/{a.phase}-latest.json")
+    if count[UNAVAILABLE]:
+        print("[gate] not checked (N/A) is not a pass: "
+              + ", ".join(r["id"] for r in results if r["status"] == UNAVAILABLE))
     for extra in data.get("not_machine_checked", []):
         print(f"[gate] not machine-checked: {extra}")
     if overall == FAIL:
