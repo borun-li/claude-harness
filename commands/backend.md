@@ -38,5 +38,5 @@ If empty, ask what to build. If it names a file, read it.
 
 ## Then
 
-Run PLAYBOOK Phase 0 (Kickoff), including the mandatory `AskUserQuestion` confirmation, and then
+Run PLAYBOOK §2 (Kickoff), including the mandatory `AskUserQuestion` confirmation, and then
 the phases in order. The PLAYBOOK is the whole procedure; this file adds nothing to it.

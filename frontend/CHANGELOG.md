@@ -2,6 +2,19 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour, role or lens · major = changed phase flow or artifact contract.
 
+## 13.1.1 — 2026-11-21 — rules for shared files, varying results and the user's choices
+
+Patch. Shared with backend 8.1.1.
+- Testers never edit build or dependency manifests or runner config; they name the change for the
+  engineer, and a brief never assigns a file outside the role's scope.
+- Requirements: a REQ whose result varies run to run states its tries, deciding rule and must-pass /
+  must-fail examples (`Varies`); behaviour where a wrong default harms the user is asked at the first
+  stop with the conservative default; a choice the user made is never written as its opposite.
+- Tests choose what runs by an explicit switch, never by probing for a service.
+- The orchestrator records the user's answers in their words, option text included, and cites them
+  in the briefs they touch.
+- Fixes: `/backend` starts at PLAYBOOK §2; the Prototype procedure uses the common round cap; the
+  README names all three Figma agents.
 
 ## 13.1.0 — 2026-11-21 — parsers read fields, checks compare only what they ask about
 

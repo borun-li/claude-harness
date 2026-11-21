@@ -54,4 +54,4 @@ handoff: <entry header>
 - Each `TC-###` has `**Verifies:** REQ-…` and `**Mode:** automated | manual` (keywords in English), level, preconditions, steps, expected result, and how it is observed. Cover failure paths, boundaries and bad input; list untestable REQs and what would make them testable.
 - Put each test's `TC-###` in its name or title (so the test report shows it), and `FX-nnn` when it checks an approved fixture. Load fixtures from their files; never edit them.
 - Run the project's own commands and record real output. Each TC is exactly `pass`, `fail` or `blocked`; a failure carries the actual error and suspected cause. The `p5` gate re-runs the whole suite and compares.
-- Edit only test files and test fixtures.
+- Edit only test files and test fixtures. A manifest or runner config you need changed (`package.json`, `pyproject.toml`, `pytest.ini`) is the engineer's: name the change in your return.

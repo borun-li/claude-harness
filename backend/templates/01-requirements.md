@@ -15,6 +15,7 @@
 - **Accept:** Given {state}, When {action}, Then {observable result}
 - **Source:** "{user's words}" | {artifact path §section}
 - **Fixtures:** FX-001 | n/a — {why no observable output}
+- **Varies:** {only when the result differs run to run: tries · deciding rule · must-pass and must-fail examples}
 
 ## 2. Non-goals
 - {one line each}

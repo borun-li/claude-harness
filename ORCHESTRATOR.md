@@ -120,10 +120,12 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
 2. No derivation on disk → take the recommended default, label it an assumption, continue, and
    list it at the next fixed stop.
 3. **Ask only what is the user's**: what the product does, for whom, what they will see, and the
-   Constitution §5 cases. Running the process is yours (order, retries, recovery, files outside the
-   round): decide, log, list at the next stop. So is carrying out a newer decision that replaces an
-   older one (Constitution §5): the owner changes what it touches, you re-lock it with `--because`
-   (PLAYBOOK §3E) and list it.
+   Constitution §5 cases. Record each answer in the user's words, the option text they picked
+   included (`log human --note`), and cite it in every brief it touches: it is a Source, and an
+   artifact that says otherwise is a Constitution §2.5 contradiction. Running the process is yours
+   (order, retries, recovery, files outside the round): decide, log, list at the next stop. So is
+   carrying out a newer decision that replaces an older one (Constitution §5): the owner changes
+   what it touches, you re-lock it with `--because` (PLAYBOOK §3E) and list it.
 4. **Waiting never stops the team.** A question that does not block the run's goal opens no
    dialog: take the recommended default, keep working, add it to `state.json` `open_questions`, and
    show it in the next report or stop. A question that blocks: first dispatch every piece of work

@@ -12,7 +12,8 @@ gate (PLAYBOOK §3D): meet the bar anyway; the gate proves it.
   Given/When/Then acceptance criteria. `[P1.req-ids · P1.acceptance]`
 - §0 Understanding restates the ask in the user's words and lists ambiguities, each blocking or
   assumed. `[P1.understanding]`
-- Every REQ's Source quotes the user or cites an artifact. `[P1.source]`
+- Every REQ's Source quotes the user or cites an artifact. `[P1.source]` A choice the user made
+  (the option they picked, in its words) is never written as its opposite.
 - Tables and one-line fields, not prose: a REQ is at most 60 words, and no paragraph or bullet runs
   over 50. `[P1.req-length · P1.prose]`
 - Sections present: **Non-goals**, **Assumptions** (each `[verified]`/`[unverified]`), **Open
@@ -21,6 +22,11 @@ gate (PLAYBOOK §3D): meet the bar anyway; the gate proves it.
 - Requirements a person perceives through a GUI/TUI are tagged `[interface]` and describe what is
   observed, not how the screen looks.
 - Non-functional axes are considered; "not this round" is a complete one-line answer.
+- A REQ whose result varies run to run (a model's output, timing, a network) states, in `Varies`,
+  how often it is tried, the rule that decides (majority, median, a threshold) and examples that
+  must pass and must fail. One perfect run is never the bar.
+- Behaviour where a wrong default harms the user (safety, privacy, money, data loss) is an open
+  question with the conservative default, asked at the first stop; it is not settled mid-run.
 - Every active REQ with observable output declares fixtures, or says why not. Inputs are real
   (from the project's data), cover a common case and an edge or absent shape, and are redacted where
   sensitive. `[P1.fixtures · PLAN.inputs]`
@@ -108,6 +114,8 @@ gate (PLAYBOOK §3D): meet the bar anyway; the gate proves it.
 - At least one test runs the real integration path end to end.
 - Tests enter through the real entry point, with inputs from the same producer the shipping path
   uses. Any scaffolding is disclosed at the point of the claim.
+- What runs is chosen by the command, never by probing the environment: a test that needs a service
+  or a model takes an explicit switch and fails, not skips, when the switch is on and it is missing.
 - Claims about external systems are verified with production-shaped input; the rest is marked
   assumed.
 - If the round delivers an interface (GUI, TUI or CLI): every control is exercised once on real

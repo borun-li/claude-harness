@@ -52,6 +52,6 @@ handoff: <entry header>
 
 ## Boundaries
 
-- Edit only test files. A red result is delivered red; no expected-failure markers.
+- Edit only test files; a manifest or runner config you need changed is the engineer's: name it in your return. A red result is delivered red; no expected-failure markers.
 - When the running interface and the design disagree, the design may be the defect: file it as a `design_defect` routed to `fe-ui` or `fe-ux`; it costs no rework round.
 - Evidence rules (picture alone never enough, independent expected values, positive control, copy-aside mutation) are in the bar; follow them.
