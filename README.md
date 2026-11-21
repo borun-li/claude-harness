@@ -72,7 +72,7 @@ Backend-only work does not depend on the interface. Support beyond the web grows
 Developed on macOS; Linux should work; on Windows use WSL.
 
 The Figma agents list the Figma plugin's tools as `mcp__plugin_figma_figma__*`; if your server has
-another name, change that line in `agents/fe-ui.md` and `agents/fe-engineer.md`. Each run has a
+another name, change that line in `agents/fe-ux.md`, `agents/fe-ui.md` and `agents/fe-engineer.md`. Each run has a
 Figma call budget under a monthly cap; the default cap (300) is the author's, so set yours with
 `/frontend-config`.
 

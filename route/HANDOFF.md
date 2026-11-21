@@ -42,7 +42,8 @@ Read: docs/codemap.md, then <file:line this item touches, from its design item, 
       handoff sections: <roles>
 Code map: <"create it (§7)" when docs/codemap.md is missing and the role reads code; omit otherwise>
 Known pitfalls / tried and failed: <≤3 lines, from earlier entries; "none" if none>
-Do not touch: <out-of-round files or items>
+Do not touch: <out-of-round files or items; never a file outside the role's scope (Constitution §3):
+            build and dependency manifests and runner config are the engineer's>
 Handoff: replace your role's section of <handoff path> before returning (~/.claude/route/HANDOFF.md §4);
          a role without Write puts it in its return instead.
 Return: your agent file's output contract, plus `handoff: <entry header>`.
