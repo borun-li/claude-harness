@@ -6,8 +6,8 @@ whether or not the other team was dispatched.
 
 ## 1. Default line
 
-A line the project wrote, named and dated, in `<project>/.claude/project-context.md` (or the legacy
-`team/frontend-team-config.md`), overrides this one.
+A line the project wrote, named and dated, in `<project>/.claude/project-context.md`, overrides this
+one.
 
 | Side | Covers | Designed by | Built by |
 |---|---|---|---|

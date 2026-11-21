@@ -30,7 +30,6 @@ Queue rows on the backend side of the line go to `be-developer` (`~/.claude/rout
 1. Read `~/.claude/frontend/config.json`; shallow-merge `<project>/.claude/frontend.json` and say so.
    Models come from `roles`: judgement → `opus`, carrying out a decision → `sonnet`; floors hold.
 2. Every `fe-*` agent works in the user's document language; identifiers stay English.
-3. A `state.json` below 7.0 is not resumed: offer a new round that reads its artifacts as input.
 
 ## 1C. Delivery surface
 
@@ -85,7 +84,7 @@ any dispatch.
   `log human --stop UI --decision approved --note "external <link>, confirmed <date>"`. Never
   assume it: what the user has not called final is reference material.
 - `reused` — a prototype confirmed by this harness. Keep its run dir, re-run its design gates, go to
-  Phase 3 (one confirmed before 8.0.0 was design only: run Phase 2b first).
+  Phase 3.
 
 ---
 

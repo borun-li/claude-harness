@@ -2,6 +2,22 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour or new role · major = changed phase flow or artifact contract.
 
+## 9.0.0 — 2026-11-21 — unused config and old-layout support removed
+
+Major: projects on pre-7.0 layouts or with the removed keys must move to the current ones. Shared with frontend 14.0.0.
+- **Removed config keys nothing read:** backend `artifacts`, `gates` (the human stops are fixed,
+  PLAYBOOK §3F), `policy`, `parallelism.design_review` / `build_test_design_in_parallel` /
+  `review_coordinator`, `language.confirm_at_kickoff`; frontend `artifacts` except `run_dir`,
+  `backend_team`, `gates`, `parallelism`, `frontend_backend_boundary`, `language.confirm_at_kickoff`.
+  The frontend `_comment` now carries the model rule.
+- **Removed support for pre-7.0 layouts and runs:** run dirs `docs/waterfall`, `docs/uiux`, `uiux`; a
+  top-level `run_dir` in `.claude/frontend.json` (use `artifacts.run_dir`); `05-queue.md`;
+  `contracts/CAPABILITY_LEDGER.md`; `team/frontend-team-config.md` and the `team/**` doc glob; design
+  at step 3 in the backend trail; the pre-8.0 exemption from the Prototype stop; registry entries with
+  no guarding tests (they now fail `FE.regression`); `/frontend status`; the installer's list of
+  agents retired before its manifest.
+- README runs every hook test with one loop; a gate docstring no longer names a project.
+
 ## 8.1.1 — 2026-11-21 — rules for shared files, varying results and the user's choices
 
 Patch. Shared with frontend 13.1.1.

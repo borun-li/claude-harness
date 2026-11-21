@@ -1162,7 +1162,7 @@ class RunLog(Base):
         self.assertEqual(r["status"], "pass", r.get("details"))
 
     def test_full_tier_needs_prototype_before_design(self):
-        for step in ("2", "3"):  # Phase 2 since 3.2.0; Phase 3 in older runs
+        for step in ("2",):
             with self.subTest(step=step):
                 self.p.close()
                 self.p = Project()

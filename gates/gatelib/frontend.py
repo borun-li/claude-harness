@@ -8,7 +8,7 @@ import hashlib
 import re
 
 from . import capture, checks, docs, registry, runlog, runner, snap
-from .common import FAIL, PASS, WAIVED, ConfigError, bad, na, ok, read_json, utc_now, write_json
+from .common import FAIL, PASS, ConfigError, bad, na, ok, read_json, utc_now, write_json
 
 STATES = ("loading", "empty", "success", "error", "permission")
 EXTRA_STATES = ("offline", "partial")
@@ -69,7 +69,7 @@ def _latest_ok(ctx, gates):
     out = []
     for g in gates:
         r = read_json(ctx.gdir / f"{g}-latest.json")
-        if r is None or r["overall"] not in (PASS, WAIVED):
+        if r is None or r["overall"] != PASS:
             out.append(f"{g}: {'never run' if r is None else r['overall']}")
     return out
 
@@ -110,13 +110,6 @@ def product(ctx):
 def _external(ctx):
     """A design the user confirmed outside the harness: intake forms of 01-ux.md / 02-ui.md (PLAYBOOK §2.5)."""
     return _state_json(ctx).get("design") == "external"
-
-
-def _version(ctx):
-    try:
-        return tuple(int(x) for x in str(_state_json(ctx).get("harness_version", "0")).split(".")[:3])
-    except ValueError:
-        return (0,)
 
 
 REQ_CELL = re.compile(r"(?:REQ-\d+[\s,;/、和与]*)+")
@@ -357,8 +350,8 @@ def queue(ctx):
     res.append(bad("FE2.rows", "No `### Q-nnn` rows", owner) if not rows else
                bad("FE2.rows", "Queue rows incomplete", owner, probs) if probs else
                ok("FE2.rows", f"{len(rows)} rows complete", owner))
-    if rows:  # 05-queue.md: the queue's name before 7.0
-        res.append(checks.unique_ids_check(ctx, "FE2.row-ids", rows, ("03-queue.md", "05-queue.md"), "Q", owner))
+    if rows:
+        res.append(checks.unique_ids_check(ctx, "FE2.row-ids", rows, ("03-queue.md",), "Q", owner))
     res.append(checks._length_check(ctx, "FE2.row-length", [(q, docs.words(b)) for q, b in rows.items()],
                                     "fe_row_words", owner, "queue row"))
     gaps = []
@@ -717,13 +710,12 @@ def _trail(ctx):
             problems.append(f"Phase 3 build dispatched (#{build}) before the UI was approved (#{ui_ok})")
         if proto is not None and proto < ui_ok:
             problems.append(f"prototype dispatched (#{proto}) before the design was approved (#{ui_ok})")
-    # 8.0.0: the user tries a running prototype before the build (Constitution §2.7).
-    if _version(ctx) >= (8, 0, 0):
-        proto_ok = approved("Prototype")
-        if proto_ok is None:
-            problems.append("no approved Prototype stop in the log")
-        elif build is not None and build < proto_ok:
-            problems.append(f"Phase 3 build dispatched (#{build}) before the Prototype was approved (#{proto_ok})")
+    # The user tries a running prototype before the build (Constitution §2.7).
+    proto_ok = approved("Prototype")
+    if proto_ok is None:
+        problems.append("no approved Prototype stop in the log")
+    elif build is not None and build < proto_ok:
+        problems.append(f"Phase 3 build dispatched (#{build}) before the Prototype was approved (#{proto_ok})")
     if _state_json(ctx).get("design_stops", 2) == 2:
         ux_ok = approved("UX")
         ui_first = first(lambda e: e["event"] == "dispatch" and e["agent"] == "fe-ui")

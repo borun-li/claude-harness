@@ -308,11 +308,7 @@ the matching `CHANGELOG.md`: what changed, without project names or the story be
 
 ```sh
 (cd gates && python3 -m unittest discover -s tests)
-python3 hooks/test_no_tree_restoring_git.py
-python3 hooks/test_no_foreign_process_kill.py
-python3 hooks/test_no_agent_continuation.py
-python3 hooks/test_run_log.py
-python3 hooks/test_hook_scoping.py
+for t in hooks/test_*.py; do python3 "$t" || break; done   # each script prints its cases and failures
 ```
 
 ---

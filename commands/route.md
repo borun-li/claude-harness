@@ -46,7 +46,7 @@ Record the answers; every team reads them instead of asking again.
 ## 1. Gather facts
 
 - Read `<project>/.claude/project-context.md` (the frontend/backend line) and the capability table in
-  `contracts/FRONTEND_BACKEND_CONTRACT.md` (legacy: `contracts/CAPABILITY_LEDGER.md`).
+  `contracts/FRONTEND_BACKEND_CONTRACT.md`.
 - If they cannot answer, read the code: does the backend already deliver what the screen needs?
 - Never classify from the wording of the request alone.
 

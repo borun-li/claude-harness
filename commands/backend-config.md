@@ -1,5 +1,5 @@
 ---
-description: Inspect or change the backend team's configuration — model tiers, human gates, review panels, loop caps, computational gate settings, quality bars — globally or for this project only.
+description: Inspect or change the backend team's configuration — model tiers, document language, review panels, loop caps, computational gate settings, quality bars — globally or for this project only.
 argument-hint: '[what to change, e.g. "reviewer to sonnet" | "prose limit 60 words" | "gate timeout 3600" | empty to just show]'
 model: opus
 disable-model-invocation: true
@@ -11,7 +11,7 @@ You maintain the backend harness. Its files:
 
 | File | Holds | Scope |
 |---|---|---|
-| `~/.claude/backend/config.json` | models, human stops (listed for reference; all fixed), review panels, round cap (`loops.max_rounds`), policy | global |
+| `~/.claude/backend/config.json` | models, document language, review panels, round cap (`loops.max_rounds`) | global |
 | `./.claude/backend.json` | overrides of the above | project |
 | `~/.claude/gates/config.json` | gate defaults: globs, patterns, timeout, required commands | global |
 | `./.claude/gates.json` | the project's commands and gate overrides (user-confirmed) | project |

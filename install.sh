@@ -14,7 +14,6 @@ owned="CONSTITUTION.md ORCHESTRATOR.md backend frontend route gates hooks skills
 shared="agents commands"
 parts="$owned $shared"
 manifest="$dest/.harness-files"
-retired="agents/fe-critic.md agents/fe-designer.md"   # shipped before the manifest existed
 
 missing=0
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing: $1 ($2)"; missing=1; }; }
@@ -47,7 +46,7 @@ for p in $owned; do
   mv "$dest/$p.tmp-install" "$dest/$p"
 done
 
-previous=$( { [ -f "$manifest" ] && cat "$manifest"; echo $retired | tr ' ' '\n'; } | sort -u)
+previous=$( { [ -f "$manifest" ] && cat "$manifest"; } | sort -u)
 for f in $previous; do
   [ -e "$here/$f" ] || { [ -f "$dest/$f" ] && rm -f "$dest/$f" && echo "removed retired $f"; } || true
 done
