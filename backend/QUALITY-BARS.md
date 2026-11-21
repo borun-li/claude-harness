@@ -126,6 +126,8 @@ gate (PLAYBOOK §3D): meet the bar anyway; the gate proves it.
 
 **Reporting** (Constitution §2.3 and §2.5 apply)
 - Each pass names its assertion precisely enough to grep. `[P5.report-complete · P5.report-honest]`
+- One current verdict per TC: a later round updates the TC's row, never adds a disagreeing one.
+  `[P5.report-complete]`
 - Non-deterministic results: state the run count, mean and range; separate always-errors from
   sometimes-errors.
 - Fix the mechanism, not the instance; name what else it reaches, or what stays broken.

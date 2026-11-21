@@ -189,7 +189,8 @@ order: design approved before the prototype, the Prototype stop before the build
 A script produces evidence. Write `capture-plan.json` covering every row, size and state:
 `surface` (`web` | `terminal` | `manual`); web: `base_url`, `sizes` (one `{name, width, height}` per
 `viewports` entry, height `viewport_height`); per capture `id`, `row`, `state`, then `url` + `steps`
-+ `styles` (web), `command` + `columns`/`lines` (terminal) or `instrument` + `files` (manual). Run
++ `styles` (web), `command` + `columns`/`lines` (terminal) or `instrument` + `files` (manual); and
+`source`, the globs of the files that make what is captured, so an unrelated edit does not stale it. Run
 `fe-capture-plan`, start an isolated instance, `capture --round <n>`. A round is never
 overwritten. Frame exports (`evidence/design/FRAME-###.png`) come from `fe-ui` once, and are locked.
 

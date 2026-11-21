@@ -119,6 +119,15 @@ def field(block, name):
     return None if not v or v.startswith(("{", "<")) else v
 
 
+def line_field(block, name):
+    """Value of a field written at the start of a line, bold or not (`- **Status:** x`, `Status: x`),
+    or None if absent or a template placeholder."""
+    m = re.search(r"^[ \t]*(?:[-*+][ \t]+)?\**%s\**[ \t]*[:：]\**[ \t]*([^\n]*)" % re.escape(name),
+                  block or "", re.I | re.M)
+    v = m.group(1).strip() if m else ""
+    return None if not v or v.startswith(("{", "<")) else v
+
+
 def has_gwt(block):
     return any(all(rx.search(block) for rx in trio) for trio in GWT)
 
@@ -162,12 +171,19 @@ def active_reqs(reqs):
     return {r for r, v in reqs.items() if not v["retired"] and v["cut"] == "above"}
 
 
+def claimed(block, name):
+    """REQ ids a block claims: those on its `**<name>:**` line, so a REQ mentioned in passing ("keeps
+    REQ-004 from the last round working") is not a claim. No such line: the whole block, outside code."""
+    line = field(block, name)
+    return ids_in(line, "REQ") if line else ids_in(mask_code(block), "REQ")
+
+
 def designs(text):
     out = {}
     for did, blocks in id_blocks(text, "DES").items():
         b = blocks[0]
         m = SIDE.search(b)
-        out[did] = {"blocks": len(blocks), "serves": ids_in(mask_code(b), "REQ"),
+        out[did] = {"blocks": len(blocks), "serves": claimed(b, "Serves"),
                     "side": m.group(1).lower() if m else None, "words": words(b)}
     return out
 
@@ -177,19 +193,20 @@ def testcases(text):
     for tid, blocks in id_blocks(text, "TC").items():
         b = blocks[0]
         mode = "automated" if AUTOMATED.search(b) else ("manual" if MANUAL.search(b) else None)
-        out[tid] = {"blocks": len(blocks), "verifies": ids_in(b, "REQ"), "mode": mode}
+        out[tid] = {"blocks": len(blocks), "verifies": claimed(b, "Verifies"), "mode": mode}
     return out
 
 
 def report_results(text):
-    """{TC: pass|fail|blocked} from the results table of 05-test-report.md."""
-    out = {}
+    """{TC: pass|fail|blocked} from the tables of 05-test-report.md. A TC whose rows disagree (an old
+    round's table left beside the current one) is `conflict: <verdicts>`, never silently the last row."""
+    seen = {}
     for cells in table_rows(text or ""):
         tcs = [c for c in cells if re.fullmatch(r"TC-\d+", c)]
         verdict = next((c.lower() for c in cells if c.lower() in ("pass", "fail", "blocked")), None)
         if tcs and verdict:
-            out[tcs[0]] = verdict
-    return out
+            seen.setdefault(tcs[0], []).append(verdict)
+    return {t: v[0] if len(set(v)) == 1 else "conflict: " + ", ".join(dict.fromkeys(v)) for t, v in seen.items()}
 
 
 def findings(text):
@@ -201,9 +218,9 @@ def findings(text):
                              "status": None, "scenario": False}
     for fid, blocks in id_blocks(text or "", "FND").items():
         b = blocks[0]
-        st = re.search(r"\bstatus\b\W{0,6}([^\n]*)", b, re.I)
-        sc = re.search(r"\bscenario\b\W{0,6}(\S[^\n]*)", b, re.I)
+        # Only a `Status:` / `Scenario:` field line: "returns status 500" in a scenario is not a status.
+        st, sc = line_field(b, "Status"), line_field(b, "Scenario")
         entry = out.setdefault(fid, {"severity": None, "where": None, "req": None})
-        entry["status"] = st.group(1).strip().lower() if st else None
-        entry["scenario"] = bool(sc and not sc.group(1).startswith(("<", "{")))
+        entry["status"] = st.lower() if st else None
+        entry["scenario"] = bool(sc)
     return out

@@ -84,8 +84,8 @@ entry point, captured by a script, before the work and after it.
    write `<run-dir>/demo-plan.json` from the goal's check, shaped like a capture plan (frontend
    PLAYBOOK §3H) without `row` and `state`: `web` (the page and the steps the user would take),
    `terminal` (the command; output, exit code and seconds are kept) or `manual` (files an
-   instrument produced). Then `gate.py demo before`. A step that cannot run yet is the point: the
-   page is captured as it is.
+   instrument produced), with `source` for the files that make it. Then `gate.py demo before`. A
+   step that cannot run yet is the point: the page is captured as it is.
 2. **After** — on the final code, before the Acceptance gate: `gate.py demo after`, again whenever
    the product changes.
 3. The Acceptance gate (`DEMO`) fails when either is missing, the before was taken after work
@@ -145,12 +145,13 @@ Merging, force pushes, `branch -D`, rebases, amends and other history rewrites a
 ## Key information
 
 - **Gates:** `python3 ~/.claude/gates/gate.py <gate> --project <root>` (`--run-dir docs/<team>/<slug>`
-  for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` round cap → the user · `2` config error · `4` busy: the other team has a writer out — wait for it.
+  for a second feature, a path from the project root; `--team frontend`). Exit `0` pass · `1` fail → its owner · `3` round cap → the user · `2` config error · `4` busy: a writer is out, the other team's or this run's — wait for its return.
   A fix round is a failure on a changed tree or with changed failures: re-running a gate to look
   again, or after a waiver, is not a round, and a green suite on an unchanged tree is reused
   (`test_reuse_minutes`; the report says so): start what the tests need outside the tree (a service,
   a model) before the gate. `N/A` means not checked, never passed: the summary lists them; say so
-  when you report the gate.
+  when you report the gate. Files the running product rewrites (logs, a local database) go in the
+  project's `.claude/gates.json` `volatile_globs`, so no check counts them as anyone's change.
   `TOOL.*` means a checker produced no reading (it crashed or was not found): fix the tool, then
   read its result; it cannot be waived. `ROLE.shared` checks writers that were out together
   against their roles combined. Cross-stack runs keep one team's

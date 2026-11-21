@@ -91,7 +91,7 @@ def _reqs(ctx):
     reqs = docs.requirements(docs.read(ctx.project / _req_rel(ctx)) or "")
     active = docs.active_reqs(reqs)
     iface = {r for r in active if reqs[r]["interface"]}
-    return set(reqs), (iface or active)
+    return checks.known_reqs(ctx, reqs), (iface or active)
 
 
 def product(ctx):
@@ -117,6 +117,9 @@ def _version(ctx):
         return tuple(int(x) for x in str(_state_json(ctx).get("harness_version", "0")).split(".")[:3])
     except ValueError:
         return (0,)
+
+
+REQ_CELL = re.compile(r"(?:REQ-\d+[\s,;/、和与]*)+")
 
 
 def _ux_pages(ctx):
@@ -146,7 +149,9 @@ def ux(ctx):
     res.append(ok("FE1.surface", f"Surface: {surface}", owner) if surface and "|" not in surface
                else bad("FE1.surface", "Surface not chosen (PLAYBOOK §1C)", owner))
     known, active = _reqs(ctx)
-    pages = {p: docs.ids_in(" ".join(r), "REQ") for p, r in _ux_pages(ctx).items()}
+    # The REQ cell only (a cell of nothing but REQ ids): a REQ named in the page's job is not a claim.
+    pages = {p: set().union(*[docs.ids_in(c, "REQ") for c in r[1:] if REQ_CELL.fullmatch(c)])
+             for p, r in _ux_pages(ctx).items()}
     bad_pages = [f"{p}: serves {sorted(s) or 'nothing'}" for p, s in pages.items() if not s or not s <= known]
     res.append(bad("FE1.pages", "No `PAGE-nnn` rows in the pages table", owner) if not pages else
                bad("FE1.pages", "Pages that serve no known REQ", owner, bad_pages) if bad_pages else
@@ -521,7 +526,7 @@ def verify(ctx):
               if v[0] not in ("done", "not done", "not observable")]
     res.append(bad("FE4.verdicts", "Rows without exactly one valid verdict", owner, probs) if probs
                else ok("FE4.verdicts", f"{len(verdicts)} rows with one verdict each", owner))
-    manifest = re.search(r"evidence/verify-[\w.-]+/manifest\.md", text)
+    manifest = _evidence_manifest(text)
     if not manifest or not (ctx.run / manifest.group(0)).exists():
         res.append(bad("FE4.evidence", "Evidence manifest missing (the orchestrator captures, §3H)", "orchestrator"))
     else:
@@ -560,8 +565,22 @@ def capture_plan(ctx):
     return res, {}
 
 
+MANIFEST = re.compile(r"evidence/verify-([\w.-]+)/manifest\.md")
+
+
+def _evidence_manifest(text):
+    """The round 04-verification.md is judged on: the one its header's `Evidence:` names, else the
+    latest round it names (an earlier round mentioned in passing is not the evidence)."""
+    head = re.search(r"Evidence\W{0,4}[ \t]*`?(evidence/verify-[\w.-]+/manifest\.md)", text or "")
+    if head:
+        return MANIFEST.search(text, head.start(1))
+    found = list(MANIFEST.finditer(text or ""))
+    key = lambda x: [int(n) if n.isdigit() else n for n in re.split(r"(\d+)", x.group(1))]
+    return max(found, key=key) if found else None
+
+
 def _capture_check(ctx, text):
-    m = re.search(r"evidence/verify-([\w.-]+)/manifest\.md", text or "")
+    m = _evidence_manifest(text)
     if not m:
         return bad("FE4.capture", "04-verification.md names no evidence round", "orchestrator")
     try:
@@ -616,7 +635,7 @@ def review(ctx):
     d = snap.diff(before, ctx.snapshot())
     # fe-tester runs beside the panel and writes tests; its scope is checked by fe-verify (ROLE.tester-scope).
     changed = [p for p in snap.changed(d)
-               if not checks.glob_match(p, [f"{ctx.run_rel}/**"]) and not ctx.is_test(p)]
+               if not checks.glob_match(p, checks.run_dir_globs(ctx)) and not ctx.is_test(p)]
     res = [state(ctx),
            bad("FE4.tree-unchanged", "Files changed while reviewers ran (PLAYBOOK §4.3)", owner, changed)
            if changed else ok("FE4.tree-unchanged", "Tree unchanged during review", owner)]
@@ -655,7 +674,9 @@ def _matrix(ctx, verdicts):
     _, active = _reqs(ctx)
     ux_text = ctx.doc("01-ux.md") or ""
     flows = {f: docs.ids_in(docs.field(b, "Serves") or "", "REQ") for f, b in _blocks(ux_text, "FLOW").items()}
-    pages = {p: docs.ids_in(" ".join(r), "REQ") for p, r in _ux_pages(ctx).items()}
+    # The REQ cell only (a cell of nothing but REQ ids): a REQ named in the page's job is not a claim.
+    pages = {p: set().union(*[docs.ids_in(c, "REQ") for c in r[1:] if REQ_CELL.fullmatch(c)])
+             for p, r in _ux_pages(ctx).items()}
     rows = _queue_rows(ctx)
     lines, gaps = ["| REQ | Flows | Pages | Rows (verdict) | Delivered |", "|---|---|---|---|---|"], []
     for req in sorted(active):
