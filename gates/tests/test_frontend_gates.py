@@ -289,6 +289,22 @@ class DesignGates(FrontBase):
         self.p.write("docs/frontend/00-requirements.md", REQS.replace("- **Cut:** above", "- **Cut:** below") + FILL)
         self.assertEqual(self.st(self.fe("fe-product")[2], "FE0.interface"), "fail")
 
+    def test_page_req_is_read_from_its_req_cell(self):
+        """G4: a REQ named in the page's job or form is not what the page serves."""
+        self.p.write("docs/frontend/01-ux.md", UX.replace(
+            "| PAGE-001 | Upload one file | REQ-001 | form — one decision |",
+            "| PAGE-001 | Upload one file, as REQ-090 did | REQ-001 | form — one decision |") + FILL)
+        self.assertEqual(self.st(self.fe("fe-ux")[2], "FE1.pages"), "pass")
+
+    def test_evidence_round_is_the_headers(self):
+        sys.path.insert(0, str(GATE.parent))
+        from gatelib import frontend
+        text = VERIFY.replace("evidence/verify-1/manifest.md", "evidence/verify-3/manifest.md") + \
+            "\nRound 1 looked different (evidence/verify-1/manifest.md).\n"
+        self.assertEqual(frontend._evidence_manifest(text).group(1), "3")
+        self.assertEqual(frontend._evidence_manifest("see evidence/verify-2/manifest.md, then "
+                                                     "evidence/verify-10/manifest.md").group(1), "10")
+
     def test_ux_defects(self):
         t = UX.replace("office admin uploading contracts daily", "{one concrete user}")
         t = t.replace("| PAGE-001 | Upload one file | REQ-001 |", "| PAGE-001 | Upload one file | REQ-009 |")

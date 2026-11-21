@@ -31,8 +31,9 @@ Frontend team (run dir docs/frontend; pass --team frontend to baseline, mark, lo
                                          after an answer); refused past the round cap (loops.max_rounds)
 
 Exit: 0 pass · 1 fail (send failures to their owners, fix, re-run) · 3 round cap reached
-(escalate to the user) · 2 usage or configuration error · 4 busy: the other team has a writer
-dispatched and not returned; `mark`, `capture` and every check gate wait for it (ORCHESTRATOR.md).
+(escalate to the user) · 2 usage or configuration error · 4 busy: a writer is dispatched and not
+returned — the other team's (`mark`, `capture`, `demo` and every check gate wait) or this run's
+(`capture`, `demo` and every check gate wait) (ORCHESTRATOR.md).
 Reports: <run-dir>/gates/<phase>-<utc>.json and <phase>-latest.json.
 """
 import argparse
@@ -119,12 +120,16 @@ def other_team_logs(project, team):
     return out
 
 
-def ensure_not_busy(project, team):
-    out = checks.open_writers(other_team_logs(project, team))
-    if out:
-        names = "; ".join(f"{a} ×{n} in {p.relative_to(project)}" for p, a, n in out)
-        raise Busy(f"the other team has a writer out ({names}). Wait for its return and log it, "
-                   f"then re-run. A dead agent: log its return as failed (ORCHESTRATOR.md, Handoff).")
+def ensure_not_busy(project, team, own_log=None):
+    """No writer out: of the other team (snapshots would mix its changes in), nor, for a check
+    (`own_log`), of this run (the tree is half-written and its role checks would misfire)."""
+    for logs, whose in ((other_team_logs(project, team), "the other team has"),
+                        ([own_log] if own_log else [], "this run has")):
+        out = checks.open_writers(logs)
+        if out:
+            names = "; ".join(f"{a} ×{n} in {p.relative_to(project)}" for p, a, n in out)
+            raise Busy(f"{whose} a writer out ({names}). Wait for its return and log it, then re-run. "
+                       f"A dead agent: log its return as failed (ORCHESTRATOR.md, Handoff).")
 
 
 def apply_waivers(results, gdir):
@@ -387,7 +392,7 @@ def main():
         print(md)
         return 0
     if a.phase in ("mark", "capture", "demo", *PHASES):
-        ensure_not_busy(project, team)
+        ensure_not_busy(project, team, None if a.phase == "mark" else log)
     if a.phase == "mark":
         if not a.role:
             raise ConfigError("mark needs --role")

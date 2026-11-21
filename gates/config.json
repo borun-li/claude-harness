@@ -1,5 +1,5 @@
 {
-  "_comment": "Defaults for every project. A project's .claude/gates.json overrides any top-level key. Per-test results come from JUnit: automatic for pytest, vitest, playwright and jest (with jest-junit); set \"junit\": \"<report path or glob>\" for any other runner.",
+  "_comment": "Defaults for every project. A project's .claude/gates.json overrides any top-level key. Per-test results come from JUnit: automatic for pytest, vitest, playwright and jest (with jest-junit); set \"junit\": \"<report path or glob>\" for any other runner. volatile_globs: files the running product rewrites (logs, a local database); snapshots, fingerprints and tree checks ignore them.",
   "required_commands": [
     "test"
   ],
@@ -28,7 +28,13 @@
     "**/__tests__/**",
     "**/conftest.py"
   ],
+  "volatile_globs": [
+    "**/*.log"
+  ],
   "doc_globs": [
+    "LICENSE*",
+    "NOTICE*",
+    "COPYING*",
     "docs/**",
     "contracts/**",
     "product/**",

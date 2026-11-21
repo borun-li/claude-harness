@@ -56,7 +56,8 @@ class Ctx:
         return docs.read(self.run / name)
 
     def snapshot(self):
-        return snap.snapshot(self.project, [f"{self.run_rel}/gates/**"])
+        # volatile_globs: files the running product rewrites (logs, a local database); no agent's change.
+        return snap.snapshot(self.project, [f"{self.run_rel}/gates/**", *self.cfg.get("volatile_globs", [])])
 
     def cmd(self, name):
         return (self.cfg.get("commands") or {}).get(name)
@@ -106,6 +107,15 @@ def state(ctx):
 
 def _reqs(ctx):
     return docs.requirements(ctx.doc("01-requirements.md") or "")
+
+
+REQ_FILES = ("01-requirements.md", "00-requirements.md")
+
+
+def known_reqs(ctx, current):
+    """REQ ids a design, test or finding may name: this run's, and those an earlier run defined (a
+    regression of last round's behaviour names last round's REQ). Coverage still counts this run's."""
+    return set(current) | set(ids_in_other_runs(ctx, REQ_FILES, "REQ"))
 
 
 def _command_check(ctx, name, owner):
@@ -227,6 +237,12 @@ def _load_mark(ctx, role):
 def _is_reviewer(role):
     """Review coordinators and panelists: their mark guards the tree, not a writer."""
     return role in ("be-reviewer", "fe-reviewer") or role.startswith(("be-review-", "fe-review-"))
+
+
+def run_dir_globs(ctx):
+    """Every run dir: their books (run logs, state, handoff) change from hooks and the orchestrator
+    while agents work, in the other team's run too."""
+    return [f"{d}/**" for d in {*RUN_DIRS, ctx.run_rel}]
 
 
 def _other_team(ctx, role):
@@ -399,6 +415,14 @@ def demo(ctx, peer=None):
 
 
 CODEMAP = "docs/codemap.md"
+FILE_EXT = re.compile(r"\.(py|pyi|js|mjs|cjs|ts|tsx|jsx|vue|svelte|json|ya?ml|toml|ini|cfg|md|txt|html?|css|scss|"
+                      r"sh|go|rs|java|kt|swift|dart|rb|php|cs|c|h|cpp|hpp|sql|lock|env|xml|gradle)$", re.I)
+
+
+def _looks_like_path(p):
+    """A backticked token the map means as a path: a relative path (`src/x/`) or a file name with a known
+    extension. Symbols, routes and commands (`useAuth`, `/api/x`, `app.listen`) are not checked."""
+    return bool(p) and "*" not in p and not p.startswith("/") and ("/" in p or FILE_EXT.search(p) is not None)
 BACKTICK = re.compile(r"`([^`\s]+)`")
 CODE_READERS = ("be-analyst", "be-architect", "be-developer", "be-tester", "fe-engineer", "fe-tester")
 
@@ -416,8 +440,9 @@ def context_files(ctx):
     elif text is None:
         res.append(bad("CTX.codemap", f"{CODEMAP} missing: the next writer creates it (route/HANDOFF.md §7)", owner))
     else:
-        paths = {re.split(r"[:#]", p)[0].rstrip("/") for p in BACKTICK.findall(text)}
-        gone = sorted(p for p in paths if p and "*" not in p and not (ctx.project / p).exists())
+        tokens = {re.split(r"[:#(]", p)[0] for p in BACKTICK.findall(text)}
+        gone = sorted({t.rstrip("/") for t in tokens if _looks_like_path(t)} - {""})
+        gone = [p for p in gone if not (ctx.project / p).exists()]
         long = len(text.splitlines()) > budget["codemap_lines"]
         problems = [f"{p}: no such path" for p in gone] + (
             [f"{len(text.splitlines())} lines, cap {budget['codemap_lines']}"] if long else [])
@@ -602,8 +627,9 @@ def _detailed_design(ctx):
     res.append(bad("P3.des-ids", "No `### DES-nnn` headings", owner) if not des else
                bad("P3.des-ids", "Duplicate DES ids", owner, dups) if dups else
                ok("P3.des-ids", f"{len(des)} DES, ids unique", owner))
+    known = known_reqs(ctx, reqs)
     bad_serves = [f"{d}: serves {sorted(v['serves']) or 'nothing'}" for d, v in des.items()
-                  if not v["serves"] or not v["serves"] <= set(reqs)]
+                  if not v["serves"] or not v["serves"] <= known]
     res.append(bad("P3.serves", "DES without a valid REQ", owner, bad_serves) if bad_serves else
                ok("P3.serves", "Every DES serves existing REQs", owner))
     no_side = [d for d, v in des.items() if v["side"] is None]
@@ -787,8 +813,9 @@ def phase4(ctx):
                ok("P4.plan-ids", f"{len(tcs)} TCs, ids unique", owner))
     if tcs:
         res.append(unique_ids_check(ctx, "P4.tc-ids", tcs, ("04-test-plan.md",), "TC", owner))
+    known = known_reqs(ctx, reqs)
     bad_tc = [f"{t}: verifies {sorted(v['verifies']) or 'nothing'}, mode {v['mode']}" for t, v in tcs.items()
-              if not v["verifies"] or not v["verifies"] <= set(reqs) or v["mode"] is None]
+              if not v["verifies"] or not v["verifies"] <= known or v["mode"] is None]
     res.append(bad("P4.plan-cases", "TCs without a valid REQ or automated/manual mode", owner, bad_tc)
                if bad_tc else ok("P4.plan-cases", "Every TC verifies REQs and has a mode", owner))
     tested = set().union(*[v["verifies"] for v in tcs.values()]) if tcs else set()
@@ -1052,8 +1079,10 @@ def phase5(ctx):
         res.append(na("P5.tc-results", "Per-test results need a JUnit report (pytest, vitest, playwright, jest-junit, or gates.json junit)", "be-tester"))
 
     reported = docs.report_results(ctx.doc("05-test-report.md"))
-    missing = [t for t in tcs if t not in reported]
-    res.append(bad("P5.report-complete", "TCs with no pass/fail/blocked verdict in 05-test-report.md",
+    missing = [f"{t}: no verdict" for t in tcs if t not in reported]
+    missing += [f"{t}: rows disagree ({v[10:]}); keep one current verdict per TC" for t, v in sorted(reported.items())
+                if v.startswith("conflict")]
+    res.append(bad("P5.report-complete", "TCs without one pass/fail/blocked verdict in 05-test-report.md",
                    "be-tester", missing) if missing else
                ok("P5.report-complete", "Every TC has a verdict in the report", "be-tester"))
     false_pass = [f"{t}: reported pass, observed {observed[t]}" for t, v in reported.items()
@@ -1079,14 +1108,14 @@ def phase6(ctx):
     owner = "orchestrator"
     before = _load_mark(ctx, "be-reviewer")["snapshot"]
     d = snap.diff(before, ctx.snapshot())
-    changed = [p for p in snap.changed(d) if not glob_match(p, [f"{ctx.run_rel}/**"])]
+    changed = [p for p in snap.changed(d) if not glob_match(p, run_dir_globs(ctx))]
     res = [state(ctx),
            bad("P6.tree-unchanged", "Files changed while reviewers ran (backend PLAYBOOK §4.4)", owner, changed)
            if changed else ok("P6.tree-unchanged", "Tree unchanged during review", owner),
            upstream(ctx, ["06-review-report.md"], owner)]
     if res[-1]["status"] == FAIL:
         return res, {}
-    reqs = set(_reqs(ctx))
+    reqs = known_reqs(ctx, _reqs(ctx))
     problems = []
     for fid, f in docs.findings(ctx.doc("06-review-report.md")).items():
         if f.get("severity") not in ("blocker", "major", "minor"):
@@ -1130,7 +1159,9 @@ def phase7(ctx):
     des = docs.designs(ctx.doc("03-detailed-design.md") or "")
     tcs = docs.testcases(ctx.doc("04-test-plan.md") or "")
     p5 = (latest["p5"] or {}).get("data", {})
-    observed, reported = p5.get("tc_observed", {}), p5.get("tc_reported", {})
+    # Observed results come from p5's test run; reported verdicts from the report as it is now.
+    observed = p5.get("tc_observed", {})
+    reported = docs.report_results(ctx.doc("05-test-report.md")) or p5.get("tc_reported", {})
     fx_obs = p5.get("fx_observed", {})
     rows, gaps = [], []
     for rid in sorted(docs.active_reqs(reqs)):

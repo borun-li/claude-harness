@@ -2,6 +2,27 @@
 
 Semver: patch = prompt/bar tuning · minor = new behaviour or new role · major = changed phase flow or artifact contract.
 
+
+## 8.1.0 — 2026-11-21 — parsers read fields, checks compare only what they ask about
+
+Minor. Shared with frontend 13.1.0.
+- **Parsers read the field a rule is about.** A finding's status comes from its `**Status:**` line
+  (not the first "status" in its text); a DES's REQs from `**Serves:**`, a TC's from `**Verifies:**`,
+  a page's from its REQ cell, so a REQ mentioned in passing is not a claim. A REQ an earlier run
+  defined counts as known in designs, tests, findings, pages and queue rows; coverage still counts
+  this run's.
+- **A test report keeps one verdict per TC.** Rows that disagree fail `P5.report-complete` with both
+  verdicts, instead of the last row winning. `p7` reads the report as it is now.
+- **`fe-verify` judges the evidence round the header names**, or else the latest round mentioned.
+- **The code map checks paths only**: backticked relative paths and file names; symbols, routes and
+  commands are not checked.
+- **Snapshots ignore what no agent changes.** Review tree checks skip every run dir (the other team's
+  log included); `volatile_globs` (default `**/*.log`) lists files the running product rewrites, left
+  out of every snapshot; `LICENSE*`, `NOTICE*`, `COPYING*` are documents. A capture or demo plan may
+  name `source` globs, and only those files make its evidence stale.
+- **No check while a writer is out.** Phase gates, `capture` and `demo` exit 4 while a writer of this
+  run is dispatched and not returned, as they already did for the other team's.
+
 ## 8.0.0 — 2026-11-21 — no false greens, a run log that follows the run
 
 Major: `waivers.json` gains `tests` for test-reporting checks. Shared with frontend 13.0.0.

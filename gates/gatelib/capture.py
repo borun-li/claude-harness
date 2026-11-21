@@ -16,8 +16,7 @@ import subprocess
 import tempfile
 import time
 
-from . import snap
-from .common import ConfigError, read_json, utc_now, write_json
+from .common import ConfigError, glob_match, read_json, utc_now, write_json
 
 HERE = pathlib.Path(__file__).resolve().parent.parent
 SURFACES = ("web", "terminal", "manual")
@@ -35,9 +34,11 @@ def load_plan(ctx):
     return plan
 
 
-def source_fingerprint(ctx):
-    """Hash of every non-doc, non-test file: changes whenever the product itself changes."""
-    items = sorted((p, h) for p, h in ctx.snapshot().items() if not ctx.is_doc(p) and not ctx.is_test(p))
+def source_fingerprint(ctx, source=None):
+    """Hash of the product's source: the plan's `source` globs when it names them (the files that make
+    what is captured), else every non-doc, non-test file. It changes whenever that source changes."""
+    keep = (lambda p: glob_match(p, source)) if source else (lambda p: not ctx.is_doc(p) and not ctx.is_test(p))
+    items = sorted((p, h) for p, h in ctx.snapshot().items() if keep(p))
     return hashlib.sha256(json.dumps(items).encode()).hexdigest()[:16]
 
 
@@ -45,6 +46,9 @@ def plan_problems(plan, rows):
     """Problems with a capture plan against the queue rows that must be verified."""
     probs = []
     surface = plan.get("surface")
+    src = plan.get("source")
+    if src is not None and not (isinstance(src, list) and all(isinstance(g, str) and g for g in src)):
+        probs.append("source must be a list of globs (the files that make what is captured)")
     if surface not in SURFACES:
         probs.append(f"surface {surface!r} not one of {SURFACES}")
     caps = plan.get("captures", [])
@@ -85,10 +89,11 @@ def _capture(ctx, plan, out, title, **head):
         entries = _terminal(ctx, plan, out)
     else:
         entries = _manual(ctx, plan, out)
-    stamp = {"time": utc_now(), "fingerprint": source_fingerprint(ctx), "surface": surface}
+    source = plan.get("source") or None
+    stamp = {"time": utc_now(), "fingerprint": source_fingerprint(ctx, source), "surface": surface}
     for e in entries:
         e.update(stamp)
-    write_json(out / "manifest.json", {**head, **stamp, "entries": entries})
+    write_json(out / "manifest.json", {**head, **stamp, **({"source": source} if source else {}), "entries": entries})
     lines = [f"# {title}", "",
              f"- Captured {stamp['time']} · surface {surface} · source fingerprint `{stamp['fingerprint']}`", "",
              "| Capture | Row | State | Size | Instrument | Files | OK |", "|---|---|---|---|---|---|---|"]
@@ -221,7 +226,7 @@ def evidence_problems(ctx, round_dir, plan, build_time):
             probs.append(f"{e['id']}@{e.get('size')}: no output on stdout or stderr")
     if build_time and manifest["time"] < build_time:
         probs.append(f"captured {manifest['time']}, before the last fe-build {build_time}")
-    if manifest["fingerprint"] != source_fingerprint(ctx):
+    if manifest["fingerprint"] != source_fingerprint(ctx, manifest.get("source")):
         probs.append("the product's source changed after capture: recapture")
     return probs
 
@@ -250,7 +255,7 @@ def demo_problems(ctx, run, events):
         probs.append("before not in the run log: take it with `gate.py demo before`")
     elif "before" in got and first is not None and logged[-1] > first:
         probs.append(f"before logged at #{logged[-1]}, after work started (dispatch #{first})")
-    if "after" in got and got["after"][1]["fingerprint"] != source_fingerprint(ctx):
+    if "after" in got and got["after"][1]["fingerprint"] != source_fingerprint(ctx, got["after"][1].get("source")):
         probs.append("the product changed after the after was captured: `gate.py demo after` again")
     if len(got) == 2:
         (bd, _, before), (ad, _, after) = got["before"], got["after"]

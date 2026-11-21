@@ -905,7 +905,7 @@ class AutoLog(Base):
             "subagent_type": agent, "prompt": first.format(a=agent) + "\nTask: build the add function", **extra}})
 
     def give_back(self, agent, report):
-        t = self.p.root / f"{agent}-transcript.jsonl"
+        t = pathlib.Path(tempfile.mkdtemp(prefix="transcript-")) / f"{agent}.jsonl"  # outside the project tree
         t.write_text(json.dumps({"message": {"role": "assistant", "content": [
             {"type": "tool_use", "name": "SubagentHandback", "input": {"message": report}}]}}) + "\n")
         return self.auto("return", {"hook_event_name": "SubagentStop", "agent_type": agent,
@@ -978,6 +978,9 @@ class AutoLog(Base):
         self.dispatch("be-developer")
         self.p.write("tests/test_calc.py", TESTS + "\n\ndef test_more():\n    assert True\n")  # the tester's
         self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# the developer's\n")
+        self.assertEqual(self.p.gate("p4")[0], 4)  # G8: not while they are still writing
+        self.give_back("be-tester", "done")
+        self.give_back("be-developer", "done")
         rep = self.p.gate("p4")[2]
         self.assertEqual(self.p.status(rep, "ROLE.shared"), "pass")
         self.assertNotIn("ROLE.tests", [c["id"] for c in rep["checks"]])
@@ -1124,6 +1127,7 @@ class RunLog(Base):
 
     def test_trail_catches_build_before_plan_and_missing_return(self):
         self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "4", "--note", "early")
+        self.p.log("return", "--agent", "be-developer", "--step", "4", "--status", "ok", "--note", "built early")
         self.p.approve()
         self.p.log("dispatch", "--agent", "be-tester", "--model", "sonnet", "--step", "5", "--note", "never returns")
         import importlib
@@ -1434,6 +1438,8 @@ class SessionDFixes(Base):
             self.p.gate("mark", "--role", role)
             self.p.log("dispatch", "--agent", role, "--model", "opus", "--step", step, "--note", "work")
         self.p.write("web/app.js", "x")  # neither an architect nor a developer may
+        for role, step in (("be-architect", "2"), ("be-developer", "4")):
+            self.p.log("return", "--agent", role, "--step", step, "--status", "ok", "--note", "done")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.shared"), "fail")
 
     def test_manual_log_refuses_copies_of_hook_entries(self):
@@ -1461,3 +1467,88 @@ class SessionDFixes(Base):
         # the voided dispatch leaves no writer out, so a fresh dispatch at that step is not a copy
         self.assertEqual(self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "4",
                                     "--note", "real")[0], 0)
+
+
+class ParserAnchors(Base):
+    """G4: the parsers read the field a rule is about, not any word in the prose."""
+    FINDINGS = ReviewAndAcceptance.FINDINGS
+
+    def test_status_is_read_from_its_line_only(self):
+        sys.path.insert(0, str(GATE.parent))
+        from gatelib import docs
+        text = self.FINDINGS.format(status="fixed in round 2").replace(
+            "add(1,2) returns 0", "the API returns status 500 and the caller retries")
+        self.assertEqual(docs.findings(text)["FND-001"]["status"], "fixed in round 2")
+        self.assertIsNone(docs.findings(text.replace("- **Status:** fixed in round 2\n", ""))["FND-001"]["status"])
+
+    def test_a_req_mentioned_in_passing_is_not_a_claim(self):
+        self.p.write("docs/backend/03-detailed-design.md", DESIGN.replace(
+            "- **Serves:** REQ-001", "- **Serves:** REQ-001\nKeeps REQ-090 of the last round working."))
+        self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.serves"), "pass")
+
+    def test_an_earlier_runs_req_is_known(self):
+        self.p.write("docs/backend/r1/01-requirements.md", REQS.replace("REQ-001", "REQ-090").replace("REQ-002", "REQ-091"))
+        self.p.write("docs/backend/r1/state.json", json.dumps(dict(STATE, status="accepted")))
+        self.p.write("docs/backend/03-detailed-design.md", DESIGN.replace("- **Serves:** REQ-002", "- **Serves:** REQ-002, REQ-090"))
+        self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.serves"), "pass")
+        self.p.write("docs/backend/03-detailed-design.md", DESIGN.replace("- **Serves:** REQ-002", "- **Serves:** REQ-099"))
+        self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.serves"), "fail")
+
+    def test_report_rows_that_disagree_fail_instead_of_last_row_winning(self):
+        self.p.to_p5()
+        self.p.write("docs/backend/05-test-report.md", REPORT + "## R2. Round 2\n| TC | Result |\n|---|---|\n| TC-001 | fail |\n")
+        rep = self.p.gate("p5")[2]
+        self.assertEqual(self.p.status(rep, "P5.report-complete"), "fail")
+        self.assertIn("TC-001: rows disagree (pass, fail)",
+                      " ".join(next(c for c in rep["checks"] if c["id"] == "P5.report-complete")["details"]))
+        self.p.write("docs/backend/05-test-report.md", REPORT + "## R2. Round 2\n| TC | Result |\n|---|---|\n| TC-001 | pass |\n")
+        self.assertEqual(self.p.status(self.p.gate("p5")[2], "P5.report-complete"), "pass")
+
+    def test_codemap_checks_paths_not_symbols(self):
+        self.p.dispatch("be-developer")
+        self.p.write("docs/codemap.md", CODEMAP + "Symbols: `useAuth`, `app.listen`, `/api/sum`, `add()`\n")
+        self.assertEqual(self.p.status(self.p.gate("p1")[2], "CTX.codemap"), "pass")
+        self.p.write("docs/codemap.md", CODEMAP + "Gone: `calc/old.py`, `lib/`\n")
+        rep = self.p.gate("p1")[2]
+        self.assertEqual(sorted(next(c for c in rep["checks"] if c["id"] == "CTX.codemap")["details"]),
+                         ["calc/old.py: no such path", "lib: no such path"])
+
+
+class ScopedSnapshots(Base):
+    """G5: a check compares only what its question is about."""
+    def test_review_ignores_every_run_dirs_books_and_volatile_files(self):
+        self.p.to_p5()
+        assert self.p.gate("p5")[0] == 0
+        self.p.dispatch("be-reviewer")
+        self.p.write("docs/backend/06-review-report.md", ReviewAndAcceptance.FINDINGS.format(status="open"))
+        self.p.write("docs/frontend/run-log.jsonl", "")      # the other team's hook appends
+        self.p.write("server.log", "GET / 200\n")            # the running product writes its log
+        self.assertEqual(self.p.status(self.p.gate("p6")[2], "P6.tree-unchanged"), "pass")
+        self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# edit\n")
+        self.assertEqual(self.p.status(self.p.gate("p6")[2], "P6.tree-unchanged"), "fail")
+
+    def test_demo_source_globs_ignore_unrelated_files(self):
+        plan = json.loads(self.p.read("docs/backend/demo-plan.json"))
+        self.p.write("docs/backend/demo-plan.json", json.dumps({**plan, "source": ["calc/**"]}))
+        self.p.write("calc/core.py", self.p.read("calc/core.py").replace("a + b", "b + a"))
+        assert self.p.demo("after")[0] == 0
+        sys.path.insert(0, str(GATE.parent))
+        from gatelib import capture, checks, runlog
+        ctx = checks.Ctx(self.p.root, "docs/backend", json.loads((GATE.parent / "config.json").read_text()))
+        stale = lambda: [p for p in capture.demo_problems(ctx, self.p.run, runlog.events(self.p.run / "run-log.jsonl"))
+                         if "changed after" in p]
+        self.p.write("NOTICE", "third-party licences\n")
+        self.p.write("scripts/tool.sh", "echo hi\n")
+        self.assertEqual(stale(), [])
+        self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# later\n")
+        self.assertEqual(len(stale()), 1)
+
+    def test_no_check_while_this_run_has_a_writer_out(self):
+        self.p.to_p4()
+        self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "4", "--note", "fix")
+        code, out, _ = self.p.gate("p4")
+        self.assertEqual(code, 4, out)
+        self.assertIn("this run has a writer out", out)
+        self.assertEqual(self.p.gate("mark", "--role", "be-tester")[0], 0)  # a parallel dispatch still marks
+        self.p.log("return", "--agent", "be-developer", "--step", "4", "--status", "ok", "--note", "done")
+        self.assertNotEqual(self.p.gate("p4")[0], 4)
