@@ -1,5 +1,5 @@
 {
-  "harness_version": "8.1.1",
+  "harness_version": "9.0.0",
   "_comment": "Global defaults for the backend agent team. A project may override any key by creating .claude/backend.json in the project root (shallow merge, top-level keys).",
   "model_plan": {
     "_active_tier": "quality",
@@ -57,49 +57,23 @@
   "language": {
     "_comment": "Documents follow the user's language unless a project sets default_docs; stated in the Kickoff preview, not asked (PLAYBOOK §2.3).",
     "default_docs": "user",
-    "code_and_identifiers": "en",
-    "confirm_at_kickoff": false
-  },
-  "artifacts": {
-    "dir": "docs/backend",
-    "state_file": "docs/backend/state.json",
-    "template_dir": "~/.claude/backend/templates"
-  },
-  "gates": {
-    "_comment": "Human stops, listed for reference: all are fixed and cannot be switched off (PLAYBOOK §3F, Constitution §2.7, §6.7); everything else stops only for a Constitution §5 case.",
-    "Kickoff": true,
-    "Prototype": true,
-    "Plan": true,
-    "Acceptance": true
+    "code_and_identifiers": "en"
   },
   "parallelism": {
     "_comment": "Design review runs only when state.json risk is high (PLAYBOOK §3). The review panel is trimmed by risk (PLAYBOOK §6); the coordinator runs whenever a panelist ran.",
-    "design_review": "high_risk",
     "design_review_panel": [
       "be-review-behavior",
       "be-review-reliability"
     ],
-    "build_test_design_in_parallel": true,
     "review_panel": [
       "be-review-behavior",
       "be-review-reliability",
       "be-review-security"
-    ],
-    "review_coordinator": "be-reviewer"
+    ]
   },
   "loops": {
     "_comment": "Rounds each step may redo its work (fixes, revisions, re-work after an answer); past it, the user decides (Constitution §5.4). continue_max_context: an author is continued into its next round (Constitution §8.1) only while its last request was at most this many tokens",
     "max_rounds": 2,
     "continue_max_context": 200000
-  },
-  "policy": {
-    "require_traceability_ids": true,
-    "requirement_id_prefix": "REQ",
-    "design_id_prefix": "DES",
-    "testcase_id_prefix": "TC",
-    "finding_id_prefix": "FND",
-    "block_phase_on_missing_upstream_doc": true,
-    "developer_may_change_scope": false,
-    "tests_derived_from_requirements_not_implementation": true
   }
 }

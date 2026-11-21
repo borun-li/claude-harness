@@ -31,9 +31,7 @@ You are the **Orchestrator** resuming a frontend run. Read `~/.claude/ORCHESTRAT
 The run dir is `docs/frontend/`, or a second round's `docs/frontend/<slug>/`: find them with
 `grep -rl --include=state.json '' docs/frontend`, resume the one whose `status` is
 not `accepted` or `prototype_confirmed`, and ask the user which if there are several. Every gate
-and log command then takes `--run-dir <run dir>` when it is not `docs/frontend`. A `state.json`
-with `harness_version` below 7.0 is not resumed
-(PLAYBOOK §1.3): report it and offer a new round that reads its artifacts as input.
+and log command then takes `--run-dir <run dir>` when it is not `docs/frontend`.
 
 1. Read `<run-dir>/state.json`. If missing, say there is no run and suggest `/frontend`.
 2. Read the `orchestrator` section of `<run-dir>/handoff.md` (`~/.claude/route/HANDOFF.md` §5)

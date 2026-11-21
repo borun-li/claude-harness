@@ -8,13 +8,13 @@ import tempfile
 import time
 
 from . import capture, docs, runlog, runner, snap
-from .common import (FAIL, PASS, WAIVED, ConfigError, bad, glob_match, na, ok, read_json, utc_now,
+from .common import (FAIL, PASS, ConfigError, bad, glob_match, na, ok, read_json, utc_now,
                      write_json)
 
 FIX_STATUS = re.compile(r"fixed|resolved|accepted|已修复|已接受|已解决", re.I)
 NO_REQ = {"none", "n/a", "-", "—", "deferred", ""}
-# Both teams' run dirs (and legacy ones) hold harness artifacts, not anyone's production work.
-RUN_DIRS = ("docs/backend", "docs/waterfall", "docs/frontend", "docs/uiux", "uiux")
+# Both teams' run dirs hold harness artifacts, not anyone's production work.
+RUN_DIRS = ("docs/backend", "docs/frontend")
 
 
 def ids_in_other_runs(ctx, names, prefix):
@@ -140,9 +140,9 @@ def _junit_path(ctx):
 
     **Outside the project.** It used to be `<run-dir>/gates/junit.xml`, inside the
     repository being checked: a report full of test ids, which a project's own
-    secret-scanning test then read as committable content and failed on (ctrip,
-    2026-11-10 — parametrize ids of the form `scrypt$16384$8$1$...`). A gate must not
-    change what the suite it runs sees.
+    secret-scanning test then read as committable content and failed on (parametrize
+    ids of the form `scrypt$16384$8$1$...`). A gate must not change what the suite it
+    runs sees.
     """
     key = hashlib.sha256(str(ctx.project.resolve()).encode()).hexdigest()[:12]
     out = pathlib.Path(tempfile.gettempdir()) / "claude-gates" / key
@@ -525,9 +525,9 @@ def _prototype_first(ctx, events, design_phases):
     return []
 
 
-def _log_trail(ctx, design_phases=("2", "3")):
+def _log_trail(ctx, design_phases=("2",)):
     """Backend trail: the common checks, then the Plan approved before build and (full tier) the
-    Prototype approved before design. design_phases: Phase 2 since 3.2.0, Phase 3 in older runs.
+    Prototype approved before design (`design_phases`).
     The Frontend team has its own trail (frontend._trail)."""
     events = runlog.events(ctx.run / "run-log.jsonl")
     owner, problems = "orchestrator", _trail_common(events)
@@ -1149,7 +1149,7 @@ def phase7(ctx):
     res = [state(ctx), upstream(ctx, ["07-acceptance.md"], owner)]
     latest = {p: read_json(ctx.gdir / f"{p}-latest.json") for p in ("p1", "p2", "p4", "p5", "p6")}
     problems = [f"{p}: {'never run' if r is None else r['overall']}" for p, r in latest.items()
-                if r is None or r["overall"] not in (PASS, WAIVED)]
+                if r is None or r["overall"] != PASS]
     if latest["p4"] and latest["p5"] and latest["p5"]["time"] < latest["p4"]["time"]:
         problems.append("p5 is older than the last p4: tests were not re-verified after the last code change")
     res.append(bad("P7.gates", "Earlier gates not green", owner, problems) if problems else

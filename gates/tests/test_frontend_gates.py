@@ -254,6 +254,7 @@ class FrontBase(Base):
         self.export_frames()
         code, out, _ = self.fe("fe-approve", "--by", "user")
         assert code == 0, out
+        self.fe_log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "tried it")
         r = subprocess.run([PY, str(GATE), "baseline", "--team", "frontend", "--project", str(self.p.root)],
                            capture_output=True, text=True)
         assert r.returncode == 0, r.stdout + r.stderr
@@ -633,6 +634,7 @@ class Trail(FrontBase):
         self.fe_log("human", "--stop", "UX", "--decision", "approved", "--by", "user", "--note", "ok")
         self.fe_dispatch("fe-engineer", step="2")
         self.fe_log("human", "--stop", "UI", "--decision", "approved", "--by", "user", "--note", "ok")
+        self.fe_log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "ok")
         self.assertEqual(self.st(self.fe("fe-accept")[2], "LOG.trail"), "pass")
 
 
@@ -763,12 +765,6 @@ class PrototypeTrail(FrontBase):
         self.ui()
         self.proto_ok()
         self.assertIn("prototype dispatched", self.trail())
-
-    def test_runs_before_8_0_are_not_charged(self):
-        self.set_state(harness_version="7.2.6")
-        self.ui()
-        self.fe_dispatch("fe-engineer", step="3")
-        self.assertNotIn("Prototype", self.trail())
 
 
 class MarkOrder(FrontBase):
@@ -980,13 +976,6 @@ class RowIds(FrontBase):
         self.p.write("docs/frontend/03-queue.md", (QUEUE + FILL).replace("Q-001", "Q-008"))
         self.assertEqual(self.st(self.fe("fe-queue")[2], "FE2.row-ids"), "pass")
 
-    def test_pre_7_queue_name_counts(self):
-        self.p.write("docs/frontend/03-queue.md", QUEUE + FILL)
-        self.p.write("docs/frontend/v6/05-queue.md", "### Q-001 — x\n")
-        for g in ("fe-product", "fe-ux", "fe-ui"):
-            self.fe(g)
-        self.assertEqual(self.st(self.fe("fe-queue")[2], "FE2.row-ids"), "fail")
-
 
 class Registry(FrontBase):
     """Accepted rows become OBS-### entries that later rounds must keep passing."""
@@ -1092,7 +1081,7 @@ class Registry(FrontBase):
         self.p.write("web/notice.html", '<p class="warn">Duplicate!</p>')
         self.assertEqual(self.st(self.fe("fe-build")[2], "FE.regression"), "fail")
 
-    def test_older_entry_with_empty_tests_is_guarded_by_its_source_row(self):
+    def test_entry_without_guarding_tests_fails(self):
         self.p.write("tests/test_rows.py", self.UNNAMED_ROW_TEST)
         self.accept()
         self.promote()
@@ -1103,11 +1092,8 @@ class Registry(FrontBase):
         reg["entries"]["OBS-002"] = old
         self.p.write("docs/frontend/observables.json", json.dumps(reg))
         rep = self.fe("fe-build")[2]
-        self.assertEqual(self.st(rep, "FE.regression"), "pass")
-        self.assertIn("1 older entries guarded by their row id",
-                      next(c for c in rep["checks"] if c["id"] == "FE.regression")["message"])
-        self.p.write("web/notice.html", '<p class="warn">Duplicate!</p>')
-        self.assertIn("OBS-002", self.details(self.fe("fe-build")[2], "FE.regression"))
+        self.assertEqual(self.st(rep, "FE.regression"), "fail")
+        self.assertIn("OBS-002", self.details(rep, "FE.regression"))
 
     def test_plan_lists_and_retire_removes_conflicts(self):
         self.accept()

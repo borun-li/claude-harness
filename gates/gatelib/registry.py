@@ -7,7 +7,6 @@ retires one a newer decision replaces (`--because`); every entry is hashed.
 """
 import hashlib
 import json
-import re
 
 from . import capture, checks, docs, runner
 from .common import PASS, ConfigError, bad, na, ok, read_json, utc_now, write_json
@@ -97,14 +96,9 @@ def retire(ctx, by, ids, because=None):
 
 
 def _guards(entry):
-    """(named tests, row tags). An entry registered before 8.2 with an empty list (its tests' names
-    were unreadable) is guarded by the row id in its `source`."""
+    """(named tests, row tags) that guard an entry."""
     tests = entry.get("tests") or []
-    named = [(t["file"], t["name"]) for t in tests if t.get("name")]
-    tags = [t["tag"] for t in tests if t.get("tag")]
-    if not tests:
-        tags = re.findall(r"#(Q-\d+)$", entry.get("source", ""))
-    return named, tags
+    return [(t["file"], t["name"]) for t in tests if t.get("name")], [t["tag"] for t in tests if t.get("tag")]
 
 
 def regression(ctx, r, owner):
@@ -114,7 +108,6 @@ def regression(ctx, r, owner):
     tests = {k: v for k, v in active(reg).items() if v["kind"] == "test"}
     if not reg["entries"]:
         return na("FE.regression", "No approved observables registered yet", owner)
-    legacy = sorted(k for k, v in tests.items() if not v.get("tests"))
     if tests and (not r or r.get("cases") is None):
         probs.append(f"{len(tests)} registered tests; pass status needs a JUnit report")
     elif tests:
@@ -131,9 +124,8 @@ def regression(ctx, r, owner):
             if st != "passed":
                 how = f", guarded by row id {', '.join(tags)}" if tags and not named else ""
                 probs.append(f"{k} ({v['observable']}): {st}{how}")
-    note = f"; {len(legacy)} older entries guarded by their row id" if legacy else ""
     return (bad("FE.regression", "Approved observables regressed (only the user retires one)", owner, probs)
-            if probs else ok("FE.regression", f"{len(tests)} registered observables still hold{note}", owner))
+            if probs else ok("FE.regression", f"{len(tests)} registered observables still hold", owner))
 
 
 def capture_entries(ctx):

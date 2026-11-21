@@ -1,5 +1,5 @@
 ---
-description: Inspect or change the frontend team's configuration — role models, review panel, design stops, Figma budget, viewports, loop caps, delivery surface, named user, gate settings — globally or for this project only.
+description: Inspect or change the frontend team's configuration — role models, design stops, Figma budget, viewports, loop caps, delivery surface, named user, gate settings — globally or for this project only.
 argument-hint: '[what to change, e.g. "fe-ui to sonnet" | "Figma budget 400" | empty to just show]'
 model: opus
 disable-model-invocation: true
@@ -11,7 +11,7 @@ You maintain the frontend harness. Its files:
 
 | File | Holds | Scope |
 |---|---|---|
-| `~/.claude/frontend/config.json` | role models, review panel, design stops, Figma budget, viewports, loop caps, run dir | global |
+| `~/.claude/frontend/config.json` | role models, design stops, Figma budget, viewports, loop caps, run dir | global |
 | `./.claude/frontend.json` | overrides of the above | project |
 | `./.claude/project-context.md` | delivery surface, named user, frontend/backend line | project (the user writes it) |
 | `~/.claude/gates/config.json` · `./.claude/gates.json` | gate defaults · the project's commands | global · project |
