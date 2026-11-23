@@ -1,5 +1,5 @@
 {
-  "harness_version": "16.0.0",
+  "harness_version": "16.0.1",
   "_comment": "Harness defaults; every install replaces this file. Your own defaults go in ~/.claude/harness-local/config.json and a project's in <project>/.claude/harness.json: each overrides the keys it names in the one before (keys merge two levels deep). Gate settings (globs, commands, timeouts) are separate: ~/.claude/gates/config.json and <project>/.claude/gates.json.",
   "models": {
     "_comment": "The model of each role per tier; _active_tier is the one in force. A role in floor is never dispatched below its model (the dispatch hook refuses). adjust: when the orchestrator moves a role one step for a single dispatch.",

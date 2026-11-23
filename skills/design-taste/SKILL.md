@@ -16,6 +16,22 @@ rule.
 **Usability over looks.** Any decoration, animation or layout choice that slows, hides or
 confuses the user's task is removed, however good it looks.
 
+What that means, in the user's own words:
+
+- **Clear and simple enough to need no manual.** Someone using the product for the first time
+  knows what to do without being told.
+- **Every action says where it leads.** A user understands a control by clicking it once, and
+  every instruction or operation points clearly to what comes next.
+- **Decoration is a cost, not a bonus.** Each ornament or effect takes some of the user's
+  attention, so it stays only when it does a job.
+
+When these pull against something else, the other thing goes: a look unlike everyone else's, rich
+motion and transitions, anything fussy or dazzling.
+
+Reference: **Muse**. On entering the app a user understands how to use it, and its steps are
+simple and direct. Take that from it: a first screen that needs no explaining, and steps that are
+each one plain action.
+
 ## 1. Product type decides four things
 
 These four are confirmed by the user and recorded in the project's written context; later rounds
@@ -161,6 +177,6 @@ Examples of each rule done well and badly: [examples.md](examples.md).
 ## 8. Where these preferences come from
 
 Each preference here came from the user (interview, 2026-09-24; additions 2026-11-02; reasons,
-values and replacements confirmed 2026-11-22). Only the user changes this file. A new preference
+values and replacements confirmed 2026-11-22; §0 in the user's words, 2026-11-22). Only the user changes this file. A new preference
 observed at acceptance or in post-launch feedback is proposed as a candidate, with its source; it
 is added only after the user confirms.

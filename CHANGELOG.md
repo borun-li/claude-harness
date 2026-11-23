@@ -3,6 +3,14 @@
 Semver: patch = prompt or bar tuning · minor = new behaviour or new role · major = changed phase
 flow, artifact contract, run layout or command line.
 
+## 16.0.1 — 2026-11-22 — design-taste: the first principle spelled out
+
+Patch: skill text only.
+
+- `skills/design-taste` §0 says what "usability over looks" means in its author's words (clear
+  enough to need no manual, every action says where it leads, decoration is a cost), what gives
+  way when they conflict with something else, and one reference product with what to take from it.
+
 ## 16.0.0 — 2026-11-21 — one run, one configuration, parallel writers
 
 Major: the run layout, the configuration files, the commands and the command line change. The
