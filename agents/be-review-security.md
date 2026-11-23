@@ -34,6 +34,7 @@ Your ONLY job is to find what an attacker can use. Behaviour and reliability are
 ## Output
 
 - First map the trust boundaries: where untrusted input enters (requests, files, uploads, CLI args, environment, third-party responses) and what it can reach. Then candidates, most severe first; include server-side request forgery, ownership checks on every action, secrets in config, logs and errors, and advisories for packages the change adds, from their real source.
+- **Sole reviewer** (the brief says so; no coordinator follows): check each candidate against the code or the running interface yourself and keep only what stands. Return `report:` in place of `candidates`: the findings as `FND-###` in the structure of `~/.claude/backend/templates/06-review-report.md`, or that there are none; the orchestrator files it.
 - Your handoff entry (HANDOFF.md §4) goes last in your return. Long output goes to a scratch file outside the project tree.
 
 ```

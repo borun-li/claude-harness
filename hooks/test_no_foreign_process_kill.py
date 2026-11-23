@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""``no-foreign-process-kill.py`` 的回归矩阵。跑法：``python3 <本文件>``，退出码即结果。
+"""Regression matrix of ``no-foreign-process-kill.py``. Run: ``python3 <this file>``; the exit code is the result.
 
-ALLOW 一半和 DENY 一半同等重要：按 PID 收掉自己起的进程
-是正路，拦了它，代理就只剩绕过这一条路。
+The ALLOW half matters as much as the DENY half: stopping the process you started, by PID, is
+the right way; deny that and the only way left to an agent is around the hook.
 """
+from __future__ import annotations
+
 import json
 import pathlib
 import subprocess
@@ -12,19 +14,19 @@ import sys
 HOOK = pathlib.Path(__file__).with_name("no-foreign-process-kill.py")
 
 CASES: list[tuple[str, bool]] = [
-    # —— 按命令行模式 ——
+    # -- by command-line pattern --
     ('pkill -f "^./server$"', True),
-    # —— 按名字或模式 ——
+    # -- by name or pattern --
     ("killall node", True),
     ("pkill guide", True),
     ("sudo pkill -9 python", True),
     ("npm run build && pkill -f vite", True),
-    # —— 按端口或文件 ——
+    # -- by port or file --
     ("fuser -k 3000/tcp", True),
     ("fuser -n tcp -k 3000", True),
     ("npx kill-port 3000", True),
     ("npx -y kill-port 3000 8080", True),
-    # —— 先查再杀 ——
+    # -- look up, then kill --
     ("kill $(pgrep guide)", True),
     ("kill -9 `lsof -ti:3000`", True),
     ("lsof -ti:3000 | xargs kill", True),
@@ -32,12 +34,12 @@ CASES: list[tuple[str, bool]] = [
     ("pgrep -f guide | xargs kill", True),
     ("P=$(pidof guide); kill $P", True),
     ("ps aux | grep guide | awk '{print $2}' | xargs kill", True),
-    # —— 整组或全部 ——
+    # -- a whole group, or everything --
     ("kill 0", True),
     ("kill -9 -1", True),
     ("kill -- -1234", True),
     ("kill -s TERM -1234", True),
-    # —— 按 PID，必须放行 ——
+    # -- by PID: must be allowed --
     ("kill 38236", False),
     ("kill -TERM 38236", False),
     ("kill -9 38236 38237", False),
@@ -48,20 +50,32 @@ CASES: list[tuple[str, bool]] = [
     ("kill $(cat /tmp/x/preview.pid)", False),
     ("./server & echo $! > /tmp/x/server.pid", False),
     ("kill -l", False),
-    ("ps -p $PID >/dev/null && kill $PID", False),   # 先确认自己的进程还在
+    ("ps -p $PID >/dev/null && kill $PID", False),   # checks that its own process is still there
     ("kill -0 $PID && kill $PID", False),
-    # —— 只查不杀 ——
+    # -- a lookup without a kill --
     ("ps aux | grep guide", False),
     ("pgrep -l guide", False),
     ("lsof -i :3000", False),
-    # —— 字符串，不是命令 ——
+    # -- a string, not a command --
     ("grep -rn pkill docs/", False),
     ("grep -rn 'pkill -f' hooks/", False),
     ('echo "use kill $(pgrep x) never"', False),
-    ("cat > d.md <<'EOF'\n不要 pkill，也不要 lsof -ti | xargs kill\nEOF", False),
+    ("cat > d.md <<'EOF'\nnever pkill, never lsof -ti | xargs kill\nEOF", False),
     ("git log --grep killall", False),
-    # —— heredoc 之后的真命令仍要拦 ——
-    ("cat > d.md <<'EOF'\n正文\nEOF\npkill guide", True),
+    # -- a real command after a heredoc is still denied --
+    ("cat > d.md <<'EOF'\nbody\nEOF\npkill guide", True),
+    # -- code inside double quotes, and code handed to a shell --
+    ('kill "$(pgrep node)"', True),
+    ('kill -9 "`pidof guide`"', True),
+    ('PID="$(lsof -ti:3000)"; kill "$PID"', True),
+    ('bash -c "pkill -f vite"', True),
+    ("bash -lc 'killall node'", True),
+    ("sh -c 'kill $(pgrep guide)'", True),
+    ("ls 2>/dev/null; pkill guide", True),               # a redirection does not swallow the separator
+    ('kill "$(cat /tmp/x/preview.pid)"', False),
+    ('echo "started $(date)"; kill $SERVER_PID', False),
+    ('bash -c "kill $SERVER_PID"', False),
+    ("which pkill killall", False),
     ("", False),
 ]
 
@@ -85,7 +99,7 @@ def main() -> int:
                          capture_output=True, text=True, check=True).stdout.strip()
     if out:
         failures += 1
-        print("FAIL 非 Bash 工具被拦了")
+        print("FAIL a tool other than Bash was denied")
     print("%d cases, %d failures" % (len(CASES) + 1, failures))
     return 1 if failures else 0
 

@@ -1,84 +1,59 @@
 #!/usr/bin/env python3
-"""PreToolUse(Bash) —— harness 会话里的 git / gh 守卫。``--role orchestrator|agent``。
+"""PreToolUse(Bash): the git / gh guard of a harness session. ``--role orchestrator|agent``.
 
-**为什么是钩子而不是一句提示。** 代理知道规则，也仍会为了「撤掉自己刚才的改动」
-顺手用 `git checkout --`、`git stash`，连带抹掉别人未提交的活；或者为了交差顺手
-`git push --force`。一条由结构承载的约束，强过一条由句子承载的约束。
+**Why a hook and not a sentence.** An agent that knows the rule still reaches for
+``git checkout --`` or ``git stash`` to undo its own change, and wipes other agents' uncommitted
+work with it; or pushes with ``--force`` to get done. A rule held by structure beats one held by
+a sentence.
 
-**判据只有两条。**
-1. 作用域 = 你亲手打出的东西。按 git 的记忆重写整棵树或整块索引的命令
-   （checkout/restore 路径、reset、clean、stash、apply -R、rm……）谁都不许：
-   它碰到的比你说出名字的多，多出来的就是别人未提交的活。
-2. 强制和改写历史的操作谁都不许（push --force、branch -D、rebase、commit --amend、
-   gh pr merge……）：它们会破坏代码库，留给人。
+**Two tests.**
+1. Scope = what you typed. A command that rewrites the tree or the index from git's memory
+   (checkout/restore of paths, reset, clean, stash, apply -R, rm …) is denied to everyone: it
+   touches more than the paths you named, and the rest is someone's uncommitted work.
+2. Forcing and rewriting history are denied to everyone (push --force, branch -D, rebase,
+   commit --amend, gh pr merge …): they are the user's.
 
-**角色。** git 写操作只归协调者（主会话，由 run 命令的 frontmatter 以
-``--role orchestrator`` 调用）：开分支、换到已有分支（工作区干净时）、按路径提交、
-推本轮分支、开草稿 PR。子代理（agent frontmatter，``--role agent``）只读。
-推送和 PR 是对外动作，还要项目 ``.claude/gates.json`` 里有用户设的 ``"git": {"push": true}``。
+**Roles.** Git writes belong to the orchestrator (the main session; the run commands call this
+hook with ``--role orchestrator``), and only the ones on its list: stage and commit by path,
+create a branch, change to an existing one on a clean tree, ``pull --ff-only``, fetch, push the
+run's branch, ``branch -d``, worktree add/remove, tag, draft PR. A git write that is not on the
+list is denied. Sub-agents (``--role agent``, from the agent files) read only, in a worktree of
+their own too. Push and PR act outside the machine and also need ``"git": {"push": true}`` in the
+project's ``.claude/gates.json``, set by the user.
 
-**门禁只归协调者。** 子代理不许运行 ``gate.py``：它写的是本轮的账本（标记、尝试次数、
-用户批准、夹具锁定），代理自己跑一次红的就耗掉一轮，跑 ``mark`` 还能让自己的改动躲过角色检查。
-读 gate.py 的源码不拦，只拦执行它。
+**A writer's work is landed, not committed by hand.** ``gate.py land`` commits what a returned
+writer changed and merges an agent's worktree into the run's branch; it calls git itself, so
+nothing here has to allow it. What is left to the orchestrator's own ``git add`` / ``git commit``
+is what it wrote itself. The denials below say so where a hand-made commit or merge was tried.
 
-**这是防失误，不是防恶意。** 它靠解析命令行；刻意绕过（变量拼命令、脚本里调 git）
-拦不住。main 的最终保护是服务器端规则。没有 ``--role`` 时按 agent 处理（最严）。
+**Gates belong to the orchestrator.** A sub-agent may not run the harness's ``gate.py``: it
+writes the run's ledger (marks, rounds, approvals, fixture locks). The one exception is
+``gate.py check …``, the read-only self-check. Reading gate.py is not running it, and a project's
+own ``gate.py`` is not the harness's.
+
+**Against mistakes, not against intent.** The guard reads the command line; a determined bypass
+(a command built from variables, git called inside a script) gets through. The default branch is
+protected by server-side rules. Without ``--role`` the role is agent (the strictest).
 """
+from __future__ import annotations
+
 import json
 import os
+import pathlib
 import re
 import subprocess
 import sys
 
+sys.dont_write_bytecode = True  # no __pycache__ next to the user's own hooks
+from shell_commands import QUOTED, command_words, commands, name  # noqa: E402
+
 ROLE = "orchestrator" if sys.argv[1:3] == ["--role", "orchestrator"] else "agent"
-
-# ---------------------------------------------------------------------------
-# 把数据从命令里剔掉
-# ---------------------------------------------------------------------------
-QUOTED = "__quoted__"
-_HEREDOC = re.compile(r"<<-?\s*[\"\']?(\w+)[\"\']?")
-_SHELL_C = re.compile(r"\b(?:bash|sh|zsh)\s+(?:-\w+\s+)*-c\s+(['\"])(.*?)\1|\beval\s+(['\"])(.*?)\3", re.S)
-
-
-def strip_data(command: str) -> str:
-    """剔掉 heredoc 体和引号内的整段，只留真正会被执行的部分。
-
-    ``grep -rn 'git checkout' docs/`` 与 ``cat > PLAYBOOK.md <<'EOF' … git stash … EOF``
-    都没有跑任何 git。一个会对写文档的人开火的守卫，第二天就会被关掉。
-    """
-    lines, out, marker = command.split("\n"), [], None
-    for line in lines:
-        if marker is not None:
-            if line.strip() == marker:
-                marker = None
-            continue
-        m = _HEREDOC.search(line)
-        out.append(line[: m.start()] if m else line)
-        if m:
-            marker = m.group(1)
-    text = "\n".join(out)
-    # 引号段换成占位词而不是空白：``git -C "<dir>" reset`` 剔空后若把 reset 当成目录，
-    # 真正的子命令就漏掉了。占位词让参数位置不变、目录「查不清」。
-    text = re.sub(r"'[^']*'", f" {QUOTED} ", text)
-    text = re.sub(r'"[^"]*"', f" {QUOTED} ", text)
-    # 重定向不是参数：``git push … 2>&1``、``> out.txt``
-    text = re.sub(r"\d*>&\d*|&>>?\s*\S+|\d*>>?\s*\S+|\d*<\s*\S+", " ", text)
-    return text
-
-
-def shell_payloads(command: str, depth: int = 0) -> list[str]:
-    """``bash -c "…"`` / ``eval '…'`` 引号里的是命令，不是数据：单独再查一遍。"""
-    found = []
-    for m in _SHELL_C.finditer(command):
-        inner = m.group(2) if m.group(2) is not None else m.group(4)
-        found.append(inner)
-        if depth < 2:
-            found += shell_payloads(inner, depth + 1)
-    return found
+HERE = pathlib.Path(__file__).resolve().parent
+GATE = HERE.parent / "gates" / "gate.py"
 
 
 # ---------------------------------------------------------------------------
-# 查仓库状态（查不清就按「不放行」处理）
+# Repository state (what cannot be determined is not allowed)
 # ---------------------------------------------------------------------------
 def _git(d: str, *args: str) -> tuple[int, str]:
     try:
@@ -93,8 +68,8 @@ def is_clean(d: str) -> bool:
     return code == 0 and out == ""
 
 
-def is_local_branch(d: str, name: str) -> bool:
-    return _git(d, "rev-parse", "--verify", "--quiet", f"refs/heads/{name}")[0] == 0
+def is_local_branch(d: str, branch: str) -> bool:
+    return _git(d, "rev-parse", "--verify", "--quiet", f"refs/heads/{branch}")[0] == 0
 
 
 def current_branch(d: str) -> str | None:
@@ -122,40 +97,45 @@ def push_allowed(d: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# 拆命令
+# Commands and the directory each runs in
 # ---------------------------------------------------------------------------
-_SPLIT = re.compile(r"&&|\|\||[;|&\n()`]|\$\(")
 _GIT_GLOBAL_WITH_ARG = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
 
 
-def segments(text: str, cwd: str):
-    """逐段给出 (tokens, 这一段的目录)。``cd x`` 改变后面各段的目录；目录查不清为 None。"""
-    d: str | None = cwd
-    for seg in _SPLIT.split(text):
-        toks = seg.split()
-        if not toks:
-            continue
-        if toks[0] == "cd":
-            if len(toks) < 2:
-                d = os.path.expanduser("~")
-            else:
-                nd = os.path.expanduser(toks[1])
-                base = d or cwd
-                nd = nd if os.path.isabs(nd) else os.path.join(base, nd)
-                d = nd if toks[1] != QUOTED and os.path.isdir(nd) else None
-            continue
-        yield toks, d
+def _resolve(word: str, base: str | None) -> str | None:
+    """The directory a ``cd`` / ``-C`` argument names; None when it cannot be determined."""
+    if word == QUOTED:
+        return None
+    path = os.path.expanduser(word)
+    if not os.path.isabs(path):
+        if base is None:
+            return None
+        path = os.path.join(base, path)
+    return path if os.path.isdir(path) else None
 
 
-def find_tool(toks: list[str], name: str) -> int | None:
-    for i, t in enumerate(toks):
-        if t == name or t.endswith("/" + name):
-            return i
-    return None
+def segments(command: str, cwd: str):
+    """Each simple command with its directory. ``cd x`` moves the commands after it in the same
+    subshell or substitution; a directory that cannot be determined is None."""
+    dirs: dict = {}
+
+    def here(scope):
+        if scope not in dirs:
+            dirs[scope] = here(scope[:-1]) if len(scope) > 1 else cwd
+        return dirs[scope]
+
+    for words, scope in commands(command):
+        d = here(scope)
+        first = command_words(words)[:1]
+        if first and name(words[first[0]]) == "cd":
+            args = words[first[0] + 1:]
+            dirs[scope] = _resolve(args[0], d) if args else os.path.expanduser("~")
+            continue
+        yield words, d
 
 
 def parse_git(toks: list[str], i: int, d: str | None):
-    """git 之后：全局选项 → 子命令 → 参数。``-C <dir>`` 改变目录（被引号剔空则查不清）。"""
+    """After ``git``: global options → subcommand → arguments. ``-C <dir>`` changes the directory."""
     j = i + 1
     while j < len(toks) and toks[j].startswith("-"):
         opt = toks[j]
@@ -163,9 +143,7 @@ def parse_git(toks: list[str], i: int, d: str | None):
             if j + 1 >= len(toks):
                 return None, [], None
             if opt == "-C":
-                nd = os.path.expanduser(toks[j + 1])
-                nd = nd if os.path.isabs(nd) else os.path.join(d or os.getcwd(), nd)
-                d = nd if toks[j + 1] != QUOTED and os.path.isdir(nd) else None
+                d = _resolve(toks[j + 1], d or os.getcwd())
             j += 2
         else:
             j += 1
@@ -179,44 +157,62 @@ def flags_and_args(args: list[str]) -> tuple[list[str], list[str]]:
 
 
 def has_short(flags: list[str], letter: str) -> bool:
-    """单字母短选项，含合写（``-am``、``-df``）。"""
+    """A one-letter option, combined forms included (``-am``, ``-df``)."""
     return any(re.fullmatch(r"-[A-Za-z]+", f) and letter in f[1:] for f in flags)
 
 
 # ---------------------------------------------------------------------------
-# 规则
+# Rules
 # ---------------------------------------------------------------------------
-ORCH_ONLY = "git 写操作只归协调者。在返回里写明要提交、建分支或推送什么，由协调者来做。"
-RESTORE = ("这条命令的作用域是 git 认为的整棵树或整块索引，不是你打出来的路径；"
-           "两者之差 = 别人尚未提交的活。")
-FORCE = "强制或改写历史的操作会破坏代码库，留给人。"
-NO_SWITCH = ("推送和 PR 是对外动作，要用户在项目 .claude/gates.json 里设 "
-             "\"git\": {\"push\": true}。没有就停下来问用户。")
+ORCH_ONLY = ("A sub-agent runs no git write, in a worktree of its own either: once you return, the "
+             "orchestrator's `gate.py land` commits what you changed and merges it into the run's branch. "
+             "Leave your changes in the files, and say in your return what else is needed (a branch, a push).")
+LAND = "A returned writer's work is committed and merged by `gate.py land`, not by hand."
+RESTORE = ("This command's scope is the tree or index as git sees it, not the paths you typed; "
+           "the difference is other agents' uncommitted work.")
+FORCE = "Forcing or rewriting history can destroy work; it is the user's."
+MERGE = ("Merging is the user's, on the host, after review; an agent's worktree is merged into the run's "
+         "branch by `gate.py land`. To bring a branch up to date: `git pull --ff-only`.")
+NO_SWITCH = ("Push and PR act outside this machine: the user sets \"git\": {\"push\": true} in the "
+             "project's .claude/gates.json. Without it, stop and ask the user.")
+UNKNOWN_DIR = "The directory cannot be determined, so this is not allowed."
 
 READ_ONLY = {"status", "diff", "log", "show", "ls-files", "ls-tree", "rev-parse", "blame", "grep",
              "archive", "cat-file", "describe", "shortlog", "merge-base", "rev-list", "show-ref",
              "for-each-ref", "name-rev", "check-ignore", "check-attr", "count-objects", "version",
              "help", "var", "whatchanged", "range-diff", "cherry", "show-branch", "difftool",
-             "init", "clone"}  # init/clone 只造新东西
+             "ls-remote", "diff-tree", "diff-index", "diff-files", "fsck", "verify-commit",
+             "verify-tag", "format-patch", "merge-tree", "annotate", "check-ref-format",
+             "init", "clone"}  # init / clone only create something new
+
+
+def not_listed(sub: str) -> str:
+    return (f"`git {sub}` is not on the orchestrator's list: add, commit, switch -c / checkout -b, "
+            "switch <existing branch>, pull --ff-only, fetch, push, branch -d, worktree add/remove, "
+            "tag, and every read.")
 
 
 def restore_rules(sub: str, args: list[str]) -> str | None:
-    """判据 1 与 2 里两种角色都不许的。"""
+    """What tests 1 and 2 deny to both roles."""
     flags, pos = flags_and_args(args)
-    if sub in ("restore", "reset", "clean", "rm", "revert", "rebase", "filter-branch",
-               "filter-repo", "update-ref", "update-index", "replace"):
-        alt = {"restore": "git show HEAD:<路径> > <路径>",
-               "reset": "改之前先 cp 一份；撤就 cp 回来，再用 cmp 证明逐字节相同",
-               "clean": "把你自己造的文件按名字 rm 掉",
-               "rm": "普通 rm；要不要从索引里去掉，提交时按路径 add 决定"}.get(sub)
-        return (RESTORE + (f"\n改用：{alt}" if alt else "")) if sub in ("restore", "reset", "clean", "rm") \
-            else FORCE
+    if sub in ("restore", "reset", "clean", "rm", "checkout-index", "read-tree"):
+        alt = {"restore": "git show HEAD:<path> > <path>",
+               "reset": "copy the file before you change it; to undo, copy it back and prove it with cmp",
+               "clean": "rm the files you created, by name",
+               "rm": "plain rm; whether it leaves the index is decided by the paths staged at commit"}.get(sub)
+        return RESTORE + (f"\nInstead: {alt}" if alt else "")
+    if sub in ("revert", "rebase", "filter-branch", "filter-repo", "update-ref", "update-index", "replace"):
+        return FORCE
     if sub == "stash" and not (pos[:1] in (["list"], ["show"])):
-        return RESTORE + "\n改用：git worktree add <临时目录> HEAD —— 基线在别处展开，你的工作区不动"
+        return RESTORE + "\nInstead: git worktree add <temp dir> HEAD (the baseline elsewhere, your tree untouched)"
     if sub == "apply" and ("-R" in flags or "--reverse" in flags):
-        return RESTORE + "\n改用：cp 回来 + cmp 证明；diff 是对 HEAD 算的，会连别人的活一起撤"
+        return RESTORE + "\nInstead: copy the file back and prove it with cmp; the diff was taken against HEAD"
     if sub == "worktree" and pos[:1] == ["remove"] and ("--force" in flags or has_short(flags, "f")):
-        return "先处理掉那个 worktree 里的改动，再用不带 --force 的 git worktree remove"
+        return ("Land that worktree's work first (`gate.py land`), then `gate.py worktrees --clean`, or "
+                "`git worktree remove` without --force.")
+    if sub == "worktree" and pos[:1] == ["add"] and ("--force" in flags or has_short(flags, "f")
+                                                     or has_short(flags, "B")):
+        return FORCE
     if sub == "pull" and ("--rebase" in flags or has_short(flags, "r") or "--force" in flags):
         return FORCE
     if sub == "reflog" and pos[:1] in (["expire"], ["delete"]):
@@ -225,28 +221,30 @@ def restore_rules(sub: str, args: list[str]) -> str | None:
 
 
 def switch_rules(sub: str, args: list[str], d: str | None) -> str | None:
-    """协调者的 switch / checkout：新建分支随时可以；换到已有分支要工作区干净；其余一律不许。"""
+    """The orchestrator's switch / checkout: a new branch at any time; an existing branch on a
+    clean tree; nothing else."""
     flags, pos = flags_and_args(args)
     quiet = {"-q", "--quiet"}
     create = {"switch": {"-c", "--create"}, "checkout": {"-b"}}[sub]
     other = [f for f in flags if f not in quiet and f not in create]
     if "--" not in args and not other and len(pos) == 1:
         if any(f in create for f in flags):
-            return None  # 在 HEAD 上新建分支：不动工作区
-        name = pos[0]
+            return None  # a new branch at HEAD: the tree is not touched
+        branch = pos[0]
         if d is None:
-            return "目录查不清，不放行换分支。"
-        if not is_local_branch(d, name):
-            return (RESTORE + f"\n{name} 不是本地分支；恢复路径改用 git show HEAD:<路径> > <路径>")
+            return UNKNOWN_DIR
+        if not is_local_branch(d, branch):
+            return RESTORE + f"\n{branch} is not a local branch. To restore a path: git show HEAD:<path> > <path>"
         if not is_clean(d):
-            return (f"{d} 的工作区不干净（git status --porcelain 非空）。只有完全干净时才放行换分支："
-                    "先按路径提交，或等写入代理返回。")
+            return (f"The tree in {d} is not clean (git status --porcelain prints something). Changing "
+                    "branch needs a clean tree: wait for the writer to return, land the returned writers "
+                    "(`gate.py land`), and commit what you wrote yourself by path.")
         return None
     if any(f in ("-C", "-B", "-f", "--force", "--discard-changes", "--orphan", "--detach", "--merge", "-m")
            for f in flags):
         return FORCE
-    return (RESTORE + "\n新建分支只认 `git switch -c <名>` / `git checkout -b <名>`（不带起点）；"
-            "换分支只认 `git switch <已有分支>`。")
+    return (RESTORE + "\nNew branch: `git switch -c <name>` / `git checkout -b <name>` (no start point). "
+            "Existing branch: `git switch <branch>`.")
 
 
 def branch_rules(args: list[str]) -> str | None:
@@ -257,37 +255,39 @@ def branch_rules(args: list[str]) -> str | None:
     if all(f.split("=")[0] in listing for f in flags) and (not pos or any(
             f.split("=")[0] in ("--list", "-l", "--contains", "--merged", "--no-merged", "--points-at",
                                 "--sort", "--format") for f in flags)):
-        return None  # 列表
+        return None  # a listing
     if ROLE != "orchestrator":
         return ORCH_ONLY
     if "-D" in flags or "--force" in flags or has_short(flags, "f") or has_short(flags, "D") \
             or "-M" in flags or "-C" in flags:
-        return FORCE + "\n删未合并的分支交给人；git branch -d 会自己拒绝未合并的分支，可以用。"
+        return FORCE + "\nAn unmerged branch is the user's to delete; `git branch -d` refuses one by itself."
     if flags in ([], ["-q"]) and len(pos) == 1:
-        return None  # 在 HEAD 上建分支
+        return None  # a new branch at HEAD
     if all(f in ("-d", "--delete") for f in flags) and flags and pos:
-        return None  # git 自己拒绝删未合并的分支
-    return "只认 `git branch <名>`（在 HEAD 上建）和 `git branch -d <名>`。"
+        return None  # git refuses to delete an unmerged branch
+    return "Only `git branch <name>` (at HEAD) and `git branch -d <name>`."
 
 
 def add_rules(args: list[str]) -> str | None:
     flags, pos = flags_and_args(args)
     if any(f in ("-A", "--all", "-u", "--update", "-f", "--force", "--no-ignore-removal") for f in flags) \
             or has_short(flags, "A") or has_short(flags, "u") or has_short(flags, "f"):
-        return "按路径暂存：git add <你改的文件>。-A / -u / -f 会把别人未提交的活一起卷进去。"
+        return ("Stage by path: git add <the files you wrote>. -A / -u / -f take other agents' uncommitted "
+                "work too. " + LAND)
     if any(p in (".", "./", ":/", ":", "*", "-") for p in pos) or not pos:
-        return "按路径暂存：git add <你改的文件>。`.` 是整棵树，会把别人未提交的活一起卷进去。"
+        return ("Stage by path: git add <the files you wrote>. `.` is the whole tree, other agents' work "
+                "included. " + LAND)
     return None
 
 
 def commit_rules(args: list[str]) -> str | None:
     flags, _ = flags_and_args(args)
     if "--amend" in flags:
-        return FORCE + "\n改上一个提交 = 改写历史；新开一个提交。"
+        return FORCE + "\nAmending rewrites the last commit; make a new one."
     if "--no-verify" in flags or has_short(flags, "n"):
-        return "跳过项目的提交钩子 = 放松检查（Constitution §4.5）。"
+        return "Skipping the project's commit hooks relaxes a check (Constitution §4.5)."
     if "--all" in flags or has_short(flags, "a"):
-        return "commit -a 会把别人未提交的改动一起提交；先 git add <路径> 再提交。"
+        return "commit -a commits other agents' uncommitted changes too: git add <paths>, then commit. " + LAND
     return None
 
 
@@ -295,20 +295,36 @@ def push_rules(args: list[str], d: str | None) -> str | None:
     flags, pos = flags_and_args(args)
     ok_flags = {"-u", "--set-upstream", "-q", "--quiet", "-v", "--verbose"}
     if any(f not in ok_flags for f in flags) or len(pos) > 2:
-        return FORCE + "\n只认 `git push [-u] [origin] [<本轮分支>]`：不带 --force / --delete / --tags / --all。"
+        return FORCE + "\nOnly `git push [-u] [origin] [<the run's branch>]`: no --force / --delete / --tags / --all."
     if d is None:
-        return "目录查不清，不放行推送。"
+        return UNKNOWN_DIR
     if not push_allowed(d):
         return NO_SWITCH
     ref = pos[1] if len(pos) == 2 else "HEAD"
     if "+" in ref or ":" in ref:
-        return FORCE + "\n只推本轮分支本身，不带 + 或 :。"
+        return FORCE + "\nPush the run's branch itself, without + or :."
     branch = current_branch(d) if ref == "HEAD" else ref
     if branch is None:
-        return "当前不在分支上（detached HEAD），不放行推送。"
+        return "Not on a branch (detached HEAD): no push."
     if branch in default_branches(d):
-        return f"不推 {branch}。改动走「分支 → PR → 用户合并」。"
+        return f"No push to {branch}. A change goes branch → PR → merged by the user."
     return None
+
+
+def worktree_rules(args: list[str]) -> str | None:
+    """A worktree lays the baseline out elsewhere. Creating a branch with it is a git write."""
+    flags, pos = flags_and_args(args)
+    verb = pos[:1]
+    if verb == ["list"]:
+        return None
+    if verb == ["add"]:
+        new_branch = has_short(flags, "b") or "--orphan" in flags or \
+            (len(pos) < 3 and "--detach" not in flags and not has_short(flags, "d"))  # no commit: a branch named after the dir
+        return ORCH_ONLY + "\nFor a baseline: git worktree add <temp dir> HEAD" \
+            if new_branch and ROLE != "orchestrator" else None
+    if verb in (["remove"], ["prune"]):
+        return None
+    return ORCH_ONLY if ROLE != "orchestrator" else not_listed("worktree " + " ".join(verb))
 
 
 def git_decision(sub: str | None, args: list[str], d: str | None) -> str | None:
@@ -318,13 +334,19 @@ def git_decision(sub: str | None, args: list[str], d: str | None) -> str | None:
     if reason:
         return reason
     flags, pos = flags_and_args(args)
-    if sub == "stash" or (sub == "worktree" and pos[:1] in (["add"], ["list"], ["remove"], ["prune"])) \
-            or (sub == "apply"):
-        return None  # 只读的 stash；worktree 在别处展开基线；正向 apply 打的是你点名的补丁
+    orchestrator = ROLE == "orchestrator"
+    if sub == "stash":
+        return None  # list / show; every other form was denied above
+    if sub == "apply":  # a forward patch touches the files it names; --index / --cached also write the index
+        to_index = any(f in ("--index", "--cached", "--3way", "-3") for f in flags)
+        return ORCH_ONLY + "\nApply to the working tree only: git apply <patch>" \
+            if to_index and not orchestrator else None
+    if sub == "worktree":
+        return worktree_rules(args)
     if sub == "branch":
         return branch_rules(args)
     if sub in ("tag", "remote", "config", "symbolic-ref", "reflog", "notes", "submodule"):
-        # 列表 / 读取形式两种角色都放行，其余是写
+        # the listing and reading forms are allowed to both roles; the rest write
         reading = (not pos and all(f in ("-l", "--list", "-v", "--get", "--get-all", "--show-origin",
                                          "--get-regexp", "--local", "-n") for f in flags)) or \
                   (sub == "remote" and pos[:1] in (["get-url"], ["show"])) or \
@@ -334,9 +356,14 @@ def git_decision(sub: str | None, args: list[str], d: str | None) -> str | None:
                   (sub == "reflog" and pos[:1] in ([], ["show"])) or \
                   (sub == "notes" and pos[:1] in ([], ["list"], ["show"])) or \
                   (sub == "submodule" and pos[:1] in ([], ["status"]))
-        return None if reading else (ORCH_ONLY if ROLE != "orchestrator" else
-                                     (FORCE if sub in ("tag", "notes") and has_short(flags, "f") else None))
-    if ROLE != "orchestrator":
+        if reading:
+            return None
+        if not orchestrator:
+            return ORCH_ONLY
+        if sub == "tag":
+            return FORCE if has_short(flags, "f") or "--force" in flags else None
+        return not_listed(sub)
+    if not orchestrator:
         return ORCH_ONLY
     if sub in ("switch", "checkout"):
         return switch_rules(sub, args, d)
@@ -346,10 +373,16 @@ def git_decision(sub: str | None, args: list[str], d: str | None) -> str | None:
         return commit_rules(args)
     if sub == "push":
         return push_rules(args, d)
-    return None  # fetch / pull --ff-only / merge 等：协调者可以
+    if sub == "fetch":
+        return FORCE if "--force" in flags or has_short(flags, "f") or any(p.startswith("+") for p in pos) else None
+    if sub == "pull":
+        return None if "--ff-only" in flags else "Only `git pull --ff-only`: any other pull can merge."
+    if sub == "merge":  # a fast-forward moves the branch as `pull --ff-only` does; anything else merges
+        return None if "--ff-only" in flags else MERGE
+    return not_listed(sub)
 
 
-# —— gh：只放行列出的子命令，其余交给人 ——
+# gh: only the listed subcommands; the rest is the user's
 GH_READ = {("pr", "view"), ("pr", "list"), ("pr", "status"), ("pr", "diff"), ("pr", "checks"),
            ("issue", "view"), ("issue", "list"), ("issue", "status"), ("run", "view"), ("run", "list"),
            ("run", "watch"), ("repo", "view"), ("auth", "status"), ("release", "view"),
@@ -375,62 +408,76 @@ def gh_decision(args: list[str], d: str | None) -> str | None:
             method = "POST" if any(a in ("-f", "-F", "--field", "--raw-field", "--input")
                                    or a.startswith(("--field=", "--raw-field=", "--input="))
                                    for a in flags) else "GET"
-        return None if method == "GET" else "gh api 只放行读取（GET）；写操作交给人。"
+        return None if method == "GET" else "gh api is allowed for reads (GET) only; a write is the user's."
     if (group, sub) in GH_READ or (group, "*") in GH_READ:
         return None
     if (group, sub) in GH_ORCH:
         if ROLE != "orchestrator":
             return ORCH_ONLY
         if d is None:
-            return "目录查不清，不放行。"
+            return UNKNOWN_DIR
         if not push_allowed(d):
             return NO_SWITCH
         if sub == "create" and not ({"--draft", "-d"} & set(args)):
-            return "PR 先开草稿：gh pr create --draft …，验收时再 gh pr ready。"
+            return "Open the PR as a draft: gh pr create --draft …; mark it ready at Acceptance with gh pr ready."
         return None
     if (group, sub) == ("pr", "merge"):
-        return "合并留给用户，在 GitHub 上审过再合。"
-    return f"gh {group} {sub if sub != '*' else ''} 不在放行表里；需要的话说出来让人跑。".replace("  ", " ")
+        return "Merging is the user's, on the host, after review."
+    return f"gh {group} {sub if sub != '*' else ''} is not on the allowed list.".replace("  ", " ")
 
 
-FOOTER = ("\n\n只读的 git 一律放行：status / diff / log / show / ls-files / archive / worktree add。\n"
-          "如果你确实需要被拦的那一条，**说出来让人来跑**（在提示里打 `! <命令>`），不要绕过。")
+FOOTER = ("\n\nEvery git read is allowed: status / diff / log / show / ls-files / archive / worktree add "
+          "<temp dir> HEAD.\nIf you do need the denied command, say so and let the user run it "
+          "(`! <command>` in the prompt). Do not work around this.")
 
 
-GATE_DENIED = ("门禁只由协调者运行（PLAYBOOK §3D）：gate.py 写的是本轮的账本（标记、轮次、批准），"
-               "子代理运行它会耗掉修复轮次、打乱角色检查。照你的 agent 文件交回结果和证据，"
-               "由协调者跑门禁。")
-_PYTHON = re.compile(r"(?:^|/)python[\d.]*$")
-_HEREDOC_BODY = re.compile(r"<<-?\s*[\"\']?(\w+)[\"\']?.*?\n\1\s*$", re.S | re.M)
+# ---------------------------------------------------------------------------
+# The harness's gate.py
+# ---------------------------------------------------------------------------
+GATE_DENIED = ("Only the orchestrator runs the gates: gate.py writes the run's ledger (marks, rounds, "
+               "approvals), and a run by you would use up a fix round and upset the role checks. "
+               "Return your result and evidence; the orchestrator runs the gate.\n"
+               "To check your own documents before you return, run only "
+               "`gate.py check <gate> --project <root>`: it is read-only. <root> is the root of the tree "
+               "you work in, your worktree's when you have one.")
+_PYTHON = re.compile(r"^python[\d.]*$")
 
 
-def runs_gate(command: str) -> bool:
-    """命令里有没有执行 gate.py：作为命令本身，或交给 python。引号去掉但内容保留
-    （``python3 "$HOME/.claude/gates/gate.py"`` 也算），heredoc 体不算。"""
-    for cmd in [command, *shell_payloads(command)]:
-        text = _HEREDOC_BODY.sub(" ", cmd).replace('"', " ").replace("'", " ")
-        for seg in _SPLIT.split(text):
-            toks = seg.split()
-            i = find_tool(toks, "gate.py")
-            if i is not None and (i == 0 or any(_PYTHON.search(t) for t in toks[:i])):
-                return True
-    return False
+def is_harness_gate(path: str, d: str | None) -> bool:
+    """Is this path the harness's gate.py — not a project's own file of the same name?"""
+    if os.path.basename(path) != "gate.py":
+        return False
+    if path.endswith(".claude/gates/gate.py"):  # ~/…, $HOME/…, an absolute path
+        return True
+    path = os.path.expanduser(os.path.expandvars(path))
+    if not os.path.isabs(path):
+        if d is None:
+            return False
+        path = os.path.join(d, path)
+    return os.path.realpath(path) == os.path.realpath(GATE)
+
+
+def gate_calls(command: str, cwd: str):
+    """The arguments of every run of the harness's gate.py: as the command itself, or handed to python."""
+    for words, d in segments(command, cwd):
+        first = command_words(words)
+        for i, w in enumerate(words):
+            if is_harness_gate(w.raw, d) and (i in first or any(_PYTHON.match(name(x)) for x in words[:i])):
+                yield words[i + 1:]
 
 
 def decide(command: str, cwd: str) -> str | None:
-    for cmd in [command, *shell_payloads(command)]:
-        for toks, d in segments(strip_data(cmd), cwd):
-            i = find_tool(toks, "git")
-            if i is not None:
-                sub, args, gd = parse_git(toks, i, d)
-                reason = git_decision(sub, args, gd)
-                if reason:
-                    return reason
-            i = find_tool(toks, "gh")
-            if i is not None:
-                reason = gh_decision(toks[i + 1:], d)
-                if reason:
-                    return reason
+    for words, d in segments(command, cwd):
+        for k in command_words(words):  # git and gh count only where a command stands
+            tool = name(words[k])
+            if tool == "git":
+                reason = git_decision(*parse_git(words, k, d))
+            elif tool == "gh":
+                reason = gh_decision(words[k + 1:], d)
+            else:
+                continue
+            if reason:
+                return reason
     return None
 
 
@@ -438,20 +485,21 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
     except Exception:
-        return 0  # 读不懂就不拦 —— 钩子不该成为新的故障源
+        return 0  # unreadable input is not denied: a hook must not become a new source of failure
     if payload.get("tool_name") != "Bash":
         return 0
     command = str(payload.get("tool_input", {}).get("command", ""))
-    if ROLE == "agent" and runs_gate(command):
+    cwd = str(payload.get("cwd") or os.getcwd())
+    if ROLE == "agent" and any(args[:1] != ["check"] for args in gate_calls(command, cwd)):
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "deny",
-            "permissionDecisionReason": f"[agent] {GATE_DENIED}"}}, ensure_ascii=False))
+            "permissionDecisionReason": f"[agent] {GATE_DENIED}"}}))
         return 0
-    reason = decide(command, str(payload.get("cwd") or os.getcwd()))
+    reason = decide(command, cwd)
     if reason:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "deny",
-            "permissionDecisionReason": f"[{ROLE}] {reason}{FOOTER}"}}, ensure_ascii=False))
+            "permissionDecisionReason": f"[{ROLE}] {reason}{FOOTER}"}}))
     return 0
 
 

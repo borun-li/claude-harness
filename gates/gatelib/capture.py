@@ -3,6 +3,8 @@
 The plan (`<run-dir>/capture-plan.json`) lists what must be captured; `gate.py capture` produces it
 into `<run-dir>/evidence/verify-<round>/` with `manifest.json` and `manifest.md`. Every entry records
 the instrument, the time and a fingerprint of the source tree, so evidence older than the build shows.
+A capture's `state` names the state row it shows (`error`, or `error — duplicate upload`). A terminal
+capture records its exit code and fails on any but 0, or the code its `expect_exit` gives.
 
 The demo (`<run-dir>/demo-plan.json`, same shape, no rows) captures the run's goal at its real entry
 point twice: `demo before` ahead of the first dispatch, `demo after` on the final code.
@@ -11,6 +13,7 @@ import hashlib
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import tempfile
@@ -42,13 +45,19 @@ def source_fingerprint(ctx, source=None):
     return hashlib.sha256(json.dumps(items).encode()).hexdigest()[:16]
 
 
-def plan_problems(plan, rows):
-    """Problems with a capture plan against the queue rows that must be verified."""
+def plan_problems(plan, rows, states=None, viewports=None, files=None):
+    """Problems with a capture plan against the rows that must be verified. `states` ({row: its
+    state names}): every state of a row needs a capture whose `state` names it. `viewports` (the
+    configured widths): a web plan captures every capture at every size, so `sizes` needs one of
+    each width; a terminal or manual plan is checked per state only. `files` (the project's paths):
+    `source` globs that match none of them would never show the evidence as stale."""
     probs = []
     surface = plan.get("surface")
     src = plan.get("source")
     if src is not None and not (isinstance(src, list) and all(isinstance(g, str) and g for g in src)):
         probs.append("source must be a list of globs (the files that make what is captured)")
+    elif src and files is not None and not any(glob_match(f, src) for f in files):
+        probs.append(f"source {src} matches no file: name the files that make what is captured")
     if surface not in SURFACES:
         probs.append(f"surface {surface!r} not one of {SURFACES}")
     caps = plan.get("captures", [])
@@ -69,6 +78,17 @@ def plan_problems(plan, rows):
         probs += [f"{c.get('id', '?')}: missing {k}" for k in need if not c.get(k)]
     covered = {c.get("row") for c in caps}
     probs += [f"{r}: no capture planned" for r in rows if r not in covered]
+    widths = {s.get("width") for s in plan.get("sizes") or [] if isinstance(s, dict)}
+    no_size = [w for w in viewports or [] if w not in widths] if surface == "web" else []
+    probs += [f"sizes: none {w} wide (the configured viewports are {list(viewports)})" for w in no_size]
+    for r in (r for r in rows if r in covered):
+        shown = " ".join(str(c.get("state") or "").lower() for c in caps if c.get("row") == r)
+        missing = []
+        for s in sorted((states or {}).get(r, ())):
+            named = re.search(rf"\b{re.escape(s)}\b", shown)
+            missing += [f"{s}@{w}" for w in no_size] if named else [s]
+        if missing:
+            probs.append(f"{r}: no capture for {', '.join(missing)}")
     return probs
 
 
@@ -177,8 +197,13 @@ def _terminal(ctx, plan, out):
         stem = f"{c['id']}@{cols}x{lines}"
         (out / f"{stem}.stdout").write_bytes(p.stdout)
         (out / f"{stem}.stderr").write_bytes(p.stderr)
+        # The exit code is part of what was captured: 0, or the code the capture says the state ends in.
+        want = int(c.get("expect_exit", 0))
         entries.append({"id": c["id"], "row": c["row"], "state": c["state"], "size": f"{cols}x{lines}",
-                        "command": c["command"], "exit": p.returncode, "seconds": seconds, "ok": True,
+                        "command": c["command"], "exit": p.returncode, "seconds": seconds,
+                        "ok": p.returncode == want,
+                        **({} if p.returncode == want else
+                           {"error": f"exit {p.returncode}, expected {want} (`expect_exit` when the state ends so)"}),
                         "files": {"stdout": f"{stem}.stdout", "stderr": f"{stem}.stderr"},
                         "instrument": f"subprocess, raw bytes, COLUMNS={cols} LINES={lines}"})
     return entries
@@ -233,8 +258,9 @@ def evidence_problems(ctx, round_dir, plan, build_time):
 
 def demo_problems(ctx, run, events):
     """Problems with a run's demo: both captures present, the before logged ahead of the run's first
-    dispatch, the after on today's code, the same entry points, and a difference between them. A
-    before may show a step failing: that is what "not yet" looks like."""
+    dispatch, the after on today's code, the same entry points, and a difference between them
+    (unless the run's goal is to preserve behaviour). A before may show a step failing: that is what
+    "not yet" looks like."""
     got, probs = {}, []
     for kind in DEMO_KINDS:
         d = demo_dir(run, kind)
@@ -267,6 +293,9 @@ def demo_problems(ctx, run, events):
                 (bd / fb[k]).is_file() and (ad / fa[k]).is_file()
                 and (bd / fb[k]).read_bytes() == (ad / fa[k]).read_bytes() for k in fb)
         shared = set(before) & set(after)
-        if shared and all(same(k) for k in shared):
+        # A goal of kind `preserve` (a refactor) is met by the same behaviour: identical is its pass.
+        goal = (read_json(run / "state.json") or {}).get("goal")
+        preserve = isinstance(goal, dict) and goal.get("kind") == "preserve"
+        if shared and all(same(k) for k in shared) and not preserve:
             probs.append("after is byte-identical to before: nothing changed at the entry point")
     return probs

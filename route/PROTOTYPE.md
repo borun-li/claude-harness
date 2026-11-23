@@ -3,7 +3,7 @@
 The user sees something running and confirms it before any detailed design (Constitution §2.7).
 Used by the Prototype tier (the whole run) and by Full development (Phase 1b, after requirements
 and before detailed design). The orchestrator runs this procedure; one engineer builds. The run
-dir is `docs/backend/`.
+dir is `docs/runs/<slug>/`.
 
 **Interfaces people operate** (web, native, desktop, game UI, terminal) are prototyped by the
 Frontend PLAYBOOK up to its Prototype stop. This file covers only work with no such interface:
@@ -13,7 +13,7 @@ APIs, scripts and command-line arguments, jobs.
 
 - **Full development:** the approved Phase 1 output (`01-requirements.md`).
 - **Prototype tier:** no requirements phase. Write down the ask in the user's words, then do
-  recon (≈30 s, read-only: stack, existing code, what already runs).
+  recon (brief, read-only: stack, existing code, what already runs).
 
 ## 2. Intent questions
 
@@ -29,7 +29,7 @@ answer drawn from step 1. Pick the questions whose answer would change what the 
 Record the answers in the project's `.claude/project-context.md` under `## Intent` (dated), so
 later phases and runs read them.
 
-## 3. Build the prototype — one engineer, one fresh dispatch
+## 3. Build the prototype — one engineer
 
 First the demo's before (`~/.claude/ORCHESTRATOR.md` § Demo), unless the run already took it.
 
@@ -50,7 +50,7 @@ First the demo's before (`~/.claude/ORCHESTRATOR.md` § Demo), unless the run al
 1. Run it yourself through its one command (Constitution §6.4), on a free port, never the user's.
 2. Give the user the URL or the command and a two-line summary of what it shows.
 3. Ask: **confirm**, **change** (what), or **stop**.
-4. **Change:** back to the engineer (Constitution §8.1), or a fresh dispatch when the hook refuses,
+4. **Change:** back to the engineer (Constitution §8.1), or a new dispatch when the hook refuses,
    with a short brief listing only the changes, the next round number, and the pitfalls from the
    previous engineer's handoff entry. Rounds are capped as everywhere (`ORCHESTRATOR.md`
    § Decisions 5).
@@ -63,8 +63,9 @@ First the demo's before (`~/.claude/ORCHESTRATOR.md` § Demo), unless the run al
 - **Prototype tier:** report and stop. Offer Full development as the next step; the confirmed
   prototype and the intent answers become its input, and its Phase 1b is skipped.
 - **Full development:** if the confirmation changed scope, `be-analyst`
-  amends the requirements first. Then continue with the next phase. The gates refuse a backend
-  design dispatch (step `2`) before the Prototype approval (`LOG.trail`).
+  amends the requirements first. Then continue with the next phase. A backend design dispatch
+  (step `2`) before the Prototype approval is not stopped at dispatch; `p2` and `p7` fail on it
+  afterwards (`P2.prototype-first`, `LOG.trail`).
 - **A later Full development run** on the same ask may reuse a confirmed prototype instead of
   building another (backend PLAYBOOK §2.3).
 - The prototype stays in `prototype/` as a reference. Product code is written from the design,

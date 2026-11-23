@@ -18,7 +18,7 @@ gate checks it exists. `Ref` is the UX or contract item (`FLOW-002`, `PAGE-003 e
 ### FND-001 — {claim}
 - **Scenario:** {this user, this size, this state, trying this, gets this}
 - **Suggested direction:**
-- **Status:** open | fixed in round n | accepted as-is (rationale)
+- **Status:** open   <!-- exactly one of: open · fixed in round <n> · accepted as-is (<rationale>) -->
 
 ## 3. Dropped by the coordinator
 Candidate ids are the panelists' own (`E-1`, `A-1`, `I-1`), never `FND-`.

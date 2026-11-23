@@ -1,63 +1,43 @@
 #!/usr/bin/env python3
-"""PreToolUse(Bash) —— 拦下「按名字、模式或端口」选中进程再停掉的命令。
+"""PreToolUse(Bash): deny a command that picks processes by name, pattern or port and stops them.
 
-**为什么是钩子而不是一句提示。** 代理收掉自己起的实例时，常顺手写 ``pkill -f "^./server$"``，
-连带停掉预览、别的代理的实例或用户自己的服务器。Constitution §4.6 写着「用户的会话、
-服务器和端口不能碰」，这里用结构来承载（~/.claude/ORCHESTRATOR.md，Boundaries）。
+**Why a hook and not a sentence.** An agent closing the instance it started tends to write
+``pkill -f "^./server$"``, and stops the preview, another agent's instance or the user's own
+server with it. Constitution §4.6 says the user's sessions, servers and ports are not touched;
+this is the structure that holds it (~/.claude/ORCHESTRATOR.md, Boundaries).
 
-**判据只有一条，和 no-tree-restoring-git.py 相同：调用者能不能把要碰的东西全部说出名字。**
-PID 是名字：``kill 38236`` 只碰你点名的那一个。程序名、命令行模式、端口不是名字：
-它们选中的是「所有长得像的」，其中有别人的。所以：
+**One test, the same as no-tree-restoring-git.py: can the caller name everything it touches?**
+A PID is a name: ``kill 38236`` touches the one process you named. A program name, a command-line
+pattern or a port is not: it selects everything that looks alike, and some of that is not yours.
 
-- 拦：``pkill`` / ``killall``；``fuser -k`` / ``kill-port``；同一条命令里先查
-  （``pgrep`` / ``pidof`` / ``lsof`` / ``ps``）再 ``kill``；``kill 0``、``kill -1``、
-  负 PID（整组进程）。
-- 放：``kill <pid>``、``kill $!``、``kill "$VAR"``、``kill %1``、
-  ``kill $(cat <pid 文件>)``；只查不杀；字符串和 heredoc 里出现的这些词。
+- Denied: ``pkill`` / ``killall``; ``fuser -k`` / ``kill-port``; a lookup (``pgrep`` / ``pidof``
+  / ``lsof`` / ``ps``) and a ``kill`` in the same command line; ``kill 0``, ``kill -1`` and
+  negative PIDs (a whole process group).
+- Allowed: ``kill <pid>``, ``kill $!``, ``kill "$VAR"``, ``kill %1``,
+  ``kill $(cat <pid file>)``; a lookup without a kill; these words inside strings and heredocs.
 
-管不住包在脚本或代码里的调用（``python -c "os.kill(…)"``、一个内含 pkill 的 .sh）。
-这个钩子防的是顺手写出的习惯命令，不是存心绕过；兜底的是 Constitution §4.6。
+A call wrapped in a script or in code (``python -c "os.kill(…)"``, a .sh that runs pkill) gets
+through. The hook guards against the habitual command, not against intent; Constitution §4.6 is
+the backstop.
 """
+from __future__ import annotations
+
 import json
 import re
 import sys
 
-_HEREDOC = re.compile(r"<<-?\s*[\"\']?(\w+)[\"\']?")
+sys.dont_write_bytecode = True  # no __pycache__ next to the user's own hooks
+from shell_commands import command_words, commands, name  # noqa: E402
 
-# 命令位置：行首或分隔符之后，可带几个透传前缀（sudo、xargs -r、timeout 5 …）
-_CMD = (r"(?:^|[;&|\n(`]|\$\()\s*"
-        r"(?:(?:sudo|nohup|exec|command|time|env(?:\s+\w+=\S*)*|xargs(?:\s+-\S+)*|timeout\s+\S+)\s+)*")
-
-_BY_NAME = re.compile(_CMD + r"(?:pkill|killall)\b")
-_BY_PORT = re.compile(_CMD + r"(?:fuser\b[^;&|\n]*\s-\w*k|(?:npx\s+(?:-y\s+)?)?kill-port\b)")
-# `ps -p <pid>` 查的是点名的那一个，不算按名字查
-_LOOKUP = re.compile(_CMD + r"(?:pgrep|pidof|lsof|ps(?!\s+-p\b))\b")
-_KILL = re.compile(_CMD + r"kill\b([^;&|\n)`]*)")
+_LOOKUPS = {"pgrep", "pidof", "lsof"}
 
 
-def strip_data(command: str) -> str:
-    """剔掉 heredoc 体和引号内的整段，只留真正会被执行的部分（同 no-tree-restoring-git.py）。"""
-    out, marker = [], None
-    for line in command.split("\n"):
-        if marker is not None:
-            if line.strip() == marker:
-                marker = None
-            continue
-        m = _HEREDOC.search(line)
-        out.append(line[: m.start()] if m else line)
-        if m:
-            marker = m.group(1)
-    text = "\n".join(out)
-    text = re.sub(r"'[^']*'", " ", text)
-    return re.sub(r'"[^"]*"', " ", text)
-
-
-def _whole_group(args: str) -> bool:
-    """kill 的目标里有 0、-1 或负 PID：停的是一整组进程。"""
-    tokens, signal_seen, after_dashes = args.split(), False, False
+def _whole_group(args: list) -> bool:
+    """A target of 0, -1 or a negative PID: kill stops a whole group of processes."""
+    signal_seen = after_dashes = False
     i = 0
-    while i < len(tokens):
-        t = tokens[i]
+    while i < len(args):
+        t = args[i]
         if after_dashes:
             if re.fullmatch(r"-?\d+", t) and int(t) <= 0:
                 return True
@@ -67,34 +47,41 @@ def _whole_group(args: str) -> bool:
             signal_seen = True
             i += 1
         elif t.startswith("-") and not signal_seen:
-            signal_seen = True          # 第一个 -X 是信号（-9、-TERM、-l）
+            signal_seen = True          # the first -X is the signal (-9, -TERM, -l)
         elif re.fullmatch(r"-?\d+", t) and int(t) <= 0:
-            return True                 # 信号之后的 -N，或 0
+            return True                 # -N after the signal, or 0
         i += 1
     return False
 
 
 def reason(command: str) -> str | None:
-    c = strip_data(command)
-    if _BY_NAME.search(c):
-        return "按程序名或命令行模式停进程（pkill / killall）"
-    if _BY_PORT.search(c):
-        return "按端口或文件停进程（fuser -k / kill-port）"
-    kills = list(_KILL.finditer(c))
-    if kills and _LOOKUP.search(c):
-        return "同一条命令里先查进程（pgrep / pidof / lsof / ps）再 kill"
-    if any(_whole_group(k.group(1)) for k in kills):
-        return "kill 0、-1 或负 PID：停的是一整组进程"
+    """Why the command is denied. Every simple command counts, wherever it stands: after a
+    separator, inside ``$(…)`` or double quotes, or handed to ``bash -c``."""
+    calls = [(name(words[k]), words[k + 1:]) for words, _ in commands(command) for k in command_words(words)]
+    kills = [args for tool, args in calls if tool == "kill"]
+    lookup = False
+    for tool, args in calls:
+        if tool in ("pkill", "killall"):
+            return "stops processes by program name or command-line pattern (pkill / killall)"
+        if tool == "fuser" and any(re.match(r"-\w*k", a) for a in args) or tool == "kill-port" \
+                or tool == "npx" and [a for a in args if not a.startswith("-")][:1] == ["kill-port"]:
+            return "stops processes by port or file (fuser -k / kill-port)"
+        # `ps -p <pid>` looks up the one process you named
+        lookup = lookup or tool in _LOOKUPS or (tool == "ps" and args[:1] != ["-p"])
+    if kills and lookup:
+        return "looks processes up (pgrep / pidof / lsof / ps) and kills in the same command line"
+    if any(_whole_group(args) for args in kills):
+        return "runs kill 0, -1 or a negative PID, which stops a whole process group"
     return None
 
 
 MESSAGE = (
-    "这条命令{what}，选中的不一定是你启动的。\n"
-    "别人的进程（预览、其他 agent、用户的服务器）一律不碰（Constitution §4.6）。\n\n"
-    "改用：启动时记下 PID ——  <命令> & echo $! > <项目外的临时目录>/<名字>.pid\n"
-    "      结束时只停它 ——    kill $(cat <项目外的临时目录>/<名字>.pid)\n"
-    "不是你启动的进程：不要停，报告给 orchestrator。确实需要，说出来让人来跑（在提示里打 `! <命令>`），"
-    "不要绕过。"
+    "This command {what}; what it selects is not only what you started.\n"
+    "Other processes (the preview, other agents, the user's servers) are not touched (Constitution §4.6).\n\n"
+    "Instead: record the PID at start:  <command> & echo $! > <temp dir outside the project>/<name>.pid\n"
+    "         stop only that one:       kill $(cat <temp dir outside the project>/<name>.pid)\n"
+    "A process you did not start: leave it and report it to the orchestrator. If it must be stopped, "
+    "say so and let the user run it (`! <command>` in the prompt). Do not work around this."
 )
 
 
@@ -102,7 +89,7 @@ def main() -> int:
     try:
         payload = json.load(sys.stdin)
     except Exception:
-        return 0  # 读不懂就不拦 —— 钩子不该成为新的故障源
+        return 0  # unreadable input is not denied: a hook must not become a new source of failure
     if payload.get("tool_name") != "Bash":
         return 0
     what = reason(str(payload.get("tool_input", {}).get("command", "")))

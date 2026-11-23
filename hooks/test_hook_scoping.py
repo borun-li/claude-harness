@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
-"""安全钩子只在 harness 会话里生效。跑法：``python3 <本文件>``，退出码即结果。
+"""The safety hooks act only in harness sessions. Run: ``python3 <this file>``; the exit code is the result.
 
-钩子写在 agent 和命令文件开头的 frontmatter 里，不写进全局 settings.json：
-- 每个 be-* / fe-* agent 带 git（``--role agent``，只读）和停进程两个钩子，结束时记返回（subagent 只认自己文件里的钩子）；
-- 开启或恢复一次 run 的命令带 git（``--role orchestrator``）、停进程、续用三个钩子，派工与续用时记日志，调用后对本会话的主线程生效；
-- install.sh 删掉旧版本写进 settings.json 的全局条目，别的设置不动。
+The hooks are declared in the frontmatter of the agent and command files, not in the global settings.json:
+- every be-* / fe-* agent carries the git hook (``--role agent``, read only) and the process hook, and
+  logs its return when it stops (a sub-agent runs only the hooks in its own file);
+- a command that starts or resumes a run carries the git hook (``--role orchestrator``), the process
+  hook and the continuation hook, and logs dispatches and continuations; from that call on they act
+  on the session's main thread;
+- install.sh removes the global entries earlier versions wrote into settings.json and leaves the
+  other settings alone.
 """
 import json
 import pathlib
@@ -14,13 +18,13 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-GIT = 'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"'  # 旧版本写进 settings.json 的形式
+GIT = 'python3 "$HOME/.claude/hooks/no-tree-restoring-git.py"'  # the form earlier versions wrote into settings.json
 GIT_AGENT = GIT + " --role agent"
 GIT_ORCH = GIT + " --role orchestrator"
 KILL = 'python3 "$HOME/.claude/hooks/no-foreign-process-kill.py"'
 CONT = 'python3 "$HOME/.claude/hooks/no-agent-continuation.py"'
 RUNLOG = 'python3 "$HOME/.claude/hooks/run-log.py"'
-RUN_COMMANDS = ["route", "backend", "frontend", "backend-resume", "frontend-resume"]
+RUN_COMMANDS = ["route", "route-resume"]  # the commands that start or resume a run
 
 
 def frontmatter(path: pathlib.Path) -> str:
@@ -29,13 +33,13 @@ def frontmatter(path: pathlib.Path) -> str:
 
 
 def event(fm: str, name: str) -> str:
-    """一个事件（PreToolUse、PostToolUse、Stop）下的那一段。"""
+    """The block under one event (PreToolUse, PostToolUse, Stop)."""
     m = re.search(r"^  %s:\n((?:\s{4,}.*\n?)*)" % name, fm + "\n", re.M)
     return m.group(1) if m else ""
 
 
 def hooked(fm: str, matcher: str, ev: str = "PreToolUse") -> set:
-    """该事件里 matcher 段下登记的命令；matcher 为 None 时取整个事件的命令。"""
+    """The commands under a matcher of that event; with matcher None, every command of the event."""
     block = event(fm, ev)
     if matcher is not None:
         m = re.search(r"- matcher: %s\n((?:\s{6,}.*\n?)*)" % re.escape(matcher), block)
@@ -44,7 +48,7 @@ def hooked(fm: str, matcher: str, ev: str = "PreToolUse") -> set:
 
 
 def cleanup(settings: dict) -> dict:
-    """跑 install.sh 里清理 settings.json 的那段 Python。"""
+    """Run the Python in install.sh that cleans settings.json."""
     script = (ROOT / "install.sh").read_text()
     code = re.search(r"python3 - \"\$dest/settings.json\" <<'EOF'\n(.*?)\nEOF\n", script, re.S).group(1)
     with tempfile.TemporaryDirectory() as d:

@@ -6,6 +6,13 @@
 | # | DES | What the design said | What was built | Why | Approved by |
 |---|---|---|---|---|---|
 
+## Files the design did not name
+| Path | Why it had to change (e.g. a caller of DES-012's function) |
+|---|---|
+
+## Retired tests
+{Tests removed with the code they covered, by path and with the reason; "none" otherwise.}
+
 ## Design gaps found
 | # | DES / REQ | Gap | How it was resolved (architect amendment / assumption made) |
 |---|---|---|---|

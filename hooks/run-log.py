@@ -7,11 +7,13 @@
                           which the transcript may not hold yet when the agent stops
     run-log.py return     Stop in every be-*/fe-* agent file
 
-It hands the payload to `gate.py auto`, which marks the writer, logs the event and enforces the
-round cap. Outside an active run it does nothing. A dispatch it refuses (no step in the brief's
-first line, round cap reached, the other team has a writer out) is denied with the reason; a
-return never blocks the agent, and nothing here may break a session: an event it could not log is
-reported as a system message, so it is logged by hand at once instead of being found missing later.
+It hands the payload, unchanged, to `gate.py auto`, which finds the project and its run from the
+payload's cwd (also from inside an agent's worktree), marks a writer in the run's tree, logs the
+event and enforces the round cap. Outside an active run it does nothing. A dispatch it refuses (no
+step in the brief's first line, round cap reached, a second writer in the run's tree, an isolated
+agent that would not start from the run's branch) is denied with the reason; a return never blocks
+the agent, and nothing here may break a session: an event it could not log is reported as a system
+message, so it is logged by hand at once instead of being found missing later.
 """
 import json
 import pathlib
@@ -27,12 +29,11 @@ def main() -> int:
     raw = sys.stdin.read()
     try:
         payload = json.loads(raw)
-        cwd = payload.get("cwd") or "."
         if mode == "report":
             from gatelib import auto
             auto.keep_report(payload.get("agent_id"), (payload.get("tool_input") or {}).get("message"))
             return 0
-        p = subprocess.run([sys.executable, str(GATE), "auto", mode, "--project", cwd],
+        p = subprocess.run([sys.executable, str(GATE), "auto", mode],
                            input=raw, capture_output=True, text=True, timeout=120)
     except Exception as e:  # never the cause of a broken session, but never silent about an event
         if "payload" not in locals():  # not a hook payload at all: nothing to log

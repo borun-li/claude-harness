@@ -181,7 +181,7 @@ A phase is done only when every bar in its section holds. `[FE…]` = also enfor
 - Acceptance opens with the goal (Constitution §7.4): the change, the user's check, its result, and
   the demo's before and after at the goal's real entry point (`ORCHESTRATOR.md` § Demo). `[DEMO]`
 - Acceptance: every active `[interface]` REQ delivered by a row verified done
-  (`gates/traceability.md`). `[FEA.matrix]`
+  (`gates/fe-traceability.md`). `[FEA.matrix]`
 - Every `needs user` DFB carries the user's decision. `[FEA.feedback]`
 - Every registered observable from earlier rounds still holds, unless the user retired it.
   `[FE.regression · FE.regression-captures]`

@@ -1,5 +1,5 @@
 {
-  "_comment": "Defaults for every project. A project's .claude/gates.json overrides any top-level key. Per-test results come from JUnit: automatic for pytest, vitest, playwright and jest (with jest-junit); set \"junit\": \"<report path or glob>\" for any other runner. volatile_globs: files the running product rewrites (logs, a local database); snapshots, fingerprints and tree checks ignore them.",
+  "_comment": "Defaults for every project. A project's .claude/gates.json overrides any top-level key. Per-test results come from JUnit: automatic for pytest, vitest, playwright and jest (with jest-junit); set \"junit\": \"<report path or glob>\" for any other runner. volatile_globs: files the running product rewrites (logs, a local database); snapshots, fingerprints and tree checks ignore them. control_globs: gate and team configuration, the orchestrator's alone; a writer that changes one fails ROLE.control.",
   "required_commands": [
     "test"
   ],
@@ -38,8 +38,10 @@
     "docs/**",
     "contracts/**",
     "product/**",
-    ".claude/**",
     "**/*.md"
+  ],
+  "control_globs": [
+    ".claude/**"
   ],
   "dependency_manifests": [
     "requirements*.txt",
@@ -103,6 +105,10 @@
     "fe_row_words": 80,
     "codemap_lines": 200,
     "handoff_section_lines": 20
+  },
+  "worktree": {
+    "_comment": "Parallel writers each work in a git worktree (ORCHESTRATOR.md § Parallel). union_globs: documents several writers add to; their merge conflicts keep both sides' lines. <run> is the run dir.",
+    "union_globs": ["<run>/**", "docs/codemap.md", "docs/codemap/**"]
   },
   "junit": null
 }

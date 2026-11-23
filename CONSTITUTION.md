@@ -118,30 +118,32 @@ A tier with no requirements or findings skips 1 and 3; nothing skips 2, 4, 7 or 
 
 ## 7. Run Tiers
 
-1. At the start of every task, ask the user which tier it is — **Small change**, **Prototype** or
-   **Full development** — in the user's language. Never infer it.
+1. At the start of every task, ask the user which tier it is — **Small change**, **Standard
+   change**, **Prototype** or **Full development** — in the user's language. Never infer it.
 2. Each tier runs only its own procedure, and ends only by its own end condition.
 3. If the work turns out bigger than its tier (new data model, new dependency, scope change),
    stop and ask the user whether to switch tiers. Never switch silently.
 4. With the tier, the user sets the run's **goal**: the change they will observe when it ends, and
    how they will tell it worked. Done is defined before building. The goal does not grow during the
    run: what comes up goes to the deferred list for a later run, unless the user changes the goal.
+   For work that must leave behaviour as it is (a refactor), the goal is the behaviour that stays
+   the same, and what the user observes is that it did.
 
 ## 8. Context Discipline
 
 Knowledge lives on disk, not in an agent's context.
 
-1. **One dispatch, one fresh agent.** Every round, fix round and retry is a new agent. A returned
-   agent is never continued into another round, with two exceptions: an agent that returned
-   blocked on a question may be continued once, in the same round, to receive the answer; and the
-   author of work being fixed or revised may be continued into that step's next rounds while its
-   context is still small, so it does not re-read what it already knows. Whoever judges the work
-   (reviewers, verifiers) is always a fresh agent.
+1. **An author keeps its work; a judge is always fresh.** The agent that wrote a piece of work is
+   continued for that work's fix and revision rounds, and for its role's next step on the same
+   work, while its context is still small: it does not re-read what it already knows. When it
+   cannot be continued, a fresh agent starts from the handoff. Whoever judges the work (reviewers,
+   verifiers) is a fresh agent every time, and is never the work's author. Any agent that returned
+   blocked on a question may be continued once to receive the answer.
 2. **Short briefs.** A dispatch names the task, the items, the evidence and the files by id and
    path. It never pastes documents, logs or earlier conversation.
 3. **Handoff notes.** Before returning, every agent leaves a dated handoff entry: who it is (role
-   and ordinal), which round, its task, what it changed, the result, and what the next agent must
-   know. A read-only agent returns the entry for the orchestrator to file.
+   and ordinal), which round, its task, what it changed, what the user will see differently, the
+   result, and what the next agent must know. A read-only agent returns the entry for the orchestrator to file.
 4. **Long output goes to files.** Command output beyond a screen is written to a file and read
    by search or tail, never pulled whole into context.
 5. **Return summaries.** Agents return their output contract; the work lives in files.

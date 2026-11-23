@@ -7,12 +7,12 @@ Builds the backend: requirements, architecture, code, tests and review. Interfac
 
 ```mermaid
 flowchart LR
-    S(["/backend"]) --> K{{kickoff ■}} --> AN[be-analyst<br/>requirements] --> P{{prototype ■}}
+    S(["/route"]) --> K{{kickoff ■}} --> AN[be-analyst<br/>requirements] --> P{{prototype ■}}
     P --> AR[be-architect<br/>architecture + detailed design] --> FX[be-analyst<br/>fixture answers] --> PL{{Plan ■}}
     AR -. "risk: high" .-> DR[design review<br/>behavior · reliability] -. "one revision" .-> AR
     FX -. "design contradicts a REQ" .-> AR
     PL --> DEV[be-developer<br/>build] & TP[be-tester<br/>test plan]
-    PL --> FT[[Frontend team<br/>side: frontend items]]
+    PL --> FT[[Frontend team<br/>side: frontend items, at the same time]]
     DEV & TP --> VT[be-tester<br/>run tests] --> PN[review panel<br/>behavior · reliability · security] --> CO[be-reviewer<br/>coordinator] --> AC{{Acceptance ■}}
     FT --> AC
     VT -. "failed tests" .-> DEV
@@ -28,11 +28,17 @@ requirements, decisions and fixture answers before any code; **Acceptance**.
   disprove. Only blockers and majors are fixed, and only the fixes are re-checked.
 - **Risk**: a `high` round (money, personal data, auth, schema, public APIs …) adds a design review
   and the full panel.
+- **Build in parallel**: developers (one per group of items that share no file), the tester
+  planning tests and, in a cross-stack run, the Frontend team on the items whose seam is written in
+  the contract go out together, each in a git worktree of its own. `gate.py land` commits each
+  return and merges it onto the run's branch, and the gate runs on what has landed.
 - **Changes mid-run** join at the next sign-off as an increment; the run never restarts.
-- Every round is a fresh agent, except that a fix goes back to its author while its context is
-  small; reviewers are always fresh. Dotted arrows are fix loops through the orchestrator.
+- The agent that wrote a piece of work keeps it (fixes, revisions, its role's next step) while its
+  context is small; reviewers are new every time. Dotted arrows are fix loops through the
+  orchestrator.
 
-Rules in full: [`PLAYBOOK.md`](PLAYBOOK.md). Deliverables: `<project>/docs/backend/`.
+Rules in full: [`PLAYBOOK.md`](PLAYBOOK.md). Deliverables: `<project>/docs/runs/<slug>/`, shared
+with the Frontend team in a cross-stack run.
 
 ## Team
 
@@ -49,7 +55,7 @@ Rules in full: [`PLAYBOOK.md`](PLAYBOOK.md). Deliverables: `<project>/docs/backe
 
 | Change | File |
 |---|---|
-| Models, panels, loop caps | `config.json`, or per project `<project>/.claude/backend.json` |
+| Models, panels, loop caps | Your defaults `~/.claude/harness-local/config.json`, or per project `<project>/.claude/harness.json` (`/route-config` writes both); they override [`harness/config.json`](../harness/config.json) |
 | Definition of done | `QUALITY-BARS.md` |
 | Deliverable documents | `templates/` |
 | Build and test commands for the gates | `<project>/.claude/gates.json` |

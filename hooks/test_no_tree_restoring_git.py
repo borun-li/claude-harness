@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-"""``no-tree-restoring-git.py`` 的回归矩阵。跑法：``python3 <本文件>``，退出码即结果。
+"""Regression matrix of ``no-tree-restoring-git.py``. Run: ``python3 <this file>``; the exit code is the result.
 
-按角色分两半：协调者（``--role orchestrator``）能开分支、按路径提交、推本轮分支、开草稿 PR；
-子代理（``--role agent``，也是缺省）只读。两者都不许重写整棵树、强制、改写历史。
+Two halves by role: the orchestrator (``--role orchestrator``) runs the git writes on its list
+(branch, commit by path, push the run's branch, draft PR); a sub-agent (``--role agent``, also
+the default) reads only, in a worktree of its own too. Neither may rewrite the tree, force, or
+rewrite history. A writer's work reaches the run's branch through ``gate.py land``: the denials of
+a hand-made commit or merge say so.
 
-**ALLOW 用例和 DENY 用例同等重要。** 一个会对 ``grep -rn 'git checkout' docs/`` 开火的守卫，
-会在第一次有人查这条禁令的出处时显得愚蠢，然后被关掉。
+**The ALLOW cases matter as much as the DENY cases.** A guard that fires on
+``grep -rn 'git checkout' docs/`` looks foolish the first time someone looks the rule up, and is
+switched off.
 """
+from __future__ import annotations
+
 import json
 import os
 import pathlib
@@ -15,11 +21,12 @@ import sys
 import tempfile
 
 HOOK = pathlib.Path(__file__).with_name("no-tree-restoring-git.py")
+ROOT = HOOK.resolve().parent.parent  # the harness root: its gates/gate.py is the harness's gate
 D, A = True, False  # deny / allow
 
-# (命令, 协调者, 子代理) —— 不依赖仓库状态的
+# (command, orchestrator, sub-agent): cases that do not depend on a repository's state
 CASES: list[tuple[str, bool, bool]] = [
-    # —— 两种角色都拦：重写整棵树 ——
+    # -- denied to both: rewrites the tree --
     ("git checkout -- review/views.py", D, D),
     ("git checkout -q -- review/views.py", D, D),
     ("git checkout tests/x.docx", D, D),
@@ -31,7 +38,7 @@ CASES: list[tuple[str, bool, bool]] = [
     ("git stash", D, D),
     ("git apply -R /tmp/round1.diff", D, D),
     ("git worktree remove --force /tmp/base", D, D),
-    # —— 两种角色都拦：强制、改写历史 ——
+    # -- denied to both: force, rewriting history --
     ("git branch -D old", D, D),
     ("git branch -df old", D, D),
     ("git branch --delete --force old", D, D),
@@ -54,12 +61,12 @@ CASES: list[tuple[str, bool, bool]] = [
     ("git push --tags", D, D),
     ("gh pr merge 27", D, D),
     ("gh pr merge 27 --squash", D, D),
-    ("gh pr checkout 27", D, D),                       # 会换分支
+    ("gh pr checkout 27", D, D),                       # changes branch
     ("gh repo delete x", D, D),
     ("gh api -X DELETE repos/o/r/git/refs/heads/x", D, D),
     ("gh api repos/o/r/pulls/1/merge -X PUT", D, D),
-    ("gh api repos/o/r/issues -f title=x", D, D),      # -f 隐含 POST
-    # —— 协调者可以、子代理不行 ——
+    ("gh api repos/o/r/issues -f title=x", D, D),      # -f implies POST
+    # -- the orchestrator may, a sub-agent may not --
     ("git switch -c feature/x", A, D),
     ("git checkout -b feature/x", A, D),
     ("git checkout -q -b feature/x", A, D),
@@ -68,18 +75,19 @@ CASES: list[tuple[str, bool, bool]] = [
     ("git add review/views.py tests/test_x.py", A, D),
     ("git commit -m x", A, D),
     ("git commit -q -F - <<'EOF'\nmsg with git push --force inside\nEOF", A, D),
+    ('git commit -m "$(cat <<\'EOF\'\nFix it; don\'t git stash (ever)\nEOF\n)"', A, D),  # the message is data
     ("git fetch -q origin", A, D),
     ("git pull --ff-only", A, D),
     ("git merge --ff-only origin/main", A, D),
-    # —— 协调者也不行：按路径暂存 ——
+    # -- not the orchestrator either: stage by path --
     ("git add -A", D, D),
     ("git add .", D, D),
     ("git add -u", D, D),
     ("git add -f ignored.log", D, D),
     ("git add -A && git commit -m x", D, D),
-    ("git checkout -b x origin/main", D, D),           # 带起点 = 换到另一个提交
+    ("git checkout -b x origin/main", D, D),           # a start point = another commit
     ("git switch --detach HEAD~1", D, D),
-    # —— 两种角色都放行：只读与认可的替代路径 ——
+    # -- allowed to both: reads and the approved alternatives --
     ("git status --short", A, A),
     ("git diff --stat", A, A),
     ("git log --oneline -5", A, A),
@@ -102,26 +110,97 @@ CASES: list[tuple[str, bool, bool]] = [
     ("gh pr checks 27", A, A),
     ("gh api repos/o/r/pulls", A, A),
     ("gh api -X GET search/issues -f q=x", A, A),
-    # —— 数据不是命令 ——
+    # -- data is not a command --
     ("grep -rn 'git checkout' docs/", A, A),
     ('grep -rn "git push --force" ~/.claude/', A, A),
-    ("cat > d.md <<'EOF'\n禁止 git checkout -- 与 git stash\nEOF", A, A),
-    ("cat > d.md <<'EOF'\n正文\nEOF\ngit reset --hard", D, D),  # heredoc 之后的真命令照拦
-    # —— 绕过写法 ——
+    ("cat > d.md <<'EOF'\nnever git checkout -- or git stash\nEOF", A, A),
+    ("cat > d.md <<'EOF'\nbody\nEOF\ngit reset --hard", D, D),  # a real command after the heredoc
+    # -- forms that used to slip through --
     ('bash -c "git push --force"', D, D),
     ("sh -c 'git reset --hard'", D, D),
     ("eval 'git stash'", D, D),
-    ('git -C "some dir" reset --hard', D, D),          # 引号目录不能让子命令漏掉
+    ('git -C "some dir" reset --hard', D, D),          # a quoted directory must not hide the subcommand
     ("echo hi && git reset --hard", D, D),
     ("ls; git clean -fd", D, D),
-    # —— 门禁只归协调者 ——
+    ("git status 2>/dev/null; git stash", D, D),       # a redirection does not swallow the separator
+    ("git status >/dev/null 2>&1 && git reset --hard", D, D),
+    ("git diff > /tmp/x.diff; git clean -fd", D, D),
+    ("bash -lc 'git stash'", D, D),
+    ("bash -ic 'git stash'", D, D),
+    ('zsh -lic "git reset --hard"', D, D),
+    ('OUT="$(git stash)"', D, D),                       # substitution inside double quotes is code
+    ('echo "saved: `git stash`"', D, D),
+    ("X=$(git stash)", D, D),
+    ('bash -c "echo $(git stash)"', D, D),
+    ("if ! git diff --quiet; then git stash; fi", D, D),
+    ("time git stash", D, D),
+    ("env GIT_PAGER=cat git clean -fd", D, D),
+    ("git ls-files | xargs git checkout --", D, D),
+    ("find . -name '*.orig' -exec git clean -f {} \\;", D, D),
+    ("# don't lose this\ngit stash", D, D),             # a quote in a comment hides nothing
+    ("cat <<'EOF' > notes.md; git stash\nbody\nEOF", D, D),  # the rest of a heredoc's line is code
+    # -- the orchestrator's git writes are a list; what is not on it is denied --
+    ("git merge feature", D, D),
+    ("git merge --no-ff feature", D, D),
+    ("git pull", D, D),
+    ("git pull origin main", D, D),
+    ("git checkout-index -a -f", D, D),
+    ("git read-tree HEAD", D, D),
+    ("git cherry-pick abc123", D, D),
+    ("git am fix.patch", D, D),
+    ("git mv a.py b.py", D, D),
+    ("git gc", D, D),
+    ("git update-ref refs/heads/x HEAD", D, D),
+    ("git filter-branch --all", D, D),
+    ("git remote add origin https://example.com/x.git", D, D),
+    ("git config user.name x", D, D),
+    ("git tag -f v1", D, D),
+    ("git fetch -f origin", D, D),
+    ("git fetch origin +main:main", D, D),
+    ("git worktree add -B tmp /tmp/base HEAD", D, D),
+    ("git worktree lock /tmp/base", D, D),
+    ("git tag v1", A, D),
+    ("git fetch --prune", A, D),
+    ("git pull --ff-only origin main", A, D),
+    # -- a sub-agent writes neither the index nor a branch --
+    ("git apply --index /tmp/fix.diff", A, D),
+    ("git apply --cached /tmp/fix.diff", A, D),
+    ("git worktree add -b tmp /tmp/base HEAD", A, D),
+    ("git worktree add /tmp/base", A, D),               # no commit named: a branch named after the dir
+    ("git apply /tmp/fix.diff", A, A),
+    ("git worktree add --detach /tmp/base", A, A),
+    ("git ls-remote origin", A, A),
+    ("git diff-tree --no-commit-id -r HEAD", A, A),
+    # -- git and gh count only where a command stands --
+    ("grep -rn git docs/", A, A),
+    ("which git gh", A, A),
+    ("echo git", A, A),
+    ("echo git stash", A, A),
+    ("command -v git", A, A),
+    ("ls .git && cat .git/HEAD", A, A),
+    ("pip show gitpython | grep -i git", A, A),
+    # -- the gates are the orchestrator's; a sub-agent runs only `gate.py check` --
     ("python3 ~/.claude/gates/gate.py p4 --project .", A, D),
     ('python3 "$HOME/.claude/gates/gate.py" mark --role be-developer', A, D),
-    ("cd gates && python3 -u gate.py p1", A, D),
-    ('bash -c "python3 gate.py p5"', A, D),
-    ("cat ~/.claude/gates/gate.py", A, A),                  # 读源码不是运行
+    ("python3 ${HOME}/.claude/gates/gate.py p2 --project .", A, D),
+    ("~/.claude/gates/gate.py p2 --project .", A, D),
+    ('bash -c "python3 ~/.claude/gates/gate.py p5"', A, D),
+    ("uv run python ~/.claude/gates/gate.py p5", A, D),
+    ("time python3 -u ~/.claude/gates/gate.py p5", A, D),
+    ('OUT="$(python3 ~/.claude/gates/gate.py p5)"', A, D),
+    ("python3 ~/.claude/gates/gate.py check p2 --project .", A, A),
+    ('python3 "$HOME/.claude/gates/gate.py" check fe-ux --project .', A, A),
+    ("python3 ~/.claude/gates/gate.py land --project .", A, D),
+    ("python3 ~/.claude/gates/gate.py worktrees --clean --project .", A, D),
+    ("python3 ~/.claude/gates/gate.py check p2 --project . && python3 ~/.claude/gates/gate.py p2 --project .", A, D),
+    ("python3 ~/.claude/gates/gate.py check p2; python3 ~/.claude/gates/gate.py mark --role be-developer", A, D),
+    ("python3 ~/.claude/gates/gate.py --project . check p2", A, D),  # exactly `gate.py check …`
+    ("cat ~/.claude/gates/gate.py", A, A),                  # reading the source is not running it
     ("grep -n gate.py README.md", A, A),
     ("cat > d.md <<'EOF'\npython3 gate.py p4\nEOF", A, A),
+    ("python3 src/gate.py --all", A, A),                    # a project's own gate.py
+    ("src/gate.py", A, A),
+    ("python3 gate.py p4", A, A),
     ("", A, A),
 ]
 
@@ -157,7 +236,7 @@ def make_repo(path, branch="main", push=None, dirty=False, extra_branch="feature
     if branch != "main":
         git(path, "switch", "-q", branch)
     if dirty:
-        open(os.path.join(path, "new.txt"), "w").close()  # 未跟踪也算脏
+        open(os.path.join(path, "new.txt"), "w").close()  # untracked counts as dirty
     return path
 
 
@@ -174,7 +253,7 @@ def main() -> int:
     for command, orch, agent in CASES:
         check("[orch] %r" % command, denies(command, "orchestrator"), orch)
         check("[agent] %r" % command, denies(command, "agent"), agent)
-        check("[no role] %r" % command, denies(command, None), agent)  # 缺省 = agent
+        check("[no role] %r" % command, denies(command, None), agent)  # the default is agent
 
     with tempfile.TemporaryDirectory() as tmp:
         clean = make_repo(os.path.join(tmp, "clean"))
@@ -185,9 +264,9 @@ def main() -> int:
         on_main = make_repo(os.path.join(tmp, "on_main"), push=True)
         no_sw = make_repo(os.path.join(tmp, "no_sw"), branch="feature")
         sw_off = make_repo(os.path.join(tmp, "sw_off"), branch="feature", push=False)
-        # (命令, 目录, 协调者是否被拦)；子代理在这些用例上一律被拦（只读的除外，见末尾）
+        # (command, directory, orchestrator denied?); a sub-agent is denied every one of these
         cwd_cases = [
-            # 换到已有分支：只要干净，任意分支
+            # to an existing branch: any branch, on a clean tree
             ("git switch main", clean, A),
             ("git checkout feature", clean, A),
             ("git checkout -q main && git pull --ff-only", clean, A),
@@ -196,28 +275,28 @@ def main() -> int:
             ("git switch main", dirty, D),
             ("git checkout feature", dirty, D),
             ("cd %s && git switch main" % dirty, clean, D),
-            ("git switch main", plain, D),                       # 不是仓库：查不清
-            ("git checkout nosuchbranch", clean, D),             # 不是本地分支 = 恢复路径
+            ("git switch main", plain, D),                       # not a repository: cannot be determined
+            ("git checkout nosuchbranch", clean, D),             # not a local branch = restoring a path
             ("git checkout main -- f.py", clean, D),
             ("git checkout main f.py", clean, D),
-            ("git switch main && git reset --hard", clean, D),   # 其余规则照拦
-            # 新建分支不看干净与否
+            ("git switch main && git reset --hard", clean, D),   # the other rules still apply
+            # a new branch does not need a clean tree
             ("git switch -c x", dirty, A),
-            # 推送：要开关、不推默认分支
+            # push: needs the switch, never the default branch
             ("git push -u origin feature", on_feat, A),
             ("git push -u origin feature 2>&1 | tail -2", on_feat, A),
             ("git push", on_feat, A),
             ("git push origin HEAD", on_feat, A),
-            ("git push", on_main, D),                            # 当前分支是 main
+            ("git push", on_main, D),                            # the current branch is main
             ("git push origin main", on_feat, D),
             ("git push origin master", on_feat, D),
-            ("git push -u origin feature", no_sw, D),            # 没有 gates.json 开关
-            ("git push -u origin feature", sw_off, D),           # 开关为 false
+            ("git push -u origin feature", no_sw, D),            # no switch in gates.json
+            ("git push -u origin feature", sw_off, D),           # the switch is false
             ("git push", plain, D),
-            # PR：要开关、先开草稿
+            # PR: needs the switch, opens as a draft
             ("gh pr create --draft --title x --body-file - <<'EOF'\nbody\nEOF", on_feat, A),
             ("gh pr create -d --fill", on_feat, A),
-            ("gh pr create --title x --body y", on_feat, D),     # 不是草稿
+            ("gh pr create --title x --body y", on_feat, D),     # not a draft
             ("gh pr create --draft --fill", no_sw, D),
             ("gh pr ready 27", on_feat, A),
             ("gh pr ready 27", no_sw, D),
@@ -227,12 +306,67 @@ def main() -> int:
             name = os.path.basename(cwd)
             check("[orch] %r @ %s" % (command, name), denies(command, "orchestrator", cwd), orch)
             check("[agent] %r @ %s" % (command, name), denies(command, "agent", cwd), D)
-        # 只读在任何目录下两种角色都放行
+        # a read is allowed to both roles in any directory
         for cwd in (clean, dirty, plain):
             for role in ("orchestrator", "agent"):
                 check("[%s] status @ %s" % (role, os.path.basename(cwd)), denies("git status", role, cwd), A)
 
-    # 非 Bash 工具一律不管
+        # the harness's gate.py by location: (command, directory, sub-agent denied?)
+        own = os.path.join(tmp, "own")
+        os.makedirs(os.path.join(own, "gates"))
+        for f in ("gate.py", os.path.join("gates", "gate.py")):
+            open(os.path.join(own, f), "w").close()
+        gate_cases = [
+            ("cd gates && python3 -u gate.py p1", str(ROOT), D),
+            ('bash -c "python3 gate.py p5"', str(ROOT / "gates"), D),
+            ("python3 gates/gate.py mark --role be-developer", str(ROOT), D),
+            ("python3 %s p4 --project ." % (ROOT / "gates" / "gate.py"), plain, D),
+            ("python3 gates/gate.py check p1 --project .", str(ROOT), A),
+            ("python3 gate.py p4", own, A),                      # a project's own files of the same name
+            ("python3 gates/gate.py p4", own, A),
+            ("cd gates && python3 gate.py p4", own, A),
+        ]
+        for command, cwd, agent in gate_cases:
+            where = os.path.basename(cwd)
+            check("[orch] %r @ %s" % (command, where), denies(command, "orchestrator", cwd), A)
+            check("[agent] %r @ %s" % (command, where), denies(command, "agent", cwd), agent)
+        # a `cd` inside a subshell or a substitution does not move the commands after it
+        check("[orch] cd in a subshell", denies("(cd %s && git status); git switch main" % dirty, "orchestrator", clean), A)
+        check("[orch] cd in a substitution",
+              denies('H="$(cd %s && git rev-parse HEAD)"; git switch main' % clean, "orchestrator", dirty), D)
+
+        # An isolated sub-agent works in a worktree of the run's repository: it reads, and writes
+        # nothing through git; the orchestrator does not merge its branch by hand either.
+        wt = os.path.join(clean, ".claude", "worktrees", "agent-w1")
+        git(clean, "worktree", "add", "-q", wt, "-b", "worktree-agent-w1")
+        for command in ("git add src/a.py", "git commit -m mine", "git merge main", "git merge --ff-only main",
+                        "git switch main", "git branch -d worktree-agent-w1",
+                        "git -C %s merge --ff-only worktree-agent-w1" % clean,
+                        "python3 %s land --project %s" % (ROOT / "gates" / "gate.py", clean)):
+            check("[agent] %r @ worktree" % command, denies(command, "agent", wt), D)
+        for command in ("git status --short", "git diff main", "git log --oneline -3", "git merge-base HEAD main",
+                        "python3 %s check p4 --project ." % (ROOT / "gates" / "gate.py")):
+            check("[agent] %r @ worktree" % command, denies(command, "agent", wt), A)
+        for command in ("git merge worktree-agent-w1", "git merge --no-ff worktree-agent-w1",
+                        "git -C %s merge main" % wt, "git worktree remove --force %s" % wt):
+            check("[orch] %r" % command, denies(command, "orchestrator", clean), D)
+
+    def why(command, role):
+        out = run_hook(command, role)
+        return json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"] if out else ""
+
+    # a hand-made commit or merge of a writer's work is pointed to `gate.py land`
+    for command, role in (("git commit -m x", "agent"), ("git add src/a.py", "agent"), ("git add -A", "orchestrator"),
+                          ("git add .", "orchestrator"), ("git commit -am x", "orchestrator"),
+                          ("git merge worktree-agent-w1", "orchestrator"),
+                          ("git worktree remove --force .claude/worktrees/agent-w1", "orchestrator")):
+        check("[%s] %r names `gate.py land`" % (role, command), "gate.py land" in why(command, role), True)
+    check("no denial mentions another team", any("other team" in why(c, r) for c, _, _ in CASES for r in
+                                                 ("orchestrator", "agent")), False)
+    # the gate denial tells a sub-agent what it may run instead
+    text = json.loads(run_hook("python3 ~/.claude/gates/gate.py p4", "agent"))["hookSpecificOutput"]
+    check("gate denial names `gate.py check`", "gate.py check" in text["permissionDecisionReason"], True)
+    # other tools are not this hook's business
     check("non-Bash tool", bool(run_hook("git stash", "agent", tool="Edit")), A)
     print("%d cases, %d failures" % (total, failures))
     return 1 if failures else 0

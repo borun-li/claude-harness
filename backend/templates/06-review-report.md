@@ -17,7 +17,7 @@
 ### FND-001 — {claim}
 - **Scenario:** {inputs/state → wrong result}
 - **Suggested direction:**
-- **Status:** open | fixed in round n | accepted as-is (rationale)
+- **Status:** open   <!-- exactly one of: open · fixed in round <n> · accepted as-is (<rationale>) -->
 
 ## 3. Dropped by the coordinator
 Every candidate the coordinator disproved, with its counter-evidence. Kept so the same non-issue is

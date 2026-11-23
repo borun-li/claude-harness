@@ -17,14 +17,22 @@ def run(cmd, cwd, timeout, log_path, env=None):
         p = subprocess.run(cmd, shell=True, cwd=str(cwd), capture_output=True, text=True,
                            timeout=timeout, executable="/bin/bash", env={**os.environ, **(env or {})})
         code, out = p.returncode, (p.stdout or "") + (p.stderr or "")
+        started = _started(code, out)
     except subprocess.TimeoutExpired as e:
         code, out = 124, ((e.stdout or b"").decode(errors="replace") if isinstance(e.stdout, bytes)
-                          else (e.stdout or "")) + f"\n[gate] timed out after {timeout}s"
+                          else (e.stdout or ""))
+        started, out = _started(code, out), out + f"\n[gate] timed out after {timeout}s"
     log_path = pathlib.Path(log_path)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     log_path.write_text(f"$ {cmd}\n{out}\nexit {code}\n", encoding="utf-8")
-    return {"cmd": cmd, "exit": code, "seconds": round(time.time() - t0, 1),
+    return {"cmd": cmd, "exit": code, "seconds": round(time.time() - t0, 1), "started": started,
             "tail": out.splitlines()[-30:], "log": str(log_path), "output": out}
+
+
+def _started(code, out):
+    """False when the command did not start (the shell's 126 / 127) or printed nothing at all: there
+    is no reading. A command that ran and printed something has a reading, parsable or not."""
+    return code not in (126, 127) and bool(out.strip())
 
 
 _KEYS = {"passed": "passed", "failed": "failed", "error": "errors", "errors": "errors",
@@ -56,16 +64,15 @@ def parse_counts(output):
     return None
 
 
-# A lint or type checker that ran prints findings or a summary; one that did not prints neither.
-_RAN = re.compile(r"^Found \d+ errors?|^Success: no issues|^All checks passed|\d+ errors?, \d+ warnings?|"
-                  r"\u2716 \d+ problems?|error TS\d+:|^[^\s:]+:\d+(:\d+)?:\s|-->\s+\S+:\d+:\d+", re.M)
+# What a checker prints when it stopped before checking anything.
 _STOPPED = re.compile(r"errors prevented further checking|command not found|No such file or directory", re.I)
 
 
 def did_not_run(r):
-    """True when a failing lint or type check produced no reading: it crashed, or was never found."""
-    out = r["output"]
-    return r["exit"] != 0 and (r["exit"] in (124, 126, 127) or bool(_STOPPED.search(out)) or not _RAN.search(out))
+    """True when a failing command gives no reading: it did not start or printed nothing (`started`),
+    timed out, or says it stopped before checking. A command that ran and exited non-zero has a
+    reading, whatever the format of its output: that is a red result, not a broken tool."""
+    return r["exit"] != 0 and (not r.get("started", True) or r["exit"] == 124 or bool(_STOPPED.search(r["output"])))
 
 
 def junit(paths):
@@ -99,16 +106,34 @@ JS_RUNNERS = ("vitest", "playwright", "jest")
 
 def js_runner(cwd, cmd):
     """(runner, via a package script) for a JS test command, looking inside `npm run x` scripts."""
-    body, via_script = cmd, False
+    body, via_script = _script_body(cwd, cmd)
+    return next((r for r in JS_RUNNERS if re.search(r"\b%s\b" % r, body)), None), via_script
+
+
+# Runners whose per-test results need a JUnit report written by a tool of their own ecosystem.
+JUNIT_TOOLS = ((r"\bgo\s+test\b", "gotestsum"), (r"\bcargo\s+test\b", "cargo2junit or cargo-nextest"),
+               (r"\bunittest\b", "unittest-xml-reporting"), (r"\bmocha\b", "mocha-junit-reporter"),
+               (r"\brspec\b", "rspec_junit_formatter"))
+
+
+def _script_body(cwd, cmd):
+    """(what the command runs, via a package script): the body of the `npm run x` script it names."""
     m = re.match(r"\s*(?:npm run|npm|pnpm|yarn)\s+(?:run\s+)?([\w:.-]+)", cmd)
     pkg = pathlib.Path(cwd) / "package.json"
     if m and pkg.exists():
         try:
-            body = json.loads(pkg.read_text()).get("scripts", {}).get(m.group(1), cmd)
-            via_script = True
+            return json.loads(pkg.read_text()).get("scripts", {}).get(m.group(1), cmd), True
         except ValueError:
             pass
-    return next((r for r in JS_RUNNERS if re.search(r"\b%s\b" % r, body)), None), via_script
+    return cmd, False
+
+
+def junit_hint(cmd, cwd="."):
+    """What to configure when a test command leaves no per-test results."""
+    body = _script_body(cwd, cmd)[0] if cmd else ""
+    tool = next((t for rx, t in JUNIT_TOOLS if re.search(rx, body or "")), None)
+    return ('set "junit": "<report path or glob>" in .claude/gates.json and have the test command write '
+            "JUnit XML there" + (f" ({tool})" if tool else ""))
 
 
 def junit_plan(cmd, cwd, junit_path, configured=None):
@@ -131,7 +156,12 @@ def junit_plan(cmd, cwd, junit_path, configured=None):
             return cmd, {}, None, "jest without jest-junit: counts only (add jest-junit or gates.json junit)"
         return (f"{cmd}{sep} --reporters=default --reporters=jest-junit", {"JEST_JUNIT_OUTPUT_FILE": str(junit_path)},
                 str(junit_path), "jest-junit reporter")
-    return cmd, {}, None, "no per-test report (set gates.json junit to enable)"
+    return cmd, {}, None, "no per-test report: " + junit_hint(cmd, cwd)
+
+
+def no_cases(r):
+    """Why a test run left no per-test results, with what to configure (the run's own note)."""
+    return r["junit_note"] if r else "the tests did not run"
 
 
 def run_tests(cmd, cwd, timeout, log_path, junit_path, configured=None):

@@ -134,7 +134,9 @@ def test_sub():
 '''
 
 STATE = {"harness_version": "2.4.0", "feature": "calc", "status": "in_progress", "current_phase": 1,
+         "tier": "small", "scope": "backend",
          "phases": [], "models": {}, "goal": {"change": "add and sub return results", "check": "run calc"}}
+RUN = "docs/runs/calc"
 
 
 CODEMAP = """# Code map
@@ -153,7 +155,7 @@ DEMO_PLAN = {"surface": "terminal", "captures": [{"id": "D-1", "command": "ls te
 class Project:
     def __init__(self):
         self.root = pathlib.Path(tempfile.mkdtemp(prefix="gatetest-"))
-        self.run = self.root / "docs" / "backend"
+        self.run = self.root / RUN
         self.write("calc/__init__.py", "")
         self.write("calc/core.py", "def add(a, b):\n    return a + b\n\n\ndef sub(a, b):\n    return a - b\n")
         self.write("tests/test_calc.py", TESTS)
@@ -165,17 +167,20 @@ class Project:
             "commands": {"build": f"{PY} -m compileall -f -q calc", "lint": None, "typecheck": None,
                          "test": f"{PY} -m pytest -q -p no:cacheprovider"},
             "confirmed": True, "confirmed_on": "2026-09-23"}))
-        self.write("docs/backend/state.json", json.dumps(STATE))
+        self.write("docs/runs/calc/state.json", json.dumps(STATE))
         for n, t in (("01-requirements.md", REQS), ("02-architecture.md", ARCH),
                      ("03-detailed-design.md", DESIGN)):
-            self.write(f"docs/backend/{n}", t)
+            self.write(f"docs/runs/calc/{n}", t)
         sh(self.root, "git", "init", "-q")
+        sh(self.root, "git", "config", "user.email", "t@t")
+        sh(self.root, "git", "config", "user.name", "t")
         sh(self.root, "git", "-c", "user.email=t@t", "-c", "user.name=t", "add", "-A")
         sh(self.root, "git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init")
-        self.write("docs/backend/demo-plan.json", json.dumps(DEMO_PLAN))
+        self.write("docs/runs/calc/demo-plan.json", json.dumps(DEMO_PLAN))
         assert self.demo("before")[0] == 0
         self.log("dispatch", "--agent", "be-analyst", "--model", "opus", "--step", "1", "--note", "requirements")
         self.log("return", "--agent", "be-analyst", "--step", "1", "--status", "ok", "--note", "3 REQs")
+        assert self.gate("land")[0] == 0, self.gate("land")[1]
 
     def log(self, *args):
         r = subprocess.run([PY, str(GATE), "log", *args, "--project", str(self.root)], capture_output=True, text=True)
@@ -186,10 +191,11 @@ class Project:
         return r.returncode, r.stdout + r.stderr
 
     def dispatch(self, role):
-        """mark, then log the dispatch and its return, as the orchestrator does."""
+        """mark, then log the dispatch and its return, and land it, as the orchestrator does."""
         self.gate("mark", "--role", role)
         self.log("dispatch", "--agent", role, "--model", "opus", "--step", "x", "--note", "work")
         self.log("return", "--agent", role, "--step", "x", "--status", "ok", "--note", "done")
+        assert self.gate("land")[0] == 0
 
     def events(self):
         p = self.run / "run-log.jsonl"
@@ -206,7 +212,7 @@ class Project:
     def gate(self, *args):
         r = subprocess.run([PY, str(GATE), *args, "--project", str(self.root)], capture_output=True, text=True)
         rep = None
-        if args[0] not in ("mark", "profile", "log", "timeline", "fixtures-approve"):
+        if args[0] not in ("mark", "profile", "log", "timeline", "fixtures-approve", "land"):
             p = self.run / "gates" / f"{args[0]}-latest.json"
             rep = json.loads(p.read_text()) if p.exists() else None
         return r.returncode, r.stdout + r.stderr, rep
@@ -230,7 +236,7 @@ class Project:
         """Fixtures approved at GF, baseline, developer marked; test plan present."""
         self.approve()
         assert self.gate("baseline")[0] == 0, self.gate("baseline")[1]
-        self.write("docs/backend/04-test-plan.md", PLAN)
+        self.write("docs/runs/calc/04-test-plan.md", PLAN)
         self.dispatch("be-developer")
 
     def to_p5(self):
@@ -238,7 +244,7 @@ class Project:
         assert self.gate("p4")[0] == 0
         self.dispatch("be-tester")
         self.write("tests/test_new.py", NEW_TESTS)
-        self.write("docs/backend/05-test-report.md", REPORT)
+        self.write("docs/runs/calc/05-test-report.md", REPORT)
 
     def close(self):
         shutil.rmtree(self.root, ignore_errors=True)
@@ -262,7 +268,7 @@ class DocGates(Base):
         t = REQS.replace("- Given two ints, When sub is called, Then it returns the difference\n", "")
         t = t.replace("### REQ-001 — add numbers\n- **Cut:** above\n", "### REQ-001 — add numbers\n")
         t = t.replace("### REQ-003", "### REQ-002")
-        self.p.write("docs/backend/01-requirements.md", t)
+        self.p.write("docs/runs/calc/01-requirements.md", t)
         code, out, rep = self.p.gate("p1")
         self.assertEqual(code, 1)
         for cid in ("P1.acceptance", "P1.cut-line", "P1.req-ids"):
@@ -272,20 +278,20 @@ class DocGates(Base):
         t = ("# 需求\n## 0. 理解\n- 要一个加法\n## 非目标\n- 不导出\n## 功能需求\n### REQ-001 — 加法\n- **Cut:** above\n- **Fixtures:** n/a — 纯函数\n- **Source:** 「加法」\n"
              "- 给定两个整数，当调用 add，则返回和\n## 假设\n- 只有整数 [verified]\n## 待决问题\n- 无\n"
              "填充\n填充\n填充\n")
-        self.p.write("docs/backend/01-requirements.md", t)
+        self.p.write("docs/runs/calc/01-requirements.md", t)
         code, out, _ = self.p.gate("p1")
         self.assertEqual(code, 0, out)
 
     def test_retired_req_exempt(self):
         t = REQS.replace("### REQ-002 — subtract\n- **Cut:** above\n- Given two ints, When sub is called, "
                          "Then it returns the difference\n", "### REQ-002 — subtract (retired)\n")
-        self.p.write("docs/backend/01-requirements.md", t)
+        self.p.write("docs/runs/calc/01-requirements.md", t)
         self.assertEqual(self.p.gate("p1")[0], 0)
 
     def test_p2_green_and_uncovered(self):
         self.p.draft_fixture()
         self.assertEqual(self.p.gate("p2")[0], 0)
-        self.p.write("docs/backend/02-architecture.md", ARCH.replace("REQ-002", ""))
+        self.p.write("docs/runs/calc/02-architecture.md", ARCH.replace("REQ-002", ""))
         code, _, rep = self.p.gate("p2")
         self.assertEqual(code, 1)
         self.assertEqual(self.p.status(rep, "P2.coverage"), "fail")
@@ -295,7 +301,7 @@ class DocGates(Base):
         self.assertEqual(self.p.gate("p2")[0], 0)
         d = DESIGN.replace("- **Serves:** REQ-002\n- **Side:** backend\n", "- **Serves:** REQ-009\n")
         d += "### DES-003 — ui\n- **Serves:** REQ-001\n- **Side:** frontend\n"
-        self.p.write("docs/backend/03-detailed-design.md", d)
+        self.p.write("docs/runs/calc/03-detailed-design.md", d)
         code, _, rep = self.p.gate("p2")
         self.assertEqual(code, 1)
         for cid in ("P3.serves", "P3.side", "P3.req-claimed", "P3.contract"):
@@ -323,17 +329,17 @@ class DocGates(Base):
         t += ("\n## Increment 2 — 2026-11-02\n### REQ-004 — subtract, saturating at zero\n- **Cut:** above\n"
               "- **Fixtures:** n/a — covered by unit tests\n- **Source:** \"never negative\"\n"
               "- Given 1 and 2, When sub is called, Then it returns 0\n")
-        self.p.write("docs/backend/01-requirements.md", t)
+        self.p.write("docs/runs/calc/01-requirements.md", t)
         code, out, rep = self.p.gate("p1")
         self.assertEqual(code, 0, out)
         self.assertIn("REQ-004", rep["data"]["active_reqs"])
         self.assertNotIn("REQ-002", rep["data"]["active_reqs"])
         t2 = t.replace("### REQ-004", "### REQ-001")  # reusing an id is caught
-        self.p.write("docs/backend/01-requirements.md", t2)
+        self.p.write("docs/runs/calc/01-requirements.md", t2)
         self.assertEqual(self.p.status(self.p.gate("p1")[2], "P1.req-ids"), "fail")
 
-    def test_missing_state(self):
-        (self.p.run / "state.json").unlink()
+    def test_state_without_its_keys(self):
+        self.p.write("docs/runs/calc/state.json", json.dumps({"status": "in_progress"}))  # still the open run
         code, _, rep = self.p.gate("p1")
         self.assertEqual(self.p.status(rep, "ALL.state"), "fail")
 
@@ -345,7 +351,7 @@ class Baseline(Base):
         self.assertEqual(self.p.status(rep, "BASE.clean-tree"), "fail")
 
     def test_run_dir_dirt_is_fine(self):
-        self.p.write("docs/backend/notes.md", "x")
+        self.p.write("docs/runs/calc/notes.md", "x")
         code, out, _ = self.p.gate("baseline")
         self.assertEqual(code, 0, out)
 
@@ -389,13 +395,13 @@ class BuildGate(Base):
     def test_unplanned_file_then_logged(self):
         self.p.write("calc/extra.py", "X = 1\n")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.unplanned"), "fail")
-        self.p.write("docs/backend/08-implementation-log.md", "added calc/extra.py because ...")
+        self.p.write("docs/runs/calc/08-implementation-log.md", "added calc/extra.py because ...")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.unplanned"), "pass")
 
     def test_queue_row_counts_as_plan(self):
         # a frontend run's Side: backend queue row names its files in 03-queue.md
         self.p.write("calc/extra.py", "X = 1\n")
-        self.p.write("docs/backend/03-queue.md", "### Q-001\n- **Side:** backend\n- **Files:** calc/extra.py\n")
+        self.p.write("docs/runs/calc/03-queue.md", "### Q-001\n- **Side:** backend\n- **Files:** calc/extra.py\n")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.unplanned"), "pass")
 
     def test_secret_and_personal_path(self):
@@ -412,10 +418,10 @@ class BuildGate(Base):
 
     def test_new_dependency_needs_design(self):
         self.p.write("requirements.txt", "requests==2.0\nnumpy>=1.0\n")
-        self.p.write("docs/backend/08-implementation-log.md", "requirements.txt changed")
+        self.p.write("docs/runs/calc/08-implementation-log.md", "requirements.txt changed")
         rep = self.p.gate("p4")[2]
         self.assertEqual(self.p.status(rep, "P4.dependencies"), "fail")
-        self.p.write("docs/backend/03-detailed-design.md", DESIGN + "Dependency: numpy\n")
+        self.p.write("docs/runs/calc/03-detailed-design.md", DESIGN + "Dependency: numpy\n")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "P4.dependencies"), "pass")
 
     def test_red_tests(self):
@@ -433,13 +439,13 @@ class BuildGate(Base):
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "CMD.build"), "fail")
 
     def test_tc_id_from_an_earlier_feature_is_refused(self):
-        self.p.write("docs/backend/first-feature/04-test-plan.md", "### TC-001 — x\n\n### TC-004 — y\n")
+        self.p.write("docs/runs/first-feature/04-test-plan.md", "### TC-001 — x\n\n### TC-004 — y\n")
         rep = self.p.gate("p4")[2]
         self.assertEqual(self.p.status(rep, "P4.tc-ids"), "fail")
         self.assertIn("continue from TC-005", next(c for c in rep["checks"] if c["id"] == "P4.tc-ids")["message"])
 
     def test_plan_defects(self):
-        self.p.write("docs/backend/04-test-plan.md", PLAN.replace("- **Verifies:** REQ-002\n", "")
+        self.p.write("docs/runs/calc/04-test-plan.md", PLAN.replace("- **Verifies:** REQ-002\n", "")
                      .replace("- **Mode:** automated\nline", "line"))
         rep = self.p.gate("p4")[2]
         self.assertEqual(self.p.status(rep, "P4.plan-cases"), "fail")
@@ -475,7 +481,7 @@ class VerifyGate(Base):
 
     def test_tc_missing_in_code_and_report(self):
         self.p.write("tests/test_new.py", NEW_TESTS.replace("# TC-001 FX-001\n", "# FX-001\n"))
-        self.p.write("docs/backend/05-test-report.md", REPORT.replace("| TC-002 | REQ-002 | pass | pytest |\n", ""))
+        self.p.write("docs/runs/calc/05-test-report.md", REPORT.replace("| TC-002 | REQ-002 | pass | pytest |\n", ""))
         rep = self.p.gate("p5")[2]
         self.assertEqual(self.p.status(rep, "P5.tc-in-code"), "fail")
         self.assertEqual(self.p.status(rep, "P5.report-complete"), "fail")
@@ -545,23 +551,23 @@ filler
         self.p.dispatch("be-reviewer")
 
     def test_p6_green_then_tree_changed(self):
-        self.p.write("docs/backend/06-review-report.md", self.FINDINGS.format(status="open"))
+        self.p.write("docs/runs/calc/06-review-report.md", self.FINDINGS.format(status="open"))
         code, out, _ = self.p.gate("p6")
         self.assertEqual(code, 0, out)
         self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# reviewer edit\n")
         self.assertEqual(self.p.status(self.p.gate("p6")[2], "P6.tree-unchanged"), "fail")
 
     def test_p6_bad_anchor(self):
-        self.p.write("docs/backend/06-review-report.md",
+        self.p.write("docs/runs/calc/06-review-report.md",
                      self.FINDINGS.format(status="open").replace("calc/core.py:2", "calc/core.py:999"))
         self.assertEqual(self.p.status(self.p.gate("p6")[2], "P6.findings"), "fail")
 
     def _p7(self, status):
-        self.p.write("docs/backend/06-review-report.md", self.FINDINGS.format(status=status))
+        self.p.write("docs/runs/calc/06-review-report.md", self.FINDINGS.format(status=status))
         assert self.p.gate("p6")[0] == 0
         for ph in ("p1", "p2"):
             assert self.p.gate(ph)[0] == 0, ph
-        self.p.write("docs/backend/07-acceptance.md", "\n".join(["accepted"] * 12))
+        self.p.write("docs/runs/calc/07-acceptance.md", "\n".join(["accepted"] * 12))
         assert self.p.demo("after")[0] == 0
         return self.p.gate("p7")
 
@@ -569,23 +575,25 @@ filler
         """Full development, 3.2.0 order: Prototype → Phase 2 → Plan → 4 → 5 → panel + coordinator → 7."""
         q = Project()
         try:
-            q.write("docs/backend/state.json", json.dumps(dict(STATE, tier="full", risk="normal", prototype="built")))
+            q.write("docs/runs/calc/state.json", json.dumps(dict(STATE, tier="full", risk="normal", prototype="built")))
             q.log("dispatch", "--agent", "fe-engineer", "--model", "sonnet", "--step", "1b", "--note", "prototype")
             q.log("return", "--agent", "fe-engineer", "--step", "1b", "--status", "ok", "--note", "runs")
+            q.gate("land")
             self.assertEqual(q.gate("p1")[0], 0)
             q.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
             for agent in ("be-architect", "be-analyst"):
                 q.log("dispatch", "--agent", agent, "--model", "opus", "--step", "2", "--note", "design")
                 q.log("return", "--agent", agent, "--step", "2", "--status", "ok", "--note", "done")
+            q.gate("land")
             q.to_p5()
             assert q.gate("p5")[0] == 0
             q.gate("mark", "--role", "be-reviewer")
             for agent in ("be-review-behavior", "be-review-security", "be-reviewer"):
                 q.log("dispatch", "--agent", agent, "--model", "opus", "--step", "6", "--note", "review")
                 q.log("return", "--agent", agent, "--step", "6", "--status", "ok", "--note", "done")
-            q.write("docs/backend/06-review-report.md", self.FINDINGS.format(status="fixed in round 1"))
+            q.write("docs/runs/calc/06-review-report.md", self.FINDINGS.format(status="fixed in round 1"))
             self.assertEqual(q.gate("p6")[0], 0, q.gate("p6")[1])
-            q.write("docs/backend/07-acceptance.md", "\n".join(["accepted"] * 12))
+            q.write("docs/runs/calc/07-acceptance.md", "\n".join(["accepted"] * 12))
             assert q.demo("after")[0] == 0
             code, out, rep = q.gate("p7")
             self.assertEqual(code, 0, out)
@@ -639,24 +647,15 @@ class Demo(Base):
 
 
 class LoopAndWaiver(Base):
-    def test_loop_cap_exit_3(self):
+    def test_a_failing_gate_is_never_a_round(self):
+        """Rounds are counted where fixes are dispatched (the run log), not where a gate fails."""
         codes = []
-        for word in ("Say", "Tell", "Ask"):  # three fix attempts, each on a different tree
-            self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", word))
+        for word in ("Say", "Tell", "Ask"):  # three failures, each on a different tree
+            self.p.write("docs/runs/calc/01-requirements.md", REQS.replace("Given", word))
             codes.append(self.p.gate("p1")[0])
-        self.assertEqual(codes, [1, 1, 3])  # loops.max_rounds = 2
-        self.p.write("docs/backend/01-requirements.md", REQS)
+        self.assertEqual(codes, [1, 1, 1])
+        self.p.write("docs/runs/calc/01-requirements.md", REQS)
         self.assertEqual(self.p.gate("p1")[0], 0)
-        self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", "Say"))
-        self.assertEqual(self.p.gate("p1")[0], 1)  # counter reset after a pass
-
-    def test_rerun_on_the_same_tree_is_not_a_round(self):
-        """H12: looking again, or re-running after a waiver, does not push the step toward its cap."""
-        self.p.write("docs/backend/01-requirements.md", REQS.replace("Given", "Say"))
-        codes = [self.p.gate("p1")[0] for _ in range(4)]
-        self.assertEqual(codes, [1, 1, 1, 1])
-        rep = json.loads((self.p.run / "gates" / "p1-latest.json").read_text())
-        self.assertEqual((rep["consecutive_failures"], rep["failed_runs"]), (1, 4))
 
     def redo(self, agent="be-architect", step="2"):
         r = self.p.log("dispatch", "--agent", agent, "--model", "opus", "--step", step, "--note", "revise", "--redo")
@@ -691,7 +690,7 @@ class LoopAndWaiver(Base):
             self.p.log("return", "--agent", "be-developer", "--step", "4", "--status", "ok", "--note", "built")
 
     def test_project_sets_its_own_cap(self):
-        self.p.write(".claude/backend.json", json.dumps({"loops": {"max_rounds": 3}}))
+        self.p.write(".claude/harness.json", json.dumps({"loops": {"max_rounds": 3}}))
         self.assertEqual([self.redo()[0] for _ in range(4)], [0, 0, 0, 3])
 
     def test_redo_only_on_dispatch(self):
@@ -700,25 +699,26 @@ class LoopAndWaiver(Base):
         self.assertEqual(code, 2, out)
 
     def test_waiver(self):
-        self.p.write("docs/backend/01-requirements.md", REQS.replace("- **Cut:** above\n- **Fixtures:** FX-001", "- **Fixtures:** FX-001"))
+        self.p.write("docs/runs/calc/01-requirements.md", REQS.replace("- **Cut:** above\n- **Fixtures:** FX-001", "- **Fixtures:** FX-001"))
         self.assertEqual(self.p.gate("p1")[0], 1)
-        self.p.write("docs/backend/gates/waivers.json", json.dumps(
-            [{"check": "P1.cut-line", "reason": "tiny round", "approved_by": "user", "date": "2026-09-23"}]))
+        self.assertEqual(self.p.gate("waive", "--check", "P1.cut-line", "--gate", "p1", "--by", "user",
+                                     "--reason", "tiny round")[0], 0)
         code, _, rep = self.p.gate("p1")
         self.assertEqual(code, 0)
         self.assertEqual(self.p.status(rep, "P1.cut-line"), "waived")
 
-    def test_waiver_without_approver_ignored(self):
-        self.p.write("docs/backend/01-requirements.md", REQS.replace("- **Cut:** above\n- **Fixtures:** FX-001", "- **Fixtures:** FX-001"))
-        self.p.write("docs/backend/gates/waivers.json", json.dumps([{"check": "P1.cut-line"}]))
+    def test_waiver_without_approver_refused(self):
+        self.p.write("docs/runs/calc/01-requirements.md", REQS.replace("- **Cut:** above\n- **Fixtures:** FX-001", "- **Fixtures:** FX-001"))
+        self.assertEqual(self.p.gate("p1")[0], 1)
+        self.assertEqual(self.p.gate("waive", "--check", "P1.cut-line", "--gate", "p1", "--reason", "tiny round")[0], 2)
         self.assertEqual(self.p.gate("p1")[0], 1)
 
 
 class Fixtures(Base):
     def test_p1_requires_declaration(self):
-        self.p.write("docs/backend/01-requirements.md", REQS.replace("- **Fixtures:** FX-001\n", ""))
+        self.p.write("docs/runs/calc/01-requirements.md", REQS.replace("- **Fixtures:** FX-001\n", ""))
         self.assertEqual(self.p.status(self.p.gate("p1")[2], "P1.fixtures"), "fail")
-        self.p.write("docs/backend/01-requirements.md", REQS.replace("n/a — covered by the arithmetic identity test",
+        self.p.write("docs/runs/calc/01-requirements.md", REQS.replace("n/a — covered by the arithmetic identity test",
                                                                      "n/a"))
         self.assertEqual(self.p.status(self.p.gate("p1")[2], "P1.fixtures"), "fail")
 
@@ -740,7 +740,7 @@ class Fixtures(Base):
 
     def test_fixture_shared_by_two_reqs_is_stable(self):
         # Which declaring REQ won used to follow the hash seed, so PLAN.meta flipped.
-        self.p.write("docs/backend/01-requirements.md", REQS.replace(
+        self.p.write("docs/runs/calc/01-requirements.md", REQS.replace(
             "n/a — covered by the arithmetic identity test", "FX-001"))
         self.p.draft_fixture()
         old = os.environ.get("PYTHONHASHSEED")
@@ -796,7 +796,7 @@ class Fixtures(Base):
 
     def test_unapproved_declared_fixture_blocks_p4(self):
         assert self.p.gate("baseline")[0] == 0
-        self.p.write("docs/backend/04-test-plan.md", PLAN)
+        self.p.write("docs/runs/calc/04-test-plan.md", PLAN)
         self.p.dispatch("be-developer")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "P4.fixtures"), "fail")
 
@@ -818,43 +818,43 @@ class Clarity(Base):
         d = DESIGN.replace("- **Serves:** REQ-001\n- **Side:** backend\n",
                            "- **Serves:** REQ-001\n```python\n# a comment, not a heading\ndef add(a, b): ...\n```\n"
                            "- **Side:** backend\n")
-        self.p.write("docs/backend/03-detailed-design.md", d)
+        self.p.write("docs/runs/calc/03-detailed-design.md", d)
         code, out, rep = self.p.gate("p2")
         self.assertEqual(self.p.status(rep, "P3.side"), "pass", out)
 
     def test_missing_understanding_and_source(self):
         t = REQS.replace("## 0. Understanding", "## 0. Background").replace('- **Source:** "adds"\n', "")
-        self.p.write("docs/backend/01-requirements.md", t)
+        self.p.write("docs/runs/calc/01-requirements.md", t)
         rep = self.p.gate("p1")[2]
         self.assertEqual(self.p.status(rep, "P1.understanding"), "fail")
         self.assertEqual(self.p.status(rep, "P1.source"), "fail")
 
     def test_unfilled_placeholder_is_not_a_source(self):
         for ph in ('{"the user\'s words"}', '<"the user\'s words">'):
-            self.p.write("docs/backend/01-requirements.md", REQS.replace('- **Source:** "adds"', f"- **Source:** {ph}"))
+            self.p.write("docs/runs/calc/01-requirements.md", REQS.replace('- **Source:** "adds"', f"- **Source:** {ph}"))
             self.assertEqual(self.p.status(self.p.gate("p1")[2], "P1.source"), "fail", ph)
 
     def test_source_citing_an_artifact_passes(self):
         t = REQS.replace('- **Source:** "adds"', "- **Source:** brief.md §2")
-        self.p.write("docs/backend/01-requirements.md", t)
+        self.p.write("docs/runs/calc/01-requirements.md", t)
         self.assertEqual(self.p.status(self.p.gate("p1")[2], "P1.source"), "pass")
 
     def test_long_requirement_and_paragraph(self):
         filler = " ".join(["word"] * 70)
         t = REQS.replace('- **Source:** "adds"', f'- **Source:** "adds"\n- **Note:** {filler}')
-        self.p.write("docs/backend/01-requirements.md", t)
+        self.p.write("docs/runs/calc/01-requirements.md", t)
         rep = self.p.gate("p1")[2]
         self.assertEqual(self.p.status(rep, "P1.req-length"), "fail")
         self.assertEqual(self.p.status(rep, "P1.prose"), "fail")
 
     def test_chinese_counts_toward_length(self):
         t = REQS.replace('- **Source:** "adds"', '- **Source:** "adds"\n- **备注：** ' + "很长的中文说明" * 20)
-        self.p.write("docs/backend/01-requirements.md", t)
+        self.p.write("docs/runs/calc/01-requirements.md", t)
         self.assertEqual(self.p.status(self.p.gate("p1")[2], "P1.req-length"), "fail")
 
     def test_tables_do_not_count_as_prose(self):
         rows = "\n".join(f"| R{i} | " + " ".join(["risk"] * 30) + " | fix |" for i in range(40))
-        self.p.write("docs/backend/02-architecture.md", ARCH + "\n| Risk | Why | Fix |\n|---|---|---|\n" + rows + "\n")
+        self.p.write("docs/runs/calc/02-architecture.md", ARCH + "\n| Risk | Why | Fix |\n|---|---|---|\n" + rows + "\n")
         rep = self.p.gate("p2")[2]
         self.assertEqual(self.p.status(rep, "P2.length"), "pass")
         self.assertEqual(self.p.status(rep, "P2.prose"), "pass")
@@ -862,13 +862,13 @@ class Clarity(Base):
     def test_long_design_item(self):
         d = DESIGN.replace("- **Side:** backend\n### DES-002", "- **Side:** backend\n- **Behaviour:** "
                            + " ".join(["step"] * 130) + "\n### DES-002")
-        self.p.write("docs/backend/03-detailed-design.md", d)
+        self.p.write("docs/runs/calc/03-detailed-design.md", d)
         self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.des-length"), "fail")
 
     def test_plan_sheet_without_fixtures(self):
         t = REQS.replace("- **Fixtures:** FX-001", "- **Fixtures:** n/a — pure function")
-        self.p.write("docs/backend/01-requirements.md", t)
-        self.p.write("docs/backend/02-architecture.md", ARCH + "## 4. Decisions\n| Decision | Chosen |\n|---|---|\n| store | none |\n")
+        self.p.write("docs/runs/calc/01-requirements.md", t)
+        self.p.write("docs/runs/calc/02-architecture.md", ARCH + "## 4. Decisions\n| Decision | Chosen |\n|---|---|\n| store | none |\n")
         code, out, _ = self.p.gate("p2")
         self.assertEqual(code, 0, out)
         sheet = (self.p.run / "gates" / "plan-review.md").read_text()
@@ -885,7 +885,7 @@ class TemplateExamples(Base):
         if not self.EXAMPLES.is_dir():
             self.skipTest(f"{self.EXAMPLES} not installed next to the gates")
         for n in ("01-requirements", "02-architecture", "03-detailed-design"):
-            self.p.write(f"docs/backend/{n}.md", (self.EXAMPLES / f"{n}.example.md").read_text())
+            self.p.write(f"docs/runs/calc/{n}.md", (self.EXAMPLES / f"{n}.example.md").read_text())
         self.assertEqual(self.p.gate("p1")[0], 0)
         rep = self.p.gate("p2")[2]  # fixture files are not part of the examples: judge the document checks only
         docs_failing = [c["id"] for c in rep["checks"] if c["id"].startswith(("P2.", "P3.")) and c["status"] == "fail"]
@@ -922,6 +922,7 @@ class AutoLog(Base):
         self.assertEqual({k: self.p.events()[-1][k] for k in ("event", "agent", "phase", "status", "note")},
                          {"event": "return", "agent": "be-developer", "phase": "4", "status": "ok",
                           "note": "be-developer #1"})
+        self.p.gate("land")
         self.dispatch("be-architect")
         self.give_back("be-architect", "blocked_on: [REQ-002 is ambiguous]")
         self.assertEqual(self.p.events()[-1]["status"], "blocked")
@@ -930,8 +931,10 @@ class AutoLog(Base):
         code, out = self.dispatch("be-developer", first="Please build it.")
         self.assertEqual(code, 2)
         self.assertIn("step", out)
-        for _ in range(2):
+        for _ in range(2):  # one writer in the run's tree at a time: each round returns and is landed
             self.assertEqual(self.dispatch("be-developer", first="You are {a} #2 — step 4, round 2.")[0], 0)
+            self.give_back("be-developer", "done")
+            self.p.gate("land")
         code, out = self.dispatch("be-developer", first="You are {a} #3 — step 4, round 3.")
         self.assertEqual(code, 2)
         self.assertIn("ROUND CAP", out)
@@ -939,19 +942,22 @@ class AutoLog(Base):
     def test_outside_a_run_nothing_is_logged(self):
         n = len(self.p.events())
         self.assertEqual(self.dispatch("general-purpose")[0], 0)
-        self.p.write("docs/backend/state.json", json.dumps(dict(STATE, status="accepted")))
+        self.p.write("docs/runs/calc/state.json", json.dumps(dict(STATE, status="accepted")))
         self.assertEqual(self.dispatch("be-developer")[0], 0)
         self.assertEqual(self.give_back("be-developer", "done")[0], 0)
         self.assertEqual(len(self.p.events()), n)
 
-    def test_return_without_its_dispatch_is_ignored(self):
+    def test_return_without_its_dispatch_is_reported_not_logged(self):
         n = len(self.p.events())
-        self.give_back("be-tester", "tests written")  # e.g. one agent, one job, outside the flow
+        code, out = self.give_back("be-tester", "tests written")  # its dispatch never reached the log
+        self.assertNotEqual(code, 0)
+        self.assertIn("never logged", out)
         self.assertEqual(len(self.p.events()), n)
 
     def test_continued_author_is_logged_as_a_redo(self):
         self.dispatch("be-developer")
         self.give_back("be-developer", "done")
+        self.p.gate("land")
         session = self.p.root / "session.jsonl"
         sub = self.p.root / "session" / "subagents"
         sub.mkdir(parents=True)
@@ -969,58 +975,28 @@ class AutoLog(Base):
         marks = [e["role"] for e in self.p.events() if e["event"] == "mark"]
         self.assertEqual(marks, ["be-reviewer"])
 
-    def test_writers_out_together_share_the_charge(self):
-        """H2: a tester and a developer dispatched in one message: neither is charged with the other's work."""
-        self.p.approve()
-        assert self.p.gate("baseline")[0] == 0
-        self.p.write("docs/backend/04-test-plan.md", PLAN)
-        self.dispatch("be-tester")
-        self.dispatch("be-developer")
-        self.p.write("tests/test_calc.py", TESTS + "\n\ndef test_more():\n    assert True\n")  # the tester's
-        self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# the developer's\n")
-        self.assertEqual(self.p.gate("p4")[0], 4)  # G8: not while they are still writing
-        self.give_back("be-tester", "done")
-        self.give_back("be-developer", "done")
-        rep = self.p.gate("p4")[2]
-        self.assertEqual(self.p.status(rep, "ROLE.shared"), "pass")
-        self.assertNotIn("ROLE.tests", [c["id"] for c in rep["checks"]])
-        self.p.write("web/app.js", "x")  # neither role may
-        rep = self.p.gate("p4")[2]
-        self.assertEqual(self.p.status(rep, "ROLE.shared"), "fail")
-
-
     def test_second_feature_run_gets_its_own_log(self):
-        """G1: a run in docs/backend/<slug>/ is found once the root run is accepted."""
-        self.p.write("docs/backend/state.json", json.dumps(dict(STATE, status="accepted")))
-        self.p.write("docs/backend/feat2/state.json", json.dumps(STATE))
+        """G1: once a run is settled, the next one under the runs root is the open run."""
+        self.p.write(f"{RUN}/state.json", json.dumps(dict(STATE, status="accepted")))
+        self.p.write("docs/runs/feat2/state.json", json.dumps(STATE))
         self.assertEqual(self.dispatch("be-developer")[0], 0)
         self.give_back("be-developer", "handoff: be-developer #1")
-        slug = self.p.root / "docs/backend/feat2/run-log.jsonl"
+        slug = self.p.root / "docs/runs/feat2/run-log.jsonl"
         evs = [json.loads(l) for l in slug.read_text().splitlines()]
         self.assertEqual([e["event"] for e in evs], ["mark", "dispatch", "return"])
 
-    def test_two_open_runs_of_a_team_are_refused(self):
-        self.p.write("docs/backend/feat2/state.json", json.dumps(STATE))
+    def test_two_open_runs_are_refused(self):
+        self.p.write("docs/runs/feat2/state.json", json.dumps(STATE))
         code, out = self.dispatch("be-developer")
         self.assertEqual(code, 2)
-        self.assertIn("several backend runs are open", out)
-
-    def test_backend_agent_in_a_frontend_only_run(self):
-        """G1: be-analyst (Phase 0) and be-developer (backend-side rows) of a frontend run log there."""
-        self.p.write("docs/backend/state.json", json.dumps(dict(STATE, status="accepted")))
-        self.p.write("docs/frontend/state.json", json.dumps({"status": "building", "goal": STATE["goal"]}))
-        n = len(self.p.events())
-        self.assertEqual(self.dispatch("be-analyst", first="You are {a} #1 — step 0, round 1.")[0], 0)
-        self.give_back("be-analyst", "handoff: be-analyst #1")
-        fe = [json.loads(l) for l in (self.p.root / "docs/frontend/run-log.jsonl").read_text().splitlines()]
-        self.assertEqual([(e["event"], e.get("agent") or e.get("role")) for e in fe],
-                         [("mark", "be-analyst"), ("dispatch", "be-analyst"), ("return", "be-analyst")])
-        self.assertEqual(len(self.p.events()), n)
+        self.assertIn("docs/runs/calc", out)
+        self.assertIn("docs/runs/feat2", out)
 
     def test_continuation_named_by_the_continuation_hook(self):
         """The continuation hook passes the agent type it read while the agent was still finished."""
         self.dispatch("be-developer")
         self.give_back("be-developer", "done")
+        self.p.gate("land")
         code, _ = self.auto("dispatch", {"hook_event_name": "PreToolUse", "tool_name": "SendMessage",
                                          "harness_agent_type": "be-developer", "tool_input": {
                                              "to": "a1", "message": "You are be-developer #1 — step 4, round 2."}})
@@ -1033,12 +1009,12 @@ class TestReuse(Base):
     """H11: a green suite on an unchanged tree is not run again."""
     def test_reused_until_the_tree_changes(self):
         self.p.to_p4()
-        first = self.p.gate("p4")[2]
         detail = lambda rep: " ".join(next(c for c in rep["checks"] if c["id"] == "CMD.test")["details"])
-        self.assertNotIn("reused", detail(first))
+        # Since the baseline only documents and the run's books changed: its green run is p4's too.
         self.assertIn("reused the run of", detail(self.p.gate("p4")[2]))
         self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# changed\n")
         self.assertNotIn("reused", detail(self.p.gate("p4")[2]))
+        self.assertIn("reused the run of", detail(self.p.gate("p4")[2]))
 
     def test_red_is_always_rerun(self):
         self.p.to_p4()
@@ -1059,10 +1035,10 @@ class ToolDidNotRun(Base):
         self.p.to_p4()
         self.set_cmd(typecheck="echo 'a.py: error: Duplicate module named a'; "
                                "echo 'Found 1 error in 1 file (errors prevented further checking)'; exit 2")
-        self.p.write("docs/backend/gates/waivers.json", json.dumps(
-            [{"check": "TOOL.typecheck", "approved_by": "user", "date": "2026-11-12", "reason": "x"}]))
         rep = self.p.gate("p4")[2]
         self.assertEqual(self.p.status(rep, "TOOL.typecheck"), "fail")
+        self.assertEqual(self.p.gate("waive", "--check", "TOOL.typecheck", "--gate", "p4", "--by", "user",
+                                     "--reason", "x")[0], 2)
         self.set_cmd(typecheck="echo 'calc/core.py:1: error: Missing return type'; echo 'Found 1 error in 1 file'; exit 1")
         rep = self.p.gate("p4")[2]
         self.assertEqual(self.p.status(rep, "CMD.typecheck"), "fail")
@@ -1070,8 +1046,13 @@ class ToolDidNotRun(Base):
 
     def test_tests_that_never_ran(self):
         self.p.to_p4()
-        self.set_cmd(test="echo 'ModuleNotFoundError: pytest'; exit 1")
+        self.set_cmd(test="no-such-test-runner-xyz -q")
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "TOOL.test"), "fail")
+        # A runner that started and exited non-zero has a reading, parsable or not: a red result.
+        self.set_cmd(test="echo 'FAIL example.com/orders'; exit 1")
+        rep = self.p.gate("p4")[2]
+        self.assertEqual(self.p.status(rep, "CMD.test"), "fail")
+        self.assertNotIn("TOOL.test", [c["id"] for c in rep["checks"]])
 
 
 class RunLog(Base):
@@ -1083,8 +1064,8 @@ class RunLog(Base):
         self.p.gate("p1")
         self.p.dispatch("be-tester")
         kinds = [e["event"] for e in self.p.events()]
-        self.assertEqual(kinds, ["capture", "dispatch", "return", "gate", "mark", "dispatch", "return"])
-        self.assertEqual(self.p.events()[3]["gate"], "p1")
+        self.assertEqual(kinds, ["capture", "dispatch", "return", "land", "gate", "mark", "dispatch", "return", "land"])
+        self.assertEqual(self.p.events()[4]["gate"], "p1")
 
     def test_tampering_breaks_the_chain(self):
         self.p.gate("p1")
@@ -1128,12 +1109,13 @@ class RunLog(Base):
     def test_trail_catches_build_before_plan_and_missing_return(self):
         self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "4", "--note", "early")
         self.p.log("return", "--agent", "be-developer", "--step", "4", "--status", "ok", "--note", "built early")
+        self.p.gate("land")
         self.p.approve()
         self.p.log("dispatch", "--agent", "be-tester", "--model", "sonnet", "--step", "5", "--note", "never returns")
         import importlib
         sys.path.insert(0, str(GATE.parent))
         checks = importlib.import_module("gatelib.checks")
-        ctx = checks.Ctx(self.p.root, "docs/backend", {"test_globs": [], "doc_globs": []})
+        ctx = checks.Ctx(self.p.root, RUN, {"test_globs": [], "doc_globs": []})
         r = checks._log_trail(ctx)
         self.assertEqual(r["status"], "fail")
         joined = " ".join(r["details"])
@@ -1144,11 +1126,11 @@ class RunLog(Base):
         import importlib
         sys.path.insert(0, str(GATE.parent))
         checks = importlib.import_module("gatelib.checks")
-        return checks._log_trail(checks.Ctx(self.p.root, "docs/backend", {"test_globs": [], "doc_globs": []}))
+        return checks._log_trail(checks.Ctx(self.p.root, RUN, {"test_globs": [], "doc_globs": []}))
 
     def _tier(self, tier):
         st = dict(STATE, tier=tier)
-        self.p.write("docs/backend/state.json", json.dumps(st))
+        self.p.write("docs/runs/calc/state.json", json.dumps(st))
 
     def test_prototype_dispatch_may_precede_plan(self):
         self._tier("full")
@@ -1157,6 +1139,7 @@ class RunLog(Base):
         self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
         self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "2", "--note", "design")
         self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "done")
+        self.p.gate("land")
         self.p.approve()
         r = self._trail()
         self.assertEqual(r["status"], "pass", r.get("details"))
@@ -1181,6 +1164,7 @@ class RunLog(Base):
         self._tier("full")
         self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "2", "--note", "design")
         self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "done")
+        self.p.gate("land")
         self.assertEqual(self.p.status(self.p.gate("p2")[2], "P2.prototype-first"), "fail")
         self.p.close()
         self.p = Project()
@@ -1188,14 +1172,16 @@ class RunLog(Base):
         self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user", "--note", "saw it")
         self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "2", "--note", "design")
         self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "done")
+        self.p.gate("land")
         self.assertEqual(self.p.status(self.p.gate("p2")[2], "P2.prototype-first"), "pass")
 
     def test_reused_prototype_logged_at_kickoff_passes(self):
         self._tier("full")
         self.p.log("human", "--stop", "Prototype", "--decision", "approved", "--by", "user",
-                   "--note", "reused docs/backend/01b-prototype.md, confirmed 2026-10-30")
+                   "--note", "reused docs/runs/calc/01b-prototype.md, confirmed 2026-10-30")
         self.p.log("dispatch", "--agent", "be-architect", "--model", "opus", "--step", "2", "--note", "design")
         self.p.log("return", "--agent", "be-architect", "--step", "2", "--status", "ok", "--note", "done")
+        self.p.gate("land")
         self.p.approve()
         self.assertEqual(self._trail()["status"], "pass")
 
@@ -1210,7 +1196,7 @@ class RunLog(Base):
 
     def test_full_tier_without_prototype_fails_and_old_runs_unaffected(self):
         self.p.approve()
-        self.assertEqual(self._trail()["status"], "pass")  # no tier key: runs before 2.8.0
+        self.assertEqual(self._trail()["status"], "pass")  # not a Full development run
         self._tier("full")
         r = self._trail()
         self.assertEqual(r["status"], "fail")
@@ -1225,21 +1211,30 @@ class RunLog(Base):
         no_goal = {k: v for k, v in STATE.items() if k != "goal"}
         for st, want in ((no_goal, "fail"), (dict(STATE, goal={"change": "x"}), "fail"),
                          (dict(STATE, goal="faster"), "fail"), (STATE, "pass")):
-            self.p.write("docs/backend/state.json", json.dumps(st))
+            self.p.write("docs/runs/calc/state.json", json.dumps(st))
             self.assertEqual(self.p.status(self.p.gate("p1")[2], "ALL.state"), want, st.get("goal"))
 
     def test_state_risk_values(self):
         for risk, want in (("high", "pass"), ("normal", "pass"), ("medium", "fail")):
-            self.p.write("docs/backend/state.json", json.dumps(dict(STATE, risk=risk)))
+            self.p.write("docs/runs/calc/state.json", json.dumps(dict(STATE, risk=risk)))
             self.assertEqual(self.p.status(self.p.gate("p1")[2], "ALL.state"), want, risk)
+
+
+def ctx_checks(p):
+    """(code, output, report) of CTX.codemap and CTX.handoff alone. They run at the build, verify and
+    accept gates and in `gate.py check`, not at the document gates."""
+    sys.path.insert(0, str(GATE.parent))
+    from gatelib import checks
+    res = checks.context_files(checks.Ctx(p.root, RUN, json.loads((GATE.parent / "config.json").read_text())))
+    return (1 if any(c["status"] == "fail" for c in res) else 0), "", {"checks": res}
 
 
 class ContextFiles(Base):
     def test_green_with_map_and_current_handoff(self):
-        self.p.write("docs/backend/handoff.md", "# Handoff\n## be-analyst #1 · 1 · round 1 · t\nTask: x\n\n"
+        self.p.write("docs/runs/calc/handoff.md", "# Handoff\n## be-analyst #1 · 1 · round 1 · t\nTask: x\n\n"
                      "## orchestrator · 1 · stop · t\nState: x\n")
         self.p.dispatch("be-analyst")
-        code, out, rep = self.p.gate("p1")
+        code, out, rep = ctx_checks(self.p)
         self.assertEqual(code, 0, out)
         self.assertEqual(self.p.status(rep, "CTX.codemap"), "pass")
         self.assertEqual(self.p.status(rep, "CTX.handoff"), "pass")
@@ -1247,31 +1242,32 @@ class ContextFiles(Base):
     def test_missing_map_goes_to_the_writer(self):
         (self.p.root / "docs/codemap.md").unlink()
         self.p.dispatch("be-developer")
-        code, _, rep = self.p.gate("p1")
+        code, _, rep = ctx_checks(self.p)
         self.assertEqual(code, 1)
         c = next(c for c in rep["checks"] if c["id"] == "CTX.codemap")
         self.assertEqual((c["status"], c["owner"]), ("fail", "be-developer"))
 
     def test_designers_never_owe_the_map(self):
         (self.p.root / "docs/codemap.md").unlink()
+        (self.p.run / "run-log.jsonl").unlink()  # a run in which no role that reads code has worked yet
         self.p.dispatch("fe-ux")
-        _, _, rep = self.p.gate("p1")
+        _, _, rep = ctx_checks(self.p)
         self.assertEqual(self.p.status(rep, "CTX.codemap"), "unavailable")
 
     def test_stale_path_and_cap(self):
         self.p.dispatch("be-architect")
         self.p.write("docs/codemap.md", CODEMAP + "Entry: `calc/gone.py:f` · `**/*.py` · `calc/`\n")
-        code, _, rep = self.p.gate("p1")
+        code, _, rep = ctx_checks(self.p)
         c = next(c for c in rep["checks"] if c["id"] == "CTX.codemap")
         self.assertEqual(c["details"], ["calc/gone.py: no such path"])
         self.p.write("docs/codemap.md", CODEMAP + "x\n" * 200)
-        _, _, rep = self.p.gate("p1")
+        _, _, rep = ctx_checks(self.p)
         self.assertEqual(self.p.status(rep, "CTX.codemap"), "fail")
 
     def test_handoff_keeps_one_short_section_per_role(self):
-        self.p.write("docs/backend/handoff.md", "## be-analyst #1 · t\nTask: a\n## be-analyst #2 · t\nTask: b\n"
+        self.p.write("docs/runs/calc/handoff.md", "## be-analyst #1 · t\nTask: a\n## be-analyst #2 · t\nTask: b\n"
                      "## be-architect #1 · t\n" + "line\n" * 21)
-        code, _, rep = self.p.gate("p1")
+        code, _, rep = ctx_checks(self.p)
         self.assertEqual(code, 1)
         c = next(c for c in rep["checks"] if c["id"] == "CTX.handoff")
         self.assertEqual(c["details"], ["be-analyst: 2 sections, keep only the latest",
@@ -1384,18 +1380,18 @@ class SessionDFixes(Base):
         g["commands"].update(cmds)
         self.p.write(".claude/gates.json", json.dumps(g))
 
-    def waive(self, check, **extra):
-        self.p.write("docs/backend/gates/waivers.json", json.dumps(
-            [{"check": check, "approved_by": "user", "date": "2026-11-21", "reason": "known red", **extra}]))
+    def waive(self, check, *tests):
+        return self.p.gate("waive", "--check", check, "--gate", "p4", "--by", "user", "--reason", "known red",
+                           *(["--tests", *tests] if tests else []))
 
     def test_waiver_covers_only_the_tests_it_names(self):
         self.p.to_p4()
         self.p.write("tests/test_red.py", "def test_red_one():\n    assert False\n")
-        self.waive("CMD.test")
-        rep = self.p.gate("p4")[2]
-        self.assertEqual(self.p.status(rep, "CMD.test"), "fail")
-        self.assertIn("lists no tests", " ".join(next(c for c in rep["checks"] if c["id"] == "CMD.test")["details"]))
-        self.waive("CMD.test", tests=["test_red_one"])
+        self.assertEqual(self.p.status(self.p.gate("p4")[2], "CMD.test"), "fail")
+        code, out, _ = self.waive("CMD.test")
+        self.assertEqual(code, 2)
+        self.assertIn("--tests", out)
+        self.assertEqual(self.waive("CMD.test", "test_red_one")[0], 0)
         self.assertEqual(self.p.status(self.p.gate("p4")[2], "CMD.test"), "waived")
         self.p.write("tests/test_red.py", "def test_red_one():\n    assert False\n\n\ndef test_red_two():\n    assert False\n")
         rep = self.p.gate("p4")[2]
@@ -1420,7 +1416,7 @@ class SessionDFixes(Base):
 
     def test_analyst_writes_documents_only(self):
         self.p.dispatch("be-analyst")
-        self.p.write("docs/backend/notes.md", "x")
+        self.p.write("docs/runs/calc/notes.md", "x")
         self.p.write("tests/fixtures/candidates/FX-001/input.json", "{}")
         self.assertEqual(self.p.status(self.p.gate("p1")[2], "ROLE.doc-scope"), "pass")
         self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# analyst\n")
@@ -1430,25 +1426,12 @@ class SessionDFixes(Base):
         bad = next(c for c in rep["checks"] if c["id"] == "ROLE.doc-scope")["details"]
         self.assertEqual(sorted(bad), ["calc/core.py", "tests/fixtures/approved/FX-001/expected.json"])
 
-    def test_architect_out_with_a_developer_is_no_free_pass(self):
-        self.p.approve()
-        assert self.p.gate("baseline")[0] == 0
-        self.p.write("docs/backend/04-test-plan.md", PLAN)
-        for role, step in (("be-architect", "2"), ("be-developer", "4")):
-            self.p.gate("mark", "--role", role)
-            self.p.log("dispatch", "--agent", role, "--model", "opus", "--step", step, "--note", "work")
-        self.p.write("web/app.js", "x")  # neither an architect nor a developer may
-        for role, step in (("be-architect", "2"), ("be-developer", "4")):
-            self.p.log("return", "--agent", role, "--step", step, "--status", "ok", "--note", "done")
-        self.assertEqual(self.p.status(self.p.gate("p4")[2], "ROLE.shared"), "fail")
-
     def test_manual_log_refuses_copies_of_hook_entries(self):
         base = ("--agent", "be-developer", "--model", "opus", "--step", "4", "--note", "build")
         self.assertEqual(self.p.log("dispatch", *base)[0], 0)
         code, out = self.p.log("dispatch", *base)
         self.assertEqual(code, 2)
         self.assertIn("already has an open dispatch", out)
-        self.assertEqual(self.p.log("dispatch", *base, "--parallel")[0], 0)
         code, out = self.p.log("return", "--agent", "be-tester", "--step", "4", "--status", "ok", "--note", "x")
         self.assertEqual(code, 2)
         self.assertIn("no open dispatch", out)
@@ -1482,36 +1465,37 @@ class ParserAnchors(Base):
         self.assertIsNone(docs.findings(text.replace("- **Status:** fixed in round 2\n", ""))["FND-001"]["status"])
 
     def test_a_req_mentioned_in_passing_is_not_a_claim(self):
-        self.p.write("docs/backend/03-detailed-design.md", DESIGN.replace(
+        self.p.write("docs/runs/calc/03-detailed-design.md", DESIGN.replace(
             "- **Serves:** REQ-001", "- **Serves:** REQ-001\nKeeps REQ-090 of the last round working."))
         self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.serves"), "pass")
 
     def test_an_earlier_runs_req_is_known(self):
-        self.p.write("docs/backend/r1/01-requirements.md", REQS.replace("REQ-001", "REQ-090").replace("REQ-002", "REQ-091"))
-        self.p.write("docs/backend/r1/state.json", json.dumps(dict(STATE, status="accepted")))
-        self.p.write("docs/backend/03-detailed-design.md", DESIGN.replace("- **Serves:** REQ-002", "- **Serves:** REQ-002, REQ-090"))
+        self.p.write("docs/runs/r1/01-requirements.md", REQS.replace("REQ-001", "REQ-090").replace("REQ-002", "REQ-091"))
+        self.p.write("docs/runs/r1/state.json", json.dumps(dict(STATE, status="accepted")))
+        self.p.write("docs/runs/calc/03-detailed-design.md", DESIGN.replace("- **Serves:** REQ-002", "- **Serves:** REQ-002, REQ-090"))
         self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.serves"), "pass")
-        self.p.write("docs/backend/03-detailed-design.md", DESIGN.replace("- **Serves:** REQ-002", "- **Serves:** REQ-099"))
+        self.p.write("docs/runs/calc/03-detailed-design.md", DESIGN.replace("- **Serves:** REQ-002", "- **Serves:** REQ-099"))
         self.assertEqual(self.p.status(self.p.gate("p2")[2], "P3.serves"), "fail")
 
     def test_report_rows_that_disagree_fail_instead_of_last_row_winning(self):
         self.p.to_p5()
-        self.p.write("docs/backend/05-test-report.md", REPORT + "## R2. Round 2\n| TC | Result |\n|---|---|\n| TC-001 | fail |\n")
+        self.p.write("docs/runs/calc/05-test-report.md", REPORT + "## R2. Round 2\n| TC | Result |\n|---|---|\n| TC-001 | fail |\n")
         rep = self.p.gate("p5")[2]
         self.assertEqual(self.p.status(rep, "P5.report-complete"), "fail")
         self.assertIn("TC-001: rows disagree (pass, fail)",
                       " ".join(next(c for c in rep["checks"] if c["id"] == "P5.report-complete")["details"]))
-        self.p.write("docs/backend/05-test-report.md", REPORT + "## R2. Round 2\n| TC | Result |\n|---|---|\n| TC-001 | pass |\n")
+        self.p.write("docs/runs/calc/05-test-report.md", REPORT + "## R2. Round 2\n| TC | Result |\n|---|---|\n| TC-001 | pass |\n")
         self.assertEqual(self.p.status(self.p.gate("p5")[2], "P5.report-complete"), "pass")
 
     def test_codemap_checks_paths_not_symbols(self):
         self.p.dispatch("be-developer")
         self.p.write("docs/codemap.md", CODEMAP + "Symbols: `useAuth`, `app.listen`, `/api/sum`, `add()`\n")
-        self.assertEqual(self.p.status(self.p.gate("p1")[2], "CTX.codemap"), "pass")
+        self.assertEqual(self.p.status(ctx_checks(self.p)[2], "CTX.codemap"), "pass")
+        # `lib/` names nothing in the project root: a word pair or another tree, not a path of this one.
         self.p.write("docs/codemap.md", CODEMAP + "Gone: `calc/old.py`, `lib/`\n")
-        rep = self.p.gate("p1")[2]
+        rep = ctx_checks(self.p)[2]
         self.assertEqual(sorted(next(c for c in rep["checks"] if c["id"] == "CTX.codemap")["details"]),
-                         ["calc/old.py: no such path", "lib: no such path"])
+                         ["calc/old.py: no such path"])
 
 
 class ScopedSnapshots(Base):
@@ -1520,21 +1504,21 @@ class ScopedSnapshots(Base):
         self.p.to_p5()
         assert self.p.gate("p5")[0] == 0
         self.p.dispatch("be-reviewer")
-        self.p.write("docs/backend/06-review-report.md", ReviewAndAcceptance.FINDINGS.format(status="open"))
-        self.p.write("docs/frontend/run-log.jsonl", "")      # the other team's hook appends
+        self.p.write("docs/runs/calc/06-review-report.md", ReviewAndAcceptance.FINDINGS.format(status="open"))
+        self.p.write("docs/runs/earlier/handoff.md", "x")    # an earlier run's documents are no one's work
         self.p.write("server.log", "GET / 200\n")            # the running product writes its log
         self.assertEqual(self.p.status(self.p.gate("p6")[2], "P6.tree-unchanged"), "pass")
         self.p.write("calc/core.py", self.p.read("calc/core.py") + "\n# edit\n")
         self.assertEqual(self.p.status(self.p.gate("p6")[2], "P6.tree-unchanged"), "fail")
 
     def test_demo_source_globs_ignore_unrelated_files(self):
-        plan = json.loads(self.p.read("docs/backend/demo-plan.json"))
-        self.p.write("docs/backend/demo-plan.json", json.dumps({**plan, "source": ["calc/**"]}))
+        plan = json.loads(self.p.read("docs/runs/calc/demo-plan.json"))
+        self.p.write("docs/runs/calc/demo-plan.json", json.dumps({**plan, "source": ["calc/**"]}))
         self.p.write("calc/core.py", self.p.read("calc/core.py").replace("a + b", "b + a"))
         assert self.p.demo("after")[0] == 0
         sys.path.insert(0, str(GATE.parent))
         from gatelib import capture, checks, runlog
-        ctx = checks.Ctx(self.p.root, "docs/backend", json.loads((GATE.parent / "config.json").read_text()))
+        ctx = checks.Ctx(self.p.root, RUN, json.loads((GATE.parent / "config.json").read_text()))
         stale = lambda: [p for p in capture.demo_problems(ctx, self.p.run, runlog.events(self.p.run / "run-log.jsonl"))
                          if "changed after" in p]
         self.p.write("NOTICE", "third-party licences\n")
@@ -1548,7 +1532,7 @@ class ScopedSnapshots(Base):
         self.p.log("dispatch", "--agent", "be-developer", "--model", "opus", "--step", "4", "--note", "fix")
         code, out, _ = self.p.gate("p4")
         self.assertEqual(code, 4, out)
-        self.assertIn("this run has a writer out", out)
-        self.assertEqual(self.p.gate("mark", "--role", "be-tester")[0], 0)  # a parallel dispatch still marks
+        self.assertIn("a writer is out in the run's tree", out)
         self.p.log("return", "--agent", "be-developer", "--step", "4", "--status", "ok", "--note", "done")
+        self.p.gate("land")
         self.assertNotEqual(self.p.gate("p4")[0], 4)

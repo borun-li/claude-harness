@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""``no-agent-continuation.py`` 的回归矩阵。跑法：``python3 <本文件>``，退出码即结果。
+"""Regression matrix of ``no-agent-continuation.py``. Run: ``python3 <this file>``; the exit code is the result.
 
-**放行用例和拦截用例同等重要。** 这个钩子挂在每一次 SendMessage 上；它要是拦了
-与本 harness 无关的代理、还在运行的代理，或第一次（合规的）续用，就会被关掉。
+**The ALLOW cases matter as much as the DENY cases.** This hook sits on every SendMessage; if it
+denied an agent outside this harness, an agent still running, or an author's fix round, it would
+be switched off.
 """
 import json
 import pathlib
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -13,14 +15,23 @@ import tempfile
 HOOK = pathlib.Path(__file__).with_name("no-agent-continuation.py")
 
 
-def run(transcript: pathlib.Path, to: str, tool: str = "SendMessage", cwd: str = "/nonexistent") -> bool:
-    out = subprocess.run(
-        [sys.executable, str(HOOK)],
-        input=json.dumps({"tool_name": tool, "transcript_path": str(transcript), "cwd": cwd,
-                          "tool_input": {"to": to, "message": "x"}}),
+def output(transcript, to, tool="SendMessage", cwd="/nonexistent", hook=HOOK, message="x"):
+    return subprocess.run(
+        [sys.executable, str(hook)],
+        input=json.dumps({"hook_event_name": "PreToolUse", "tool_name": tool, "transcript_path": str(transcript),
+                          "cwd": str(cwd), "tool_input": {"to": to, "message": message}}),
         capture_output=True, text=True, check=True,
     ).stdout.strip()
-    return bool(out) and json.loads(out)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def reason(out):
+    """The denial text, or "" when the call was allowed."""
+    spec = json.loads(out).get("hookSpecificOutput", {}) if out else {}
+    return spec.get("permissionDecisionReason", "") if spec.get("permissionDecision") == "deny" else ""
+
+
+def run(transcript, to, **kw):
+    return bool(reason(output(transcript, to, **kw)))
 
 
 def main() -> int:
@@ -34,93 +45,167 @@ def main() -> int:
             print("FAIL %s: want=%s got=%s" % (label, "DENY" if want_deny else "ALLOW",
                                               "DENY" if got else "ALLOW"))
 
+    def true(label, ok):
+        nonlocal failures, cases
+        cases += 1
+        if not ok:
+            failures += 1
+            print("FAIL", label)
+
     with tempfile.TemporaryDirectory() as d:
         transcript = pathlib.Path(d) / "session.jsonl"
         transcript.write_text("")
         sub = pathlib.Path(d) / "session" / "subagents"
         sub.mkdir(parents=True)
-        metas = {
-            "a1": {"agentType": "be-tester", "finished": True},
-            "a2": {"agentType": "fe-engineer", "finished": False},
-            "a3": {"agentType": "Explore", "finished": True},
-            "a4": {"agentType": "fe-critic", "finished": True, "name": "critic-1"},
-            "a5": {"agentType": "be-developer", "finished": True},
-            "a6": {"agentType": "fe-ux", "finished": True},
-            "a7": {"agentType": "be-architect", "finished": True},
-        }
-        for aid, meta in metas.items():
-            (sub / f"agent-{aid}.meta.json").write_text(json.dumps(meta))
+
+        def agent(aid, kind, finished=True, **more):
+            (sub / f"agent-{aid}.meta.json").write_text(json.dumps({"agentType": kind, "finished": finished, **more}))
 
         def usage(aid, *sizes):
             (sub / f"agent-{aid}.jsonl").write_text("".join(json.dumps({"type": "assistant", "message": {
                 "usage": {"input_tokens": 2, "cache_creation_input_tokens": 0, "cache_read_input_tokens": s}}})
                 + "\n" for s in sizes))
 
-        # 作者（be-tester 写测试）：续用到 loops.max_rounds（2）次为止，第三次拒绝
-        expect("author be-tester first continuation", run(transcript, "a1"), False)
-        expect("author be-tester second continuation", run(transcript, "a1"), False)
-        expect("author be-tester third continuation", run(transcript, "a1"), True)
-        # 作者的上下文：看最后一次请求，不看峰值；超过 continue_max_context 拒绝
+        # An author (be-tester writes the tests): continued round after round; the round cap is the
+        # run log's, not a count kept here.
+        agent("a1", "be-tester")
+        for n in range(1, 5):
+            expect("author be-tester continuation %d" % n, run(transcript, "a1"), False)
+        true("an author has no continuation counter", not (sub / "agent-a1.continuations").exists())
+        # An author's context: the last request counts, not the peak.
+        agent("a5", "be-developer")
         usage("a5", 250000, 90000)
-        expect("author with small last context", run(transcript, "a5"), False)
+        expect("author with a small last context", run(transcript, "a5"), False)
+        agent("a6", "fe-ux")
         usage("a6", 90000, 210000)
-        expect("author over the context limit", run(transcript, "a6"), True)
-        # 项目覆盖 loops：上限 1 次
+        why = reason(output(transcript, "a6"))
+        true("author over the context limit: denied, in English, with the size and what to do",
+             "Constitution §8.1" in why and "210002 tokens" in why and "loops.continue_max_context" in why
+             and "Start a fresh fe-ux" in why)
+        # The project overrides the limit.
         proj = pathlib.Path(d) / "proj"
         (proj / ".claude").mkdir(parents=True)
-        (proj / ".claude" / "backend.json").write_text(json.dumps(
-            {"loops": {"max_rounds": 1, "continue_max_context": 200000}}))
-        expect("project cap first", run(transcript, "a7", cwd=str(proj)), False)
-        expect("project cap second", run(transcript, "a7", cwd=str(proj)), True)
-        # 仍在运行的代理：同一轮内补一句话，不记账
+        (proj / ".claude" / "harness.json").write_text(json.dumps({"loops": {"continue_max_context": 50000}}))
+        expect("project limit, over it", run(transcript, "a5", cwd=proj), True)
+        # A size that cannot be read is unknown, not 0: allowed, whatever the limit.
+        (proj / ".claude" / "harness.json").write_text(json.dumps({"loops": {"continue_max_context": -1}}))
+        agent("a7", "be-architect")
+        expect("no transcript: size unknown", run(transcript, "a7", cwd=proj), False)
+        (sub / "agent-a7.jsonl").write_text('{"message": {"usage": \n')
+        expect("unreadable transcript: size unknown", run(transcript, "a7", cwd=proj), False)
+        usage("a7", 10)
+        true("a size that was read is never reported as unknown",
+             "12 tokens" in reason(output(transcript, "a7", cwd=proj)))
+        # An agent still running: a word within its round, never counted.
+        agent("a2", "fe-engineer", finished=False)
         expect("running fe-engineer", run(transcript, "a2"), False)
         expect("running fe-engineer again", run(transcript, "a2"), False)
-        # 非本 harness 的代理一律不管
+        # Agents outside this harness are not this hook's business.
+        agent("a3", "Explore")
         expect("Explore", run(transcript, "a3"), False)
         expect("Explore again", run(transcript, "a3"), False)
-        # 评判者（非作者）：只为带回答案续用一次；按名字寻址，带 [ref] 后缀
+        # A judge (not an author): continued once, to receive an answer; addressed by name, with a [ref].
+        agent("a4", "fe-critic", name="critic-1")
         expect("named judge first", run(transcript, "critic-1 [3fa9c1]"), False)
-        expect("named judge second", run(transcript, "critic-1"), True)
-        # 查不到的目标、main、非 SendMessage 工具
+        why = reason(output(transcript, "critic-1"))
+        true("named judge second: denied, a judge is fresh every round", "continued once already" in why)
+        # A target that is not found, main, a tool other than SendMessage.
         expect("unknown agent", run(transcript, "zzz"), False)
         expect("main", run(transcript, "main"), False)
         expect("other tool", run(transcript, "a1", tool="Bash"), False)
 
-        # 在一个进行中的 run 里：放行的续用当场记进运行日志（PreToolUse，此时 meta 还是 finished）
+        # Inside a run: an allowed continuation is written to the run log at once (PreToolUse,
+        # while the meta file still says finished).
         proj2 = pathlib.Path(d) / "proj2"
-        (proj2 / "docs" / "backend").mkdir(parents=True)
-        (proj2 / "docs" / "backend" / "state.json").write_text(json.dumps({"status": "in_progress", "goal": {}}))
-        (sub / "agent-a8.meta.json").write_text(json.dumps({"agentType": "be-developer", "finished": True}))
-
-        def cont(msg):
-            return subprocess.run([sys.executable, str(HOOK)], capture_output=True, text=True, check=True, input=json.dumps({
-                "hook_event_name": "PreToolUse", "tool_name": "SendMessage", "transcript_path": str(transcript),
-                "cwd": str(proj2), "tool_input": {"to": "a8", "message": msg}})).stdout.strip()
-
-        out = cont("You are be-developer #1 — step 4, round 2.\nOnly: TC-001")
-        log = proj2 / "docs" / "backend" / "run-log.jsonl"
-        evs = [json.loads(l) for l in log.read_text().splitlines()] if log.exists() else []
-        expect("continuation in a run: allowed", bool(out), False)
-        cases += 1
-        if not (evs and evs[-1]["event"] == "dispatch" and evs[-1].get("continued") and evs[-1].get("redo") == 1):
-            failures += 1
-            print("FAIL continuation in a run: not logged as a continued round", evs[-1:] if evs else evs)
-        out = cont("Please fix it.")  # no step: an answer to a blocked agent, same step
-        expect("continuation without step: allowed", bool(out) and "deny" in out, False)
-        # 轮次用满（另一个 be-developer 已在第 4 步做了一轮返工）：run-log 拒绝，续用账本不记
-        (sub / "agent-a9.meta.json").write_text(json.dumps({"agentType": "be-developer", "finished": True}))
+        run_dir = proj2 / "docs" / "runs" / "demo"
+        run_dir.mkdir(parents=True)
+        (run_dir / "state.json").write_text(json.dumps({"status": "in_progress", "goal": {}}))
         gate = HOOK.parent.parent / "gates" / "gate.py"
-        done = ["return", "--status", "ok", "--note", "x"]  # a8's two continued rounds returned
-        for ev in (done, done, ["dispatch", "--model", "opus", "--note", "fix", "--redo"], done):
-            subprocess.run([sys.executable, str(gate), "log", ev[0], "--agent", "be-developer", "--step", "4", *ev[1:],
-                            "--project", str(proj2)], capture_output=True, check=True)
-        out = subprocess.run([sys.executable, str(HOOK)], capture_output=True, text=True, check=True, input=json.dumps({
-            "hook_event_name": "PreToolUse", "tool_name": "SendMessage", "transcript_path": str(transcript),
-            "cwd": str(proj2), "tool_input": {"to": "a9", "message": "You are be-developer #2 — step 4, round 3."}})).stdout
-        expect("continuation past the round cap: run-log denies", "ROUND CAP" in out, True)
-        expect("denied continuation not counted", (sub / "agent-a9.continuations").exists(), False)
 
-    # 读不懂的输入
+        def log_by_hand(agent_type, step, *ev):
+            subprocess.run([sys.executable, str(gate), "log", ev[0], "--agent", agent_type, "--step", step, *ev[1:],
+                            "--project", str(proj2)], capture_output=True, check=True)
+
+        def returned_and_landed():  # a writer's round is over once its return is on the run's branch
+            log_by_hand("be-developer", "4", *done)
+            subprocess.run([sys.executable, str(gate), "land", "--project", str(proj2)], capture_output=True, check=True)
+
+        done = ["return", "--status", "ok", "--note", "x"]
+        agent("a8", "be-developer")
+        out = output(transcript, "a8", cwd=proj2, message="You are be-developer #1 — step 4, round 2.\nOnly: TC-001")
+        log = run_dir / "run-log.jsonl"
+        evs = [json.loads(line) for line in log.read_text().split("\n") if line] if log.exists() else []
+        expect("continuation in a run: allowed", bool(out), False)
+        true("continuation in a run: logged as a continued round",
+             bool(evs) and evs[-1]["event"] == "dispatch" and evs[-1].get("continued") and evs[-1].get("redo") == 1)
+        why = reason(output(transcript, "a8", cwd=proj2, message="Please fix it."))
+        true("a second writer in the run's tree while the first is out: the run log's refusal is relayed",
+             "one writer in the run's tree" in why)
+        returned_and_landed()
+        out = output(transcript, "a8", cwd=proj2, message="Please fix it.")  # no step: an answer, same step
+        expect("continuation without a step: allowed", bool(reason(out)), False)
+        # The rounds of TC-001 are used up (another be-developer redid it at step 4): the run log
+        # refuses, the hook relays the refusal.
+        agent("a9", "be-developer")
+        returned_and_landed()
+        log_by_hand("be-developer", "4", "dispatch", "--model", "opus", "--note", "fix", "--redo", "--items", "TC-001")
+        returned_and_landed()
+        why = reason(output(transcript, "a9", cwd=proj2,
+                            message="You are be-developer #2 — step 4, round 3.\nOnly: TC-001"))
+        true("continuation past the round cap: the run log's refusal is relayed", "ROUND CAP" in why)
+        # A judge the run log refuses has not used its one continuation.
+        agent("j1", "be-reviewer")
+        for ev in (["dispatch", "--model", "opus", "--note", "review"], done,
+                   ["dispatch", "--model", "opus", "--note", "again", "--redo"], done,
+                   ["dispatch", "--model", "opus", "--note", "again", "--redo"], done):
+            log_by_hand("be-reviewer", "5", *ev)
+        why = reason(output(transcript, "j1", cwd=proj2, message="You are be-reviewer #1 — step 5, round 4."))
+        true("refused judge: the run log's refusal is relayed", "ROUND CAP" in why)
+        true("refused judge not counted", not (sub / "agent-j1.continuations").exists())
+
+    # The three layers of the one harness config, in a harness root of their own: the harness
+    # default, the user's own defaults (harness-local), the project.
+    with tempfile.TemporaryDirectory() as d:
+        root = pathlib.Path(d) / "harness"
+        for part in ("hooks", "harness", "backend", "harness-local"):
+            (root / part).mkdir(parents=True)
+        hook = pathlib.Path(shutil.copy(HOOK, root / "hooks"))
+        transcript = pathlib.Path(d) / "session.jsonl"
+        transcript.write_text("")
+        sub = pathlib.Path(d) / "session" / "subagents"
+        sub.mkdir(parents=True)
+        (sub / "agent-b1.meta.json").write_text(json.dumps({"agentType": "be-developer", "finished": True}))
+        (sub / "agent-b1.jsonl").write_text(json.dumps({"message": {"usage": {"input_tokens": 100000}}}) + "\n")
+        proj = pathlib.Path(d) / "proj"
+        (proj / ".claude").mkdir(parents=True)
+
+        def layers(default, local=None, project=None):
+            for path, value in ((root / "harness" / "config.json", default),
+                                (root / "harness-local" / "config.json", local),
+                                (proj / ".claude" / "harness.json", project)):
+                if value is None:
+                    path.unlink() if path.exists() else None
+                else:
+                    path.write_text(json.dumps({"loops": {"continue_max_context": value}}))
+            return run(transcript, "b1", cwd=proj, hook=hook)
+
+        expect("harness default above the size", layers(150000), False)
+        expect("harness default below the size", layers(50000), True)
+        expect("the user's own default overrides the harness default", layers(50000, local=150000), False)
+        expect("the user's own default, below the size", layers(150000, local=50000), True)
+        expect("the project overrides both", layers(50000, local=50000, project=150000), False)
+        expect("the project, below the size", layers(150000, local=150000, project=50000), True)
+        # The per-team files of the layout before 16.0.0 are not read any more.
+        for old in (root / "backend" / "config.json", root / "harness-local" / "backend.json",
+                    proj / ".claude" / "backend.json"):
+            old.write_text(json.dumps({"loops": {"continue_max_context": 50000}}))
+        expect("a per-team config file is not read", layers(150000), False)
+        # A layer that sets another key of `loops` keeps the limit of the layer below.
+        layers(50000)
+        (proj / ".claude" / "harness.json").write_text(json.dumps({"loops": {"max_rounds": 3}}))
+        expect("a layer without the key keeps the one below", run(transcript, "b1", cwd=proj, hook=hook), True)
+
+    # Unreadable input.
     out = subprocess.run([sys.executable, str(HOOK)], input="not json",
                          capture_output=True, text=True, check=True).stdout.strip()
     expect("bad input", bool(out), False)

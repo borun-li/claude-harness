@@ -1,314 +1,167 @@
 # Claude Harness
 
-A software-development agent team for Claude Code: backend and frontend roles, human sign-offs, automatic gates.
+**A software team inside Claude Code.** You say what you want; specialist agents plan, build, test
+and review it; scripts check each step; you sign off at a few fixed points.
 
 ---
 
-## Description
+## What it is
 
-Your Claude Code session becomes the orchestrator. It asks you a few questions, hands each step to
-a fresh specialist agent (sixteen, in a backend and a frontend team), runs automatic checks between
-steps, and stops for your sign-off at fixed points. You see something running before details are
-designed, and every run is kept on disk so it can be resumed. It installs into `~/.claude`, so it
-works in every project.
-
-Every task starts with one question, the tier, and the tier decides the path:
-
-```mermaid
-flowchart LR
-  R(["/route"]) --> T{{tier ■}}
-  T -- Small change --> SP{{plan ■}} --> E1[one engineer] --> A1{{check it running ■}}
-  T -- Prototype --> D1["design (with an interface)"] --> P1{{try it running ■}}
-  T -- Full development --> D2[design] --> P2{{prototype ■}} --> PL{{plan ■}} --> B[build · tests · review] --> A2{{acceptance ■}}
-```
-
-*■ marks your sign-offs; automatic checks run between the steps. A run with an interface adds UX
-and UI sign-offs before the prototype. The team READMEs show each team's full flow.*
-
-Between sign-offs you are asked only when something irreversible or outward-facing is about to
-happen. Everything else is decided with a recommended default and shown to you at the next stop.
-A question that doesn't block the run waits in a list while work continues, and when your newer
-words replace an earlier decision, the team follows them without asking again.
-
-### Scope today
-
-Built and tested on **web applications**: a backend, a browser frontend, or both.
-
-| Interface | Design | Evidence and checks |
-|---|---|---|
-| Web | Figma | Automated: Chrome captures the DOM and computed styles at every screen size |
-| Terminal | Text mockups | Automated capture of the program's output; less used so far |
-| Native app, desktop | Figma | Manual: you or an instrument supply the evidence files; the gates do not yet recognise native UI code as frontend files |
-
-Backend-only work does not depend on the interface. Support beyond the web grows as projects use it.
+One long Claude Code session tends to review its own work, skip a check it feels sure about, and
+lose the thread when the session ends. Claude Harness splits the work instead: one agent writes,
+others test and review, a script checks each step's result, and every run is kept on disk so it
+can stop and resume. It installs into `~/.claude` and works in every project.
 
 ---
 
-## Table of Contents
+## See it in action
 
-- [Description](#description)
-- [Scope today](#scope-today)
-- [Prerequisites](#prerequisites)
-- [Quick Start](#quick-start)
-- [Using it](#using-it)
-- [How it works](#how-it-works)
-- [Repository structure](#repository-structure)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
+An example of the smallest kind of run:
 
----
+```text
+You:   /route add a CSV export button to the orders page
 
-## Prerequisites
+Team:  I read the code: the orders page and its API already exist, so this is
+       frontend work only. Two questions:
+       1. How big is this?  Small change · Standard change · Prototype · Full development
+       2. The goal as I understand it: "An Export CSV button on the orders page
+          downloads the orders on screen." Right?
+You:   Small change. Yes.
 
-| To do this | You need |
-|---|---|
-| Any scenario | [Claude Code](https://claude.com/claude-code), Python 3.10+, git, Node.js 20+ with npm |
-| Scenarios 2–5 with a web interface | Also Google Chrome (evidence capture) |
-| A new visual design (Scenarios 2, 3) | Also the Figma plugin for Claude Code, with a seat that can write to Figma files |
-| Scenario 4 with a Figma design | The Figma plugin; read access is enough |
-| A terminal interface | No Figma: screens are designed as text mockups |
+Team:  The frontend engineer's plan:
+       - You will see: an "Export CSV" button above the orders table
+       - Files: OrdersPage.tsx, exportCsv.ts (new), exportCsv.test.ts (new)
+       - Check: the file has one line per order on screen
+       Build it?
+You:   Yes.
 
-Developed on macOS; Linux should work; on Windows use WSL.
+Team:  Built. The build and the tests pass.
+       Before and after: orders-before.png · orders-after.png
+       Try it at http://localhost:5173/orders. Accept?
+You:   Accept.
 
-The Figma agents list the Figma plugin's tools as `mcp__plugin_figma_figma__*`; if your server has
-another name, change that line in `agents/fe-ux.md`, `agents/fe-ui.md` and `agents/fe-engineer.md`. Each run has a
-Figma call budget under a monthly cap; the default cap (300) is the author's, so set yours with
-`/frontend-config`.
-
----
-
-## Quick Start
-
-**Step 1 — download the repository.**
-
-```sh
-git clone https://github.com/borun-li/claude-harness.git
-cd claude-harness
+Team:  Committed on branch csv-export.
 ```
 
-**Step 2 — check prerequisites.**
-
-```sh
-./install.sh --check
-```
-
-You should see `prerequisites ok`; otherwise each missing tool is listed with what needs it.
-
-**Step 3 — install.**
-
-```sh
-./install.sh
-```
-
-It backs up what it will replace to `~/.claude/backup-harness-<date>.tgz`, copies the harness into
-`~/.claude` and installs `playwright-core` for the gates. You should see
-`done. Restart Claude Code, then run /route in a project.`
-
-**What install changes.** After the backup, `CONSTITUTION.md`, `ORCHESTRATOR.md` and the folders
-`backend/`, `frontend/`, `route/`, `gates/`, `hooks/`, `skills/design-taste/` in `~/.claude` are
-replaced. In `agents/` and `commands/` only the harness's own files are written, and a file an
-earlier version installed is removed when the harness no longer ships it (listed in
-`~/.claude/.harness-files`); your own agents and commands there stay. Nothing else is touched; `settings.json` is not changed (an update removes the hook entries earlier versions put
-there).
-
-**Where the safety hooks apply.** Only in harness sessions: inside every `be-*` and `fe-*` agent,
-and in your session from the moment `/route`, `/backend`, `/frontend` or a `-resume` command runs
-until the session ends. There Claude cannot run `git stash`, `git checkout -- <file>`, `pkill` and
-similar commands; run such a command yourself with `! <command>` in the prompt. Other sessions are
-not affected. A session reopened with `claude --resume` has them again after `/backend-resume` or
-`/frontend-resume`.
-
-**Branches and pull requests.** Each run works on its own branch and commits as it goes; only the
-main session does git writes, never an agent. To let it also push that branch and open a draft pull
-request for you to review and merge, add `"git": {"push": true}` to `<project>/.claude/gates.json`
-(the harness asks at the start of a run if the key is missing). Merging, force pushes, deleting
-unmerged branches and rewriting history stay yours.
-
-**Step 4 — restart Claude Code and confirm.** In any project, run `/backend-config`: it prints
-the effective configuration and the harness version.
-
-Update later with `git pull && ./install.sh`.
-
-**Uninstall.**
-1. Delete the installed files and folders listed above from `~/.claude`, or restore your earlier
-   copies from the backup: `tar xzf ~/.claude/backup-harness-<date>.tgz -C ~/.claude`.
-2. Restart Claude Code.
-
----
-
-## Using it
-
-Describe the work in plain words, or start with `/route`. A request that changes what users see or
-how the software is built starts the team; questions, research, one-off scripts and coursework do
-not.
-
-### Scenario 1 — a small change
-
-For a change that needs no new data model, dependency or scope decision.
-
-```
-/route add a CSV export button to the orders page
-```
-
-You get a short plan (what you will see change, the files, how it will be checked) and say yes
-once. One engineer per side makes the change, the orchestrator runs the build and tests, and you
-accept it running, with a capture of it before and after. The only record is `docs/handoff.md` and the git history. If the work turns out bigger, it stops and
-asks whether to switch tiers.
-
-### Scenario 2 — try an idea
-
-For seeing whether something is worth building before committing to it.
-
-```
-/route prototype a habit tracker
-```
-
-With an interface, its screens are designed first (Figma, or text mockups for a terminal) and you
-confirm them; then it runs on the real surface with fake data and you try it. Without an interface,
-a throwaway prototype runs and you confirm its behaviour. The run ends there; a later Full
-development run offers to reuse the confirmed prototype.
-
-### Scenario 3 — build a feature end to end
-
-For work that will be used and maintained.
-
-```
-/route let users reset their password by email
-```
-
-The orchestrator reads the code and decides frontend, backend or both; a change on both sides runs
-as one cross-stack run with one acceptance. You sign off at kickoff, the prototype and acceptance;
-backend work also at the plan (design, risk and approved test fixtures), and a new interface also
-at UX and UI.
-Deliverables go to `docs/backend/` and `docs/frontend/`.
-
-### Scenario 4 — build from a design you already have
-
-For a design that is already confirmed, in Figma or elsewhere.
-
-```
-/route build the onboarding screens from this Figma file: <link>. The design is confirmed.
-```
-
-The design is taken in, not redrawn. UX and UI list its gaps (missing states, screen sizes) and you
-answer them in one batch; then the prototype runs from it and the flow continues as in Scenario 2
-or 3.
-
-### Scenario 5 — change your mind, pause, resume
-
-Tell the orchestrator the new requirement mid-run. The run is not restarted: the change joins at the
-next sign-off. Where your new words replace something you approved earlier, the team follows them
-and lists what it changed; anything else that would change an approved result comes back to you.
-
-```
-/frontend-status      # phases, sign-offs, checks, open items
-/frontend-resume      # continue, also in a fresh session
-```
-
-The `/backend-…` pair does the same for a backend or cross-stack run.
-
-**Long runs.** Each time something you can see is done, the orchestrator posts what changed and a
-link to the page on the local preview, and sends a notification when you are away from the
-terminal. To get them:
-- Desktop: Ghostty, Kitty and iTerm2 show them (in iTerm2, turn on Settings → Profiles → Terminal →
-  Notification Center Alerts, and in Filter Alerts allow escape-sequence alerts); Apple Terminal
-  does not. Allow notifications for your terminal in macOS settings, and note Focus / Do Not
-  Disturb hides them.
-- Phone: sign in with your claude.ai account, run `/remote-control` in the session (or turn on
-  *Enable Remote Control for all sessions* in `/config`), and open the session in the Claude app.
-- Keep the machine awake: start with `caffeinate -i claude` on macOS. A run that must survive the
-  laptop closing belongs in a cloud session (claude.ai/code).
-
-### Scenario 6 — one agent, one job
-
-For a review, a test plan or a design question without running the flow.
-
-```
-have be-review-security review src/auth
-have fe-review-accessibility check the sign-up page
-```
-
-The named agent works alone: no phases, no sign-offs, no gates.
-
-### Commands
-
-| Command | Does |
-|---|---|
-| `/route <what you want>` | Asks the tier, decides frontend, backend or both, starts the right team |
-| `/backend`, `/frontend` | Start one team directly |
-| `/backend-status`, `/frontend-status` | Show a run: phases, gates, open items |
-| `/backend-resume`, `/frontend-resume` | Continue a run, also in a fresh session |
-| `/backend-config`, `/frontend-config` | Show or change models, panels, caps, budgets, globally or per project |
+Bigger work follows the same shape with more of the team: a separate tester, reviewers, designers,
+and automatic checks between the steps.
 
 ---
 
 ## How it works
 
-- **Orchestrator** — the main session dispatches, decides with recommended defaults and keeps
-  context ([`ORCHESTRATOR.md`](ORCHESTRATOR.md)). [`CONSTITUTION.md`](CONSTITUTION.md) overrides
-  every other file.
-- **A goal per run** — with the tier, you say what change you will see when the run ends and how
-  you will check it; the run does not grow past it, and Acceptance opens with your check.
-- **Round caps** — each step may redo its work twice by default (`loops.max_rounds`); after that
-  the run asks you instead of looping.
-- **Fresh agents, continued authors** — each step goes to a new agent with a written brief. A fix
-  goes back to the agent that wrote the work while its context is small, so it does not re-read
-  the codebase; reviewers and verifiers are always new, so no review inherits the author's blind
-  spots.
-- **Code map and reading list** — a short `docs/codemap.md` and a brief that names the lines to
-  read let a fresh agent start in minutes instead of rediscovering the codebase; `handoff.md`
-  keeps only each role's latest note.
-- **Before and after** — at kickoff the run captures your check at its real entry point (a
-  screenshot, or a command's output and time), and again on the final code; Acceptance opens with
-  the two side by side, and its gate fails if either is missing or nothing changed.
-- **Automatic gates** — between phases, `gates/gate.py` checks documents, traceability, tests and
-  the working tree; the agent being checked never runs its own gate.
-- **Run log** — every dispatch, gate and sign-off goes to a hash-chained log on disk, which status,
-  resume and the final checks read.
-- **Safety hooks** — one blocks git commands that discard uncommitted work or force and rewrite
-  history, and keeps git writes to the main session (branch, commit, push the run's branch, draft
-  PR), one blocks stopping
-  processes by name, pattern or port (an agent stops only a process it started), one limits
-  reusing a finished agent to the author of the work, within the round cap and a context limit.
-  A fourth writes every dispatch and return to the run log and enforces the round cap, so the log
-  never depends on memory. They are declared in the agent and command files, so they act only in
-  harness sessions.
-
-Each team's flow and rules: [Backend team](backend/README.md) · [Frontend team](frontend/README.md).
+1. **One orchestrator, sixteen specialists.** Your session delegates; each agent has one job
+   (analyst, architect, developer, tester, reviewer, UX, UI, frontend engineer…) and hands its
+   work on as a document in `docs/runs/<name>/`.
+2. **You decide at fixed points.** In between, the team takes the recommended default and shows it
+   to you at the next stop. It interrupts only before something that cannot be undone.
+3. **Scripts check the work.** After each step a gate checks that the documents are complete, each
+   requirement has a test, the tests pass, and no agent changed files outside its role. A failed
+   item is redone at most twice; then you are asked.
+4. **Authors keep their work, reviewers start fresh.** A fix goes back to the agent that wrote the
+   code; every review is done by a new agent that has not seen the author's reasoning.
+5. **Independent work runs in parallel.** Agents working at the same time each get their own copy
+   of the repository, and their changes are merged one by one.
+6. **Everything is on disk.** The state, a log of every step, and before-and-after captures, so a
+   run can be paused, resumed in a new session, and checked afterwards.
 
 ---
 
-## Repository structure
+## Quick Start
 
-```
-claude-harness/
-├── README.md
-├── LICENSE
-├── install.sh            # back up, copy into ~/.claude
-├── CONSTITUTION.md       # rules that override everything else
-├── ORCHESTRATOR.md       # how the main session dispatches, decides and keeps context
-├── commands/             # /route and the team slash commands
-├── agents/               # the sixteen be-* and fe-* roles
-├── backend/ · frontend/  # each team's README, playbook, quality bars, templates, config, changelog
-├── route/                # prototype procedure, handoff format, the frontend/backend line
-├── gates/                # automatic checks, run log and evidence capture, with tests
-├── hooks/                # the safety and run-log hooks, with their tests
-└── skills/design-taste/  # the author's interface taste; edit it to yours (a project's brand wins)
+You need [Claude Code](https://claude.com/claude-code), Python 3.9+, git and Node.js 18+; Google
+Chrome for work on a web interface.
+
+```sh
+git clone https://github.com/borun-li/claude-harness.git
+cd claude-harness
+./install.sh --check    # lists anything missing
+./install.sh            # backs up what it replaces, then copies into ~/.claude
 ```
 
-Versions: `harness_version` in `backend/config.json` and `frontend/config.json`.
+Restart Claude Code. Then, in any project:
+
+```
+/route <what you want, in plain words>
+```
+
+Update later with `git pull && ./install.sh`. What install changes, how to undo it, and what
+designing in Figma needs: [GUIDE.md](GUIDE.md).
+
+---
+
+## Pick a tier
+
+`/route` first asks how big the work is. You choose; the team never guesses.
+
+| Tier | Choose it when | What the team does | You sign off |
+|---|---|---|---|
+| **Small change** | A tweak: no new data, no new dependency, nothing to decide about scope | One engineer plans, then builds | The plan · the result running |
+| **Standard change** | Everyday work on software that exists; it fits a one-page plan | Plan → build → a separate tester → one reviewer | The plan · acceptance |
+| **Prototype** | You want to see whether an idea is worth building | Designs the screens, then runs it with fake data | The design · the prototype |
+| **Full development** | New screens or flows, new data, or a new dependency | Requirements → design → prototype → plan → build → tests → review panel | Kickoff · UX and UI · prototype · plan · acceptance |
+
+Examples:
+
+```
+/route add a CSV export button to the orders page                # small: one button, existing data
+/route add a status filter to the orders endpoint and its page   # standard: both sides, no new design
+/route prototype a habit tracker                                 # prototype
+/route let users reset their password by email                   # full: two new screens, stored reset
+                                                                 #       tokens, sending email
+```
+
+If the work turns out bigger than its tier, the team stops and asks whether to switch.
+
+You can also:
+
+- **Build from a design you have.** Give the Figma link and say it is confirmed; the team asks
+  only about what the design leaves out.
+- **Change your mind.** Say so mid-run; the change joins at the next sign-off.
+- **Pause and continue.** `/route-status` shows where a run stands; `/route-resume` continues it,
+  also in a new session.
+- **Use one specialist.** `have be-review-security review src/auth`: one agent, no phases.
+
+---
+
+## Commands
+
+| Command | Does |
+|---|---|
+| `/route <what you want>` | Starts a run: asks the tier, decides frontend, backend or both, runs the team |
+| `/route-status` | Shows a run: steps done, checks, what the last agents changed, open items |
+| `/route-resume` | Continues a run, also in a new session |
+| `/route-config` | Shows or changes models, review panels, limits and budgets; prints the version |
+
+---
+
+## Scope today
+
+Built and tested on **web applications**: a backend, a browser frontend, or both. Terminal
+interfaces work with text mockups and are less used so far; native and desktop apps need their
+evidence supplied by hand. Details: [GUIDE.md](GUIDE.md#what-it-supports).
+
+---
+
+## Documentation
+
+- [GUIDE.md](GUIDE.md): prerequisites, what install changes, each tier in detail, safety hooks,
+  branches and pull requests, parallel work, long runs, configuration, upgrading, uninstalling
+- [Backend team](backend/README.md) · [Frontend team](frontend/README.md): each team's flow and rules
+- [ORCHESTRATOR.md](ORCHESTRATOR.md): how the main session dispatches and decides ·
+  [CONSTITUTION.md](CONSTITUTION.md): the rules above every other file
+- [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
 ## Contributing
 
 Work on a branch and open a pull request. Before merging, run the tests and record the change in
-the matching `CHANGELOG.md`: what changed, without project names or the story behind it.
+`CHANGELOG.md`: what changed, without project names or the story behind it.
 
 ```sh
-(cd gates && python3 -m unittest discover -s tests)
-for t in hooks/test_*.py; do python3 "$t" || break; done   # each script prints its cases and failures
+(cd gates && npm ci && python3 -m unittest discover -s tests)   # npm ci once: the capture tests need it
+for t in hooks/test_*.py; do python3 "$t" || break; done        # each script prints its cases and failures
 ```
 
 ---
@@ -316,9 +169,5 @@ for t in hooks/test_*.py; do python3 "$t" || break; done   # each script prints 
 ## License
 
 [MIT](LICENSE) © 2026 borun-li
-
----
-
-## Contact
 
 Questions, bugs and ideas: [open an issue](https://github.com/borun-li/claude-harness/issues).

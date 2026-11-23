@@ -1,6 +1,6 @@
 """Project-level registry of approved observables (frontend PLAYBOOK §3I).
 
-Rows the user accepted become `OBS-###` entries in `docs/frontend/observables.json`. Each is guarded
+Rows the user accepted become `OBS-###` entries in `docs/observables.json`. Each is guarded
 from then on by the test that proved it (kind `test`) or by a planned re-capture (kind `capture`).
 Only the user adds (`fe-promote`) or retires (`fe-approve --retire`) entries, or the orchestrator
 retires one a newer decision replaces (`--because`); every entry is hashed.
@@ -13,7 +13,7 @@ from .common import PASS, ConfigError, bad, na, ok, read_json, utc_now, write_js
 
 
 def path(ctx):
-    return ctx.project / ctx.cfg.get("observables_registry", "docs/frontend/observables.json")
+    return ctx.project / ctx.cfg.get("observables_registry", "docs/observables.json")
 
 
 def load(ctx):
@@ -101,15 +101,20 @@ def _guards(entry):
     return [(t["file"], t["name"]) for t in tests if t.get("name")], [t["tag"] for t in tests if t.get("tag")]
 
 
-def regression(ctx, r, owner):
-    """Every active `test` entry's tests still exist and pass in this run."""
+def regression(ctx, r, owner, partial=False):
+    """Every active `test` entry's tests still exist and pass in this run. `partial`: the run was the
+    frontend's own suite (`commands.fe_test`), so a guard it did not execute is left to `fe-verify`,
+    which runs the whole suite."""
     reg = load(ctx)
     probs = _tampered(reg)
     tests = {k: v for k, v in active(reg).items() if v["kind"] == "test"}
     if not reg["entries"]:
         return na("FE.regression", "No approved observables registered yet", owner)
+    if ctx.dry:
+        return na("FE.regression", checks.DRY, owner)
+    left = []
     if tests and (not r or r.get("cases") is None):
-        probs.append(f"{len(tests)} registered tests; pass status needs a JUnit report")
+        probs.append(f"{len(tests)} registered tests, but whether they pass is not read: {runner.no_cases(r)}")
     elif tests:
         probs += [f"{k}: {t['file']} missing" for k, v in tests.items() for t in v.get("tests") or []
                   if not (ctx.project / t["file"]).exists()]
@@ -121,11 +126,13 @@ def regression(ctx, r, owner):
             seen = list(checks._observed_ids({k: named}, [k], r["cases"]).values()) if named else []
             seen += list(checks._observed_ids({}, tags, r["cases"]).values())
             st = ("failed" if "failed" in seen else "not-executed" if "not-executed" in seen else "passed")
-            if st != "passed":
+            if st == "not-executed" and partial:
+                left.append(f"{k}: not run by fe_test; fe-verify runs it")
+            elif st != "passed":
                 how = f", guarded by row id {', '.join(tags)}" if tags and not named else ""
                 probs.append(f"{k} ({v['observable']}): {st}{how}")
     return (bad("FE.regression", "Approved observables regressed (only the user retires one)", owner, probs)
-            if probs else ok("FE.regression", f"{len(tests)} registered observables still hold", owner))
+            if probs else ok("FE.regression", f"{len(tests) - len(left)} registered observables still hold", owner, left))
 
 
 def capture_entries(ctx):

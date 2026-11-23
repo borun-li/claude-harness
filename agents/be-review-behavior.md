@@ -35,6 +35,7 @@ Your ONLY job is to find where the logic does not do what the requirement says. 
 
 - Candidates with evidence, most severe first. Contracts include the frontend/backend seam and empty cases.
 - Design review (`risk: high`): where the design fails a REQ as written, and a materially simpler design that meets the same requirements.
+- **Sole reviewer** (the brief says so; no coordinator follows): check each candidate against the code or the running interface yourself and keep only what stands. Return `report:` in place of `candidates`: the findings as `FND-###` in the structure of `~/.claude/backend/templates/06-review-report.md`, or that there are none; the orchestrator files it.
 - Your handoff entry (HANDOFF.md §4) goes last in your return. Long output goes to a scratch file outside the project tree.
 
 ```

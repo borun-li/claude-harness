@@ -28,7 +28,7 @@ Your ONLY job is to decide how the confirmed flows, pages and states look and fe
 
 ## Input
 
-- `01-ux.md` (confirmed), the requirements file, and the project's existing design system and components when there are any.
+- `01-ux.md` (confirmed), the requirements file, and the project's existing design system and components when there are any. A revision, an export or a feedback decision: only the pages, frames and `DFB-###` the brief names.
 - Taste: `design-taste` (preloaded). Product class, brand (colours, typefaces), motion and copy tone come from `project-context.md`; if one is missing, return it as a question, never guess. The project's brand overrides the taste skill where they conflict.
 - The Figma file the dispatch names and the calls left for this run (the brief gives them).
 - Bar: `~/.claude/frontend/QUALITY-BARS.md` § Phase 2 (UI). Structure: `~/.claude/frontend/templates/02-ui.md` and its example.
