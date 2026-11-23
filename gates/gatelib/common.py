@@ -6,6 +6,8 @@ import pathlib
 import re
 
 PASS, FAIL, UNAVAILABLE, WAIVED = "pass", "fail", "unavailable", "waived"
+# The harness root holds `gates/`, `hooks/` and `harness/` (the repository, or an install).
+HARNESS_ROOT = pathlib.Path(__file__).resolve().parents[2]
 
 
 class ConfigError(Exception):
@@ -48,6 +50,38 @@ def write_json(path, data):
     p = pathlib.Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def merge(base, over, depth=1):
+    """`base` with `over` on top. A dict value is merged into the dict it overrides, `depth` levels
+    deep, so a project that sets one budget or one command keeps the others; any other value
+    replaces. `_comment` keys are left out."""
+    out = dict(base)
+    for k, v in over.items():
+        if k.startswith("_comment"):
+            continue
+        if depth > 0 and isinstance(v, dict) and isinstance(out.get(k), dict):
+            out[k] = merge(out[k], v, depth - 1)
+        else:
+            out[k] = v
+    return out
+
+
+def harness_cfg(project):
+    """The harness config from its three layers: the harness default (`harness/config.json`, replaced
+    on install), the user's own defaults (`harness-local/config.json`, which install never touches),
+    then the project's `.claude/harness.json`. Each layer's top-level keys override the one before;
+    a dict is merged key by key two levels deep, so a layer that sets `loops.max_rounds` or
+    `models._active_tier` keeps the rest of that block."""
+    cfg = {}
+    for p in (HARNESS_ROOT / "harness" / "config.json", HARNESS_ROOT / "harness-local" / "config.json",
+              pathlib.Path(project) / ".claude" / "harness.json"):
+        try:
+            layer = read_json(p)
+        except ValueError as e:
+            raise ConfigError(f"{p} is not JSON ({e})")
+        cfg = merge(cfg, layer, depth=2) if isinstance(layer, dict) else cfg
+    return cfg
 
 
 @functools.lru_cache(maxsize=None)

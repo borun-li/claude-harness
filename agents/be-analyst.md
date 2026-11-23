@@ -34,7 +34,7 @@ Your ONLY job is to turn a request into requirements: what the product must do, 
 
 ## Output
 
-- The document the dispatch names: `01-requirements.md`; `docs/frontend/00-requirements.md` in a frontend-only run; or `expected.*` and `meta.json` `compare` per fixture (`exact` unless timestamps or ordering make that wrong).
+- The document the dispatch names: `01-requirements.md`; `00-requirements.md` in a frontend-only run; or `expected.*` and `meta.json` `compare` per fixture (`exact` unless timestamps or ordering make that wrong).
 - Handoff entry, long output and the code map: `~/.claude/route/HANDOFF.md` §4, §6 and §7.
 - Return this summary only, with the fields you used:
 

@@ -45,10 +45,15 @@ def headings(text):
     return [(len(m.group(1)), m.group(2), m.start(), m.end()) for m in HEADING.finditer(mask_code(text))]
 
 
+# One word each: an inline code span, a URL, a path (`docs/x/evidence/Q-3-1440.png` is not five words).
+ATOM = re.compile(r"`[^`\n]+`|https?://[!-~]+|[\w.@~%+-]*(?:/[A-Za-z0-9_.@~%+-]+)+/?", re.A)
+
+
 def words(text):
-    """Word count outside code: Latin words plus CJK characters at two per word."""
-    t = mask_code(text)
-    return len(WORD.findall(t)) + (len(CJK.findall(t)) + 1) // 2
+    """Word count outside fenced code: Latin words plus CJK characters at two per word. An inline
+    code span, a URL and a path each count as one word."""
+    t, atoms = ATOM.subn(" ", mask_code(text))
+    return atoms + len(WORD.findall(t)) + (len(CJK.findall(t)) + 1) // 2
 
 
 def prose_units(text):
@@ -192,9 +197,33 @@ def testcases(text):
     out = {}
     for tid, blocks in id_blocks(text, "TC").items():
         b = blocks[0]
-        mode = "automated" if AUTOMATED.search(b) else ("manual" if MANUAL.search(b) else None)
-        out[tid] = {"blocks": len(blocks), "verifies": claimed(b, "Verifies"), "mode": mode}
+        out[tid] = {"blocks": len(blocks), "verifies": claimed(b, "Verifies"), "mode": _mode(b)}
     return out
+
+
+def _mode(block):
+    """automated | manual | None, read from the `**Mode:**` field alone when there is one (the word it
+    names first), so "automated" in the body does not turn a manual case automated. No such field:
+    the whole block, as `claimed` does."""
+    value = field(block, "Mode") or line_field(block, "Mode")
+    if value is None:
+        return "automated" if AUTOMATED.search(block) else ("manual" if MANUAL.search(block) else None)
+    hits = sorted((m.start(), mode) for mode, rx in (("automated", AUTOMATED), ("manual", MANUAL))
+                  for m in [rx.search(value)] if m)
+    return hits[0][1] if hits else None
+
+
+# A verdict cell: the word alone, in any case, bold or in backticks, after a status mark or not.
+VERDICTS = {"pass": "pass", "passed": "pass", "fail": "fail", "failed": "fail", "blocked": "blocked"}
+VERDICT = re.compile(r"[\s*`\u2705\u274c\u26a0\ufe0f\u2713\u2714\u2717\u2718]*(%s)[\s*`]*" % "|".join(VERDICTS),
+                     re.I)
+
+
+def _verdict(cell):
+    """pass | fail | blocked for a cell that holds exactly one verdict (`passed`, `**PASS**`,
+    `✅ pass`), else None: `pass / fail` is two verdicts, so none."""
+    m = VERDICT.fullmatch(cell)
+    return VERDICTS[m.group(1).lower()] if m else None
 
 
 def report_results(text):
@@ -203,7 +232,7 @@ def report_results(text):
     seen = {}
     for cells in table_rows(text or ""):
         tcs = [c for c in cells if re.fullmatch(r"TC-\d+", c)]
-        verdict = next((c.lower() for c in cells if c.lower() in ("pass", "fail", "blocked")), None)
+        verdict = next((v for v in map(_verdict, cells) if v), None)
         if tcs and verdict:
             seen.setdefault(tcs[0], []).append(verdict)
     return {t: v[0] if len(set(v)) == 1 else "conflict: " + ", ".join(dict.fromkeys(v)) for t, v in seen.items()}

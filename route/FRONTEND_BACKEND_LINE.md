@@ -32,20 +32,20 @@ the user sign one; offer §1 as the draft. An unwritten line stops the frontend 
 
 ## 4. Cross-stack runs
 
-The Backend team's run drives; the Frontend team runs inside it.
+One run: the backend PLAYBOOK's phases drive it and the Frontend team's phases run inside them,
+with every document in the one run directory.
 
 | Backend | Frontend |
 |---|---|
 | Phase 1 requirements (`[interface]` REQs) | input to Phase 1 UX (no Phase 0) |
-| Phase 1b Prototype | Phases 1–2b: the frontend Prototype stop **is** the backend's; log it in both run logs |
+| Phase 1b Prototype | Phases 1–2b: the frontend Prototype stop **is** the backend's |
 | Phase 2 design → Plan | the contract's `new` capabilities get their `DES`; the queue rows' observables are shown again at Plan only if a DES changed them |
-| Phase 4 build | Phase 3 build: frontend rows refine the prototype; a row replaces fake data once its seam's backend half exists |
+| Phase 4 build | Phase 3 build, at the same time (`ORCHESTRATOR.md` § Parallel): frontend rows refine the prototype against the seam as the contract writes it; a row replaces fake data once its seam's backend half has landed |
 | Phase 5 verification | Phase 4 verify: `fe-tester` verifies the frontend rows; `be-tester` tests each seam from the backend side |
 | Phase 6 review | Phase 4 review: the frontend panel reviews the frontend diff, the backend panel the backend diff; their findings make one fix list |
-| Phase 7 acceptance | one Acceptance for both, with one demo in the backend run dir |
+| Phase 7 acceptance | one Acceptance for both, with one demo; gates `p7` and `fe-accept` |
 
-Frontend artifacts stay in `docs/frontend/`; `state.json` (backend) records which `DES` went to
-the Frontend team (`frontend_items`).
+A step in a brief's first line is the phase number of the agent's own team.
 
 ## 5. Verify
 

@@ -30,7 +30,7 @@ Your ONLY job is to decide how the named user gets through each feature, step by
 
 - The requirements file named in `state.json` `requirements`; the frontend/backend line (`~/.claude/route/FRONTEND_BACKEND_LINE.md`); the backend design's error taxonomy when it exists; the taste choices in `project-context.md` that affect flow (e.g. keyboard-first). `~/.claude/skills/design-taste/SKILL.md` § 1–3 applies to flows.
 - With a UX stop on a canvas surface: the Figma file and the calls left for this run (the brief gives them).
-- For a feedback item: the `DFB-###` from `fe-ui` or `fe-engineer` addressed to UX. After launch: the user's and their users' feedback.
+- For a feedback item: the `DFB-###` from `fe-ui` or `fe-engineer` addressed to UX, and only the pages and flows it touches. After launch: the user's and their users' feedback.
 - Bar: `~/.claude/frontend/QUALITY-BARS.md` § Phase 1 (post-launch: § Phase 5). Structure: `~/.claude/frontend/templates/01-ux.md`, `06-feedback.md` and their examples.
 - Called directly, outside a team run: design what the user describes, in the same format, in the file they name (or `docs/ux.md`).
 

@@ -6,7 +6,7 @@
 ## 1. Capabilities
 | # | Capability | Status | Source | Needed by | Backend DES |
 |---|---|---|---|---|---|
-| C-001 | | verified \| unverified \| new | `docs/backend/…` / `file:line` / human, date | PAGE-001 | DES-### |
+| C-001 | | verified \| unverified \| new | `docs/runs/…` / `file:line` / human, date | PAGE-001 | DES-### |
 
 ## 2. Per page and action
 ### PAGE-001 · {action}  (states and words from `01-ux.md`)
@@ -25,5 +25,5 @@
 |---|---|---|---|---|
 
 ## 4. Changes
-| Date | Change | Who | Impact on the other team |
+| Date | Change | Who | Impact on the other side |
 |---|---|---|---|

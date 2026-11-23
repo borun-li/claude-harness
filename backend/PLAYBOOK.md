@@ -4,7 +4,7 @@
 > **Then read `~/.claude/ORCHESTRATOR.md`: how you dispatch, decide, keep context and use gates.**
 
 What the Backend team runs and when, in Full development. Version: `harness_version` in
-`~/.claude/backend/config.json`.
+`~/.claude/harness/config.json`.
 
 ---
 
@@ -24,9 +24,9 @@ Interface work goes to the Frontend team under §3C.
 
 ## 1. Configuration
 
-Read `~/.claude/backend/config.json`; shallow-merge `<project>/.claude/backend.json` and say so.
-Gates, panels, caps and paths come from the merged config, never from memory. Rounds per step are
-counted in the run log (`ORCHESTRATOR.md` § Decisions), not in `state.json`.
+The merged configuration (`ORCHESTRATOR.md` § Capabilities, Start); say which layers you merged.
+Gates, panels, caps and paths come from it, never from memory. Rounds are counted in the run log
+(`ORCHESTRATOR.md` § Decisions), not in `state.json`.
 
 ---
 
@@ -36,16 +36,18 @@ counted in the run log (`ORCHESTRATOR.md` § Decisions), not in `state.json`.
 user did not name (variants, legacy data, concurrency, migrations, non-functional axes) goes below
 the cut line into `deferred.md`; the cut line goes in the analyst's brief.
 
-**2.2 Recon (≈30 s, read-only):** stack, build and test commands, a prior run, a confirmed prototype
-(`01b-prototype.md`). No `.claude/gates.json` → `gate.py profile`. A product that calls an LLM at
+**2.2 Recon (read-only, brief):** stack, build and test commands, a prior run, a confirmed prototype
+(`01b-prototype.md`), and what a second copy of the project needs to build and run
+(`ORCHESTRATOR.md` § Parallel). No `.claude/gates.json` → `gate.py profile`. A product that calls an LLM at
 runtime: benchmark candidate models on a production-shaped prompt before build.
 
 **2.3 One `AskUserQuestion`** (skip what `/route` asked). First a preview of what stands unless the
-user changes it: models (`model_plan.tiers[_active_tier]`, plus `fe-*` with an interface), language
-(documents in the user's, code in English), risk with its evidence. Ask only:
+user changes it: models (`models.tiers[_active_tier]`), language
+(documents in the user's unless `language.default_docs` names one; code in English), risk with its
+evidence. Ask only:
 - **Tier** (Constitution §7). A confirmed prototype is offered first ("Full development, reusing the
-  prototype confirmed <date>"). Small change → `~/.claude/commands/route.md` §4; Prototype →
-  `~/.claude/route/PROTOTYPE.md`.
+  prototype confirmed <date>"). Small change → `~/.claude/commands/route.md` §4; Standard change →
+  `~/.claude/route/STANDARD.md`; Prototype → `~/.claude/route/PROTOTYPE.md`.
 - **Goal** (Constitution §7.4): what the user will observe at the end and how they will check it;
   the round (§2.1) is what that goal needs, and nothing more.
 - With an interface: the facts frontend PLAYBOOK §2.3 asks.
@@ -54,19 +56,25 @@ user changes it: models (`model_plan.tiers[_active_tier]`, plus `fe-*` with an i
 migration, schema changes, new external dependencies or public APIs. **Gate profile:** run each
 detected command once, confirm the ones that work yourself (logged), ask only about the rest.
 
-**2.4** Write `state.json` (§8) with the goal in the user's words; an unfinished one →
-`/backend-resume`. Then the demo's before (`ORCHESTRATOR.md` § Demo), before any dispatch. A reused prototype: log `--stop Prototype --decision approved --note "reused <path>, confirmed <date>"`.
+**2.4** Write `docs/runs/<slug>/state.json` (§8) with the goal in the user's words; an unfinished
+run → `/route-resume`. Then the demo's before (`ORCHESTRATOR.md` § Demo), before any dispatch. A reused
+prototype: `log human --stop Prototype --decision approved --by <user> --note "reused <path>,
+confirmed <date>"`.
 
 ---
 
 ## 3. Phase flow
 
 A phase ends when its gate exits 0; phase numbers are the run log's `--step` (there is no Phase 3:
-it was merged into 2), named in each brief's first line; the hook marks each writer and the
-panel's coordinator (§4.4). After any code change, `p4` then `p5`.
+it was merged into 2; section numbers are stable, so gaps are retired sections), named in each
+brief's first line; the hook logs each dispatch and marks the panel's coordinator (§4.4). After any code
+change, `p4` then `p5`. Each role's work stays with the agent that started it, across phases too
+(`ORCHESTRATOR.md` § Boundaries): where a step below names a role that already worked in this
+session, continue that agent; reviewers are always new. Writers a step sends out together each get
+a worktree of their own (`ORCHESTRATOR.md` § Parallel).
 
 **Phase 1 — Requirements.** `be-analyst` takes a recommended default for every open question and
-declares fixtures (§3E). Its blocking questions go out with the prototype's intent questions; a fresh
+declares fixtures (§3E). Its blocking questions go out with the prototype's intent questions; the
 analyst amends. Gate `p1`.
 
 **Phase 1b — Prototype** (`route/PROTOTYPE.md`; with an interface, the Frontend team up to its
@@ -76,29 +84,34 @@ back to the analyst and `p1`. Nothing in Phase 2 starts before (Constitution §2
 **Phase 2 — Design.**
 1. `be-architect` writes `02-architecture.md` and `03-detailed-design.md`; every `DES` names its
    `REQ` and `side` (§3C.3). New dependencies, schema changes and ties are decided and shown at Plan.
-2. `risk: high`: the design review panel argues against it; one revision by a fresh architect.
-3. A fresh `be-analyst` writes the fixtures' expected outputs and every point where the design misses
-   a REQ; a contradiction goes to a fresh architect before Plan.
+2. `risk: high`: the design review panel argues against it; one revision by the architect.
+3. The analyst writes the fixtures' expected outputs and every point where the design misses a REQ;
+   a contradiction goes back to the architect before Plan.
 4. Gate `p2` (writes `gates/plan-review.md`).
 - **Plan stop:** the review sheet, risk, open review items, assumptions. On yes
   `fixtures-approve --by <user>`. Nothing is built before.
 
-**Phase 4 — Build.** `baseline`; mark `be-tester`, then `be-developer` (the gate checks the last
-marked writer); then in one message `be-developer` builds `side: backend` items and `be-tester` plans
-tests from requirements and design only. `side: frontend` items go to the Frontend team once their
-seam's backend half exists. An unbuildable design goes to a fresh architect; it stops the run only
-if scope changes. Gate `p4`.
+**Phase 4 — Build.** `baseline` (once per run, before its first code writer); then in one message,
+each in a worktree of its own (`ORCHESTRATOR.md` § Parallel): `be-developer` builds `side: backend`
+items, one developer per group when the design's items fall into groups that share no file, each
+brief naming its items and files; `be-tester` plans tests from requirements and design only; and
+the Frontend team builds the `side: frontend` items whose seam is written in the contract (frontend
+PLAYBOOK Phase 3), connecting real data once the backend half has landed. Land and gate each as it
+returns. An unbuildable design goes back to the architect; it stops the run only if scope changes.
+Gate `p4`.
 
-**Phase 5 — Verification.** `be-tester` runs every `TC` (frontend items: `fe-tester`, §3C.5).
-Failures go to their owner (§3C.6), a fresh engineer naming only the failing TCs, then a fresh
-tester. Gate `p5`. Never relax a test.
+**Phase 5 — Verification.** The tester that planned them implements and runs every `TC` (frontend
+items: `fe-tester`, §3C.5). Failures go to their owner (§3C.6) naming only the failing TCs, then
+back to the tester for those TCs. Gate `p5`. Never relax a test.
 
 **Phase 6 — Review** (panel by §6; with frontend items, the frontend panel joins in the same message).
 1. Panelists return candidates; keep them in `logs/`.
-2. A fresh `be-reviewer` merges and tries to disprove each, dropping one only with counter-evidence.
-   File its text as `06-review-report.md`; gate `p6`.
-3. Blockers and majors go to fresh owners; minors to `deferred.md`; then Phase 5 on the affected TCs.
-4. A fresh `be-reviewer` re-checks only the fixed FNDs; file its table in `06-review-report.md` §5
+2. Two or more panelists: `be-reviewer` merges and tries to disprove each, dropping one only with
+   counter-evidence. One panelist: its brief says it is the sole reviewer; it checks its own
+   candidates and returns the report, and no coordinator runs. File the text as
+   `06-review-report.md`; gate `p6`.
+3. Blockers and majors go to their owners; minors to `deferred.md`; then Phase 5 on the affected TCs.
+4. `be-reviewer` re-checks only the fixed FNDs; file its table in `06-review-report.md` §5
    and set each FND's `**Status:**` to `fixed in round <n>` or leave it `open` (back to step 3).
    At `loops.max_rounds` minors are deferred (Constitution §5.4).
 
@@ -118,14 +131,14 @@ check. On yes `status: accepted`.
 
 ## 3C. The frontend/backend line
 
-`~/.claude/route/FRONTEND_BACKEND_LINE.md`, cited here as §3C.n. `fe-*` models come from
-`~/.claude/frontend/config.json`.
+`~/.claude/route/FRONTEND_BACKEND_LINE.md`, cited here as §3C.n.
 
 ## 3D. Gates
 
-`gate.py <gate> --project <root>` (second feature: `--run-dir docs/backend/<slug>`), run by you,
+`gate.py <gate> --project <root>`, run by you,
 never by the agent checked; reports in `<run-dir>/gates/`. Phase gates are named in §3; exit codes
-and waivers in `ORCHESTRATOR.md`.
+and waivers in `ORCHESTRATOR.md`. Authors check their own documents before returning with
+`gate.py check <gate>`, which reads only and records nothing.
 
 ## 3E. Approved fixtures
 
@@ -135,7 +148,7 @@ Real input/output pairs the user confirms, which every later test must match.
 2. At Plan the user approves, edits or rejects each; `fixtures-approve` hashes and locks them.
    Nothing is locked without their yes.
 3. Tests load the approved files and are tagged `FX-nnn`; nobody edits them (`P4/P5.fixtures`).
-4. An answer a newer decision replaces (Constitution §5): a fresh `be-analyst` rewrites it, then
+4. An answer a newer decision replaces (Constitution §5): the analyst rewrites it, then
    `p2` and `fixtures-approve --by orchestrator --reapprove FX-nnn --because "<whose words, date>"`;
    list it at the next stop. An answer found wrong for any other reason: stop, show the user old and
    proposed, and lock the new one with `--reapprove FX-nnn` on their yes. Fixtures live in the
@@ -165,17 +178,17 @@ Commands in `ORCHESTRATOR.md`. `p7` checks the trail follows §3's order.
 
 | | `risk: normal` | `risk: high` |
 |---|---|---|
-| Design review | none | `design_review_panel` + one revision |
-| Review panel | `be-review-behavior`; `-security` if the diff touches input parsing, auth, files, network or secrets; `-reliability` if it touches persistence, concurrency, external calls or long-running work | all of `review_panel` |
+| Design review | none | `review.design_panel` + one revision |
+| Review panel | `be-review-behavior`; `-security` if the diff touches input parsing, auth, files, network or secrets; `-reliability` if it touches persistence, concurrency, external calls or long-running work | all of `review.backend_panel` |
 
-`be-reviewer` coordinates whenever a panelist ran. Say whom you dispatched and why; a risk change
-mid-run is a Constitution §5.1 stop.
+`be-reviewer` coordinates when two or more panelists ran. Say whom you dispatched and why; a risk
+change mid-run is a Constitution §5.1 stop.
 
 ## 7. Artifacts
 
 ```
-docs/backend/      (second feature: docs/backend/<slug>/)
-  state.json  01-requirements.md  01b-prototype.md  02-architecture.md  03-detailed-design.md
+docs/runs/<slug>/  (with an interface, the frontend PLAYBOOK §7 documents sit beside these)
+  state.json  run-log.jsonl  01-requirements.md  01b-prototype.md  02-architecture.md  03-detailed-design.md
   04-test-plan.md  05-test-report.md  06-review-report.md  07-acceptance.md
   08-implementation-log.md  deferred.md  handoff.md  logs/
 prototype/         throwaway prototype (Phase 1b, no interface)
@@ -183,16 +196,4 @@ prototype/         throwaway prototype (Phase 1b, no interface)
 
 ## 8. `state.json`
 
-```json
-{
-  "harness_version": "x.y.z", "feature": "one line", "slug": "feature-slug",
-  "goal": { "change": "what the user will observe", "check": "how they will tell it worked" },
-  "started_at": "ISO-8601", "updated_at": "ISO-8601",
-  "status": "in_progress | blocked | accepted",
-  "tier": "full", "risk": "high | normal", "prototype": "built | reused",
-  "models": { "be-analyst": "opus", "…": "…" },
-  "current_phase": 4, "phases": [],
-  "frontend_items": [ { "des": "DES-021", "queue_row": "Q-3", "status": "verified" } ],
-  "increments": [], "open_questions": [], "notes": []
-}
-```
+`~/.claude/route/HANDOFF.md` §8.

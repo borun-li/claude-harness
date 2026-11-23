@@ -30,6 +30,7 @@ Your ONLY job is to answer, for each queue row: did it really take effect on the
 - The rows the brief names (in a rework round, only those and their named defects; the gates run the regression), the frame exports (`evidence/design/FRAME-###.png`), the UX state rows, the contract.
 - The captures the orchestrator took from the declared surface (DOM and computed styles, view hierarchy, terminal bytes), in the folder named in the manifest line of `04-verification.md`. You cannot drive the product yourself.
 - Bar: `~/.claude/frontend/QUALITY-BARS.md` § Phase 4, "Verification". Structure: `~/.claude/frontend/templates/04-verification.md` and its example.
+- Standard change (`~/.claude/route/STANDARD.md`): the interface Checks of `<run-dir>/plan.md`. One assertion per `CHK`, written from the plan's wording, with its `CHK` id in the test's name or title; no verification document.
 - Called directly, outside a team run: check the interface the user points at against the design or words they give, with the same verdicts and evidence rules.
 
 ## Output

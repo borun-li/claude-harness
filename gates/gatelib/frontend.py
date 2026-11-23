@@ -1,4 +1,6 @@
-"""Frontend team gates (PLAYBOOK §3D in ~/.claude/frontend, 8.0). Reuses the backend helpers.
+"""Frontend team gates (PLAYBOOK §3D in ~/.claude/frontend). Reuses the backend helpers. A run is one
+directory (`checks.runs_root`): in a cross-stack run this team's documents sit beside the Backend
+team's, and every gate here reads the run's own requirements, log, baseline and demo.
 
 Phases: 0 product (be-analyst, frontend-only runs) · 1 UX (fe-ux), or 1E intake of an external design
 (fe-ux, fe-ui) · 2 UI (fe-ui), scaffold, feasibility and queue (fe-engineer) · UI stop · 2b runnable
@@ -7,13 +9,14 @@ fe-reviewer) · Acceptance · 5 after launch."""
 import hashlib
 import re
 
-from . import capture, checks, docs, registry, runlog, runner, snap
-from .common import FAIL, PASS, ConfigError, bad, na, ok, read_json, utc_now, write_json
+from . import capture, checks, docs, registry, runlog, runner, snap, taste
+from .common import FAIL, PASS, ConfigError, bad, harness_cfg, na, ok, read_json, utc_now, write_json
 
 STATES = ("loading", "empty", "success", "error", "permission")
 EXTRA_STATES = ("offline", "partial")
 HEX = re.compile(r"#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b")
-FIGMA_NODE = re.compile(r"figma\.com/(design|file)/[\w-]+.*node-id=\d+[-:]\d+")
+# A node link, with the id as Figma writes it in a URL (`12-34`), in its API (`12:34`) or encoded (`12%3A34`).
+FIGMA_NODE = re.compile(r"figma\.com/(design|file)/[\w-]+.*node-id=\d+(?:[-:]|%3A)\d+", re.I)
 NA = re.compile(r"^\s*n/?a\b", re.I)
 PANEL = ("fe-review-experience", "fe-review-accessibility", "fe-review-integration")
 UX_FLOW_FIELDS = ("Serves", "Steps", "Success", "Failure", "Cancel", "Recovery", "Boundary")
@@ -22,29 +25,6 @@ ROW_FIELDS = ("Page", "Frame", "States", "REQ", "Files", "Observable", "Acceptan
 
 def _state_json(ctx):
     return read_json(ctx.run / "state.json") or {}
-
-
-def state(ctx):
-    s = read_json(ctx.run / "state.json")
-    if s is None:
-        return bad("ALL.state", "state.json missing", "orchestrator")
-    missing = [k for k in ("harness_version", "feature", "goal", "status", "current_phase", "phases", "models",
-                           "tier") if k not in s]
-    g = s.get("goal")
-    if "goal" in s and not (isinstance(g, dict) and g.get("change") and g.get("check")):
-        missing.append("goal needs change and check, set by the user at kickoff (Constitution §7.4)")
-    if "tier" in s and s["tier"] not in ("small", "prototype", "full"):
-        missing.append(f"tier must be small|prototype|full, got {s['tier']!r}")
-    if "risk" in s and s["risk"] not in ("normal", "high"):
-        missing.append(f"risk must be normal|high, got {s['risk']!r}")
-    if "design" in s and s["design"] not in ("new", "external", "reused"):
-        missing.append(f"design must be new|external|reused, got {s['design']!r}")
-    stops = (0,) if s.get("design") == "external" else (1, 2)
-    if "design_stops" in s and s["design_stops"] not in stops:
-        missing.append(f"design_stops must be {' or '.join(map(str, stops))} for design "
-                       f"{s.get('design', 'new')!r}, got {s['design_stops']!r}")
-    return (bad("ALL.state", "state.json does not match the schema (PLAYBOOK §8)", "orchestrator", missing)
-            if missing else ok("ALL.state", "state.json valid", "orchestrator"))
 
 
 def _need(ctx, name, owner):
@@ -79,16 +59,16 @@ def _table(text, prefix):
     return {r[0]: r for r in docs.table_rows(text or "") if r and re.fullmatch(rf"{prefix}-\d+", r[0])}
 
 
-# ---------- requirements (Phase 0, or the Backend team's Phase 1) ----------
+# ---------- requirements (the Backend team's Phase 1, or Phase 0 of a frontend-only run) ----------
 
-def _req_rel(ctx):
-    return _state_json(ctx).get("requirements") or f"{ctx.run_rel}/00-requirements.md"
+def _req_name(ctx):
+    return next((n for n in checks.REQ_FILES if (ctx.run / n).exists()), "00-requirements.md")
 
 
 def _reqs(ctx):
     """(all REQ ids, active REQs a person uses). Frontend-only runs tag them [interface]; when no REQ is
     tagged, every active REQ counts."""
-    reqs = docs.requirements(docs.read(ctx.project / _req_rel(ctx)) or "")
+    reqs = docs.requirements(ctx.doc(_req_name(ctx)) or "")
     active = docs.active_reqs(reqs)
     iface = {r for r in active if reqs[r]["interface"]}
     return checks.known_reqs(ctx, reqs), (iface or active)
@@ -97,7 +77,6 @@ def _reqs(ctx):
 def product(ctx):
     owner = "be-analyst"
     res, data = checks.phase1(ctx, name="00-requirements.md")
-    res[0] = state(ctx)  # this team's state.json schema
     _, iface = _reqs(ctx)
     if res[1]["status"] != FAIL:
         res.append(ok("FE0.interface", f"{len(iface)} active REQs a person uses", owner, sorted(iface)) if iface
@@ -133,7 +112,7 @@ def _page_states(block):
 def ux(ctx):
     owner = "fe-ux"
     text, up = _need(ctx, "01-ux.md", owner)
-    res = [state(ctx), up] + _role_if(ctx, "fe-ux")
+    res = [checks.state(ctx), up] + _role_if(ctx, "fe-ux")
     if text is None:
         return res, {}
     user, surface = docs.field(text, "Named user"), docs.field(text, "Surface")
@@ -151,7 +130,7 @@ def ux(ctx):
                ok("FE1.pages", f"{len(pages)} pages, each serving a REQ", owner))
     served = set().union(*pages.values()) if pages else set()
     unserved = sorted(active - served)
-    res.append(bad("FE1.coverage", f"Active REQs in {_req_rel(ctx)} with no page", owner, unserved) if unserved
+    res.append(bad("FE1.coverage", f"Active REQs in {_req_name(ctx)} with no page", owner, unserved) if unserved
                else ok("FE1.coverage", f"{len(active)} active REQs each served by a page", owner))
     external = _external(ctx)
     flows = _blocks(text, "FLOW")
@@ -221,10 +200,31 @@ def _figma(ctx, owner):
     return ok("FE.figma", f"{used} of {budget} Figma calls used" + (" (raised by the user)" if raised else ""), owner)
 
 
+STYLE_VALUE = re.compile(r"(?:colou?r|background|border|outline|fill|stroke|shadow)[\w-]*\**\s*:[^;`\n]*$", re.I)
+
+
+def _raw_colours(text):
+    """The `#hex` tokens of `text` that are colour values (FE2.tokens: colours live in the palette and
+    the tokens table). In an inline code span every one is. Outside code, digits alone are an issue
+    or PR number (`#123`) and never a colour; anything else is one after a CSS-like `property:`, or
+    when it does not read as a lowercase word (a vowel and a consonant: `#decade`, `#add`). So
+    `Use #FF0000 for errors` and `white (#fff)` name colours, `the #decade review` does not."""
+    out = set()
+    for line in text.splitlines():
+        spans = [m.span() for m in re.finditer(r"`[^`]*`", line)]
+        for m in HEX.finditer(line):
+            digits = m.group(0)[1:]
+            in_code = any(a < m.start() < b for a, b in spans)
+            word = re.fullmatch(r"[a-f]+", digits) and set(digits) & set("ae") and set(digits) & set("bcdf")
+            if in_code or (not digits.isdigit() and (STYLE_VALUE.search(line[:m.start()]) or not word)):
+                out.add(m.group(0))
+    return sorted(out)
+
+
 def ui(ctx):
     owner = "fe-ui"
     text, up = _need(ctx, "02-ui.md", owner)
-    res = [state(ctx), up] + _role_if(ctx, "fe-ui")
+    res = [checks.state(ctx), up] + _role_if(ctx, "fe-ui")
     if text is None:
         return res, {}
     external = _external(ctx)
@@ -249,7 +249,7 @@ def ui(ctx):
                else bad("FE2.self-check", "Self-check empty: what read like a default, and what replaced it", owner))
     tokens = checks._section(text, [r"tokens?", r"令牌"]) or ""
     body = docs.mask_code(text.replace(tokens, "").replace(plan, ""))
-    inline = sorted(set(HEX.findall(body)))
+    inline = _raw_colours(body)
     res.append(bad("FE2.tokens", "Colour values outside the plan and tokens tables", owner, inline) if inline
                else ok("FE2.tokens", "Colours only in the plan and tokens tables", owner))
     comps = _blocks(text, "CMP")
@@ -323,7 +323,7 @@ def _contract(ctx, owner):
 def queue(ctx):
     owner = "fe-engineer"
     text, up = _need(ctx, "03-queue.md", owner)
-    res = [state(ctx), up]
+    res = [checks.state(ctx), up]
     if text is None:
         return res, {}
     known, _ = _reqs(ctx)
@@ -378,9 +378,15 @@ def queue(ctx):
 
 # ---------- Prototype stop: review sheet, approval ----------
 
+# Both teams' gates write into the run's one `gates/`: the Backend team's `p2` and `p7` own
+# `plan-review.md` and `traceability.md`.
+PLAN_SHEET = "fe-plan-review.md"
+MATRIX = "fe-traceability.md"
+
+
 def plan(ctx):
     owner = "orchestrator"
-    res = [state(ctx)]
+    res = [checks.state(ctx)]
     need = ["fe-ux", "fe-ui", "fe-queue"]
     if (ctx.run / "00-requirements.md").exists():
         need.insert(0, "fe-product")
@@ -411,9 +417,10 @@ def plan(ctx):
               "|---|---|---|---|",
               *(f"| {q} | {docs.field(b, 'Priority')} | {docs.field(b, 'Frame')} | {docs.field(b, 'Observable')} |"
                 for q, b in rows.items()), ""]
-    (ctx.gdir / "plan-review.md").parent.mkdir(parents=True, exist_ok=True)
-    (ctx.gdir / "plan-review.md").write_text("\n".join(sheet) + "\n", encoding="utf-8")
-    return res, {"review_sheet": f"{ctx.run_rel}/gates/plan-review.md", "rows": sorted(rows), "may_change": clash}
+    if not ctx.dry:
+        (ctx.gdir / PLAN_SHEET).parent.mkdir(parents=True, exist_ok=True)
+        (ctx.gdir / PLAN_SHEET).write_text("\n".join(sheet) + "\n", encoding="utf-8")
+    return res, {"review_sheet": f"{ctx.run_rel}/gates/{PLAN_SHEET}", "rows": sorted(rows), "may_change": clash}
 
 
 def _exports(ctx):
@@ -430,6 +437,8 @@ def _exports(ctx):
 def approve(ctx, by, retire=(), because=None):
     """Lock each queue row and each frame export: after the user's yes at the Prototype stop, or to
     re-lock what a newer decision replaced (`because`; Constitution §5)."""
+    if ctx.dry:
+        return [na("FEP.approve", checks.DRY, "orchestrator")], {}
     p = read_json(ctx.gdir / "fe-plan-latest.json")
     if not p or p["overall"] != PASS:
         raise ConfigError("`fe-plan` has not passed; run it and get the user's confirmation first")
@@ -471,14 +480,19 @@ def _observables(ctx, owner):
 def build(ctx):
     base = checks._baseline(ctx)
     run_diff = snap.diff(base["snapshot"], ctx.snapshot())
-    res = [state(ctx)]
+    res = [checks.state(ctx)]
     roles, changed = checks.role_checks(ctx)
     res += roles
-    res += checks._scan(ctx, base, run_diff)
+    scan = checks._scan(ctx, base, run_diff)
+    for hit in scan:  # at this team's build gate, what the scan finds is its engineer's
+        hit["owner"] = "fe-engineer"
+    res += scan
     res.append(checks._dependency_check(ctx, base, run_diff, "03-queue.md", "fe-engineer", "FE3.dependencies"))
     for name in ("build", "lint", "typecheck"):
         res.append(checks._command_check(ctx, name, "fe-engineer")[0])
-    t, r = checks._tests(ctx, "fe-engineer", base)
+    # A project may give the frontend its own suite (`commands.fe_test`); fe-verify runs the whole one.
+    own = bool(ctx.cmd("fe_test"))
+    t, r = checks._tests(ctx, "fe-engineer", base, command="fe_test" if own else "test")
     approved = (ctx.gdir / "observables-approved.json").exists()
     one_stop = _state_json(ctx).get("design_stops") in (0, 1)
     code = [p for p in changed if not ctx.is_doc(p) and not ctx.is_test(p)]
@@ -489,7 +503,7 @@ def build(ctx):
              else na("FE.observables", "Before the Prototype stop: scaffold and prototype only", "fe-engineer"))
     res += [t, checks._test_file_drift(ctx, base, "fe-engineer", "FE3.test-drift"),
             _observables(ctx, "fe-engineer") if approved else early,
-            registry.regression(ctx, r, "fe-engineer")]
+            registry.regression(ctx, r, "fe-engineer", partial=own)]
     return res, {"writer_changed": changed, "counts": r["counts"] if r else None}
 
 
@@ -499,7 +513,7 @@ def verify(ctx):
     base = checks._baseline(ctx)
     owner = "fe-tester"
     text, up = _need(ctx, "04-verification.md", owner)
-    res = [state(ctx), up]
+    res = [checks.state(ctx), up]
     res += checks.role_checks(ctx)[0]
     t, r = checks._tests(ctx, "fe-engineer", base)
     res += [t, checks._test_file_drift(ctx, base, owner, "FE4.test-drift"), _observables(ctx, "orchestrator")]
@@ -519,22 +533,54 @@ def verify(ctx):
               if v[0] not in ("done", "not done", "not observable")]
     res.append(bad("FE4.verdicts", "Rows without exactly one valid verdict", owner, probs) if probs
                else ok("FE4.verdicts", f"{len(verdicts)} rows with one verdict each", owner))
-    manifest = _evidence_manifest(text)
+    manifest, reported = _evidence_manifest(text), []
     if not manifest or not (ctx.run / manifest.group(0)).exists():
         res.append(bad("FE4.evidence", "Evidence manifest missing (the orchestrator captures, §3H)", "orchestrator"))
     else:
-        cited = set(re.findall(r"`([\w.@-]+\.(?:html|json|txt|png|jpg|xml|log|yml|stdout|stderr))`", text))
-        folder = (ctx.run / manifest.group(0)).parent
-        absent = sorted(c for c in cited if not (folder / c).exists() and not (ctx.run / "evidence" / "design" / c).exists())
+        cited, absent = _cited_evidence(ctx, text, (ctx.run / manifest.group(0)).parent)
         res.append(bad("FE4.evidence", "Cited evidence files not in the capture folder", "orchestrator", absent)
                    if absent else ok("FE4.evidence", f"Manifest present; {len(cited)} cited files exist", owner))
+        # Reported, never failing: what the captured pages measure against the configured taste values.
+        reported, pages, why = taste.notes(ctx, (ctx.run / manifest.group(0)).parent)
+        if not why:
+            res.append(ok("FE4.taste", f"Taste measures on {pages} captured pages: {len(reported)} to look at "
+                                       "(reported, they fail nothing)", "fe-engineer", reported))
     captured = registry.capture_entries(ctx)
     unjudged = [f"{k}: {verdicts.get(k, ['no verdict'])[0]}" for k in captured if verdicts.get(k, [None])[0] != "done"]
     if captured:
         res.append(bad("FE.regression-captures", "Registered capture-guarded observables not re-verified done",
                        "fe-tester", unjudged) if unjudged
                    else ok("FE.regression-captures", f"{len(captured)} capture-guarded observables re-verified", "fe-tester"))
-    return res, {"verdicts": {q: v[0] for q, v in verdicts.items()}, "row_tests": row_seen}
+    return res, {"verdicts": {q: v[0] for q, v in verdicts.items()}, "row_tests": row_seen,
+                 "reported": [f"FE4.taste: {n}" for n in reported]}
+
+
+FILE_REF = re.compile(r"`((?:[\w.@-]+/)*[\w.@-]+\.(?:html|json|txt|png|jpg|xml|log|yml|stdout|stderr))`")
+
+
+def _cited_evidence(ctx, text, folder):
+    """(the backticked files 04-verification.md cites as evidence, those that do not exist). A file
+    is evidence when its path is under an `evidence/` dir, or its name is a capture's: `<id>@<size>.*`,
+    one the round's manifest lists or names by id, or one that starts with a row, observable or
+    frame id. `package.json` in a sentence is neither."""
+    entries = (read_json(folder / "manifest.json") or {}).get("entries", [])
+    ids = {str(e.get("id")) for e in entries}
+    listed = {f for e in entries for f in (e.get("files") or {}).values()}
+    cited, absent = set(), []
+    for ref in sorted(set(FILE_REF.findall(text))):
+        name = ref.rsplit("/", 1)[-1]
+        if "/" in ref:
+            if "evidence/" not in ref:
+                continue
+            found = (ctx.run / ref).exists() or (ctx.project / ref).exists()
+        elif ("@" in name or name in listed or re.match(r"(?:Q|OBS|FRAME)-\d+", name)
+              or any(name.startswith((i + ".", i + "@")) for i in ids)):
+            found = (folder / name).exists() or (ctx.run / "evidence" / "design" / name).exists()
+        else:
+            continue
+        cited.add(ref)
+        absent += [] if found else [ref]
+    return cited, absent
 
 
 def _rows_to_verify(ctx):
@@ -544,17 +590,21 @@ def _rows_to_verify(ctx):
 
 def capture_plan(ctx):
     owner = "orchestrator"
-    res = [state(ctx)]
+    res = [checks.state(ctx)]
     try:
         plan = capture.load_plan(ctx)
     except ConfigError as e:
         return res + [bad("FE4.capture-plan", str(e), owner)], {}
-    probs = capture.plan_problems(plan, _rows_to_verify(ctx) + sorted(registry.capture_entries(ctx)))
+    rows, todo = _queue_rows(ctx), _rows_to_verify(ctx)
+    viewports = [w for w in harness_cfg(ctx.project).get("viewports") or [] if isinstance(w, int)]
+    probs = capture.plan_problems(plan, todo + sorted(registry.capture_entries(ctx)),
+                                  {q: _row_states(rows[q]) for q in todo}, viewports, ctx.snapshot())
     surface = _surface(ctx)
     if plan.get("surface") == "web" and surface and "browser" not in surface and "web" not in surface:
         probs.append(f"plan surface web, 01-ux.md says {surface!r}")
     res.append(bad("FE4.capture-plan", "Capture plan incomplete (PLAYBOOK §3H)", owner, probs) if probs
-               else ok("FE4.capture-plan", f"{len(plan['captures'])} captures cover every row to verify", owner))
+               else ok("FE4.capture-plan", f"{len(plan['captures'])} captures cover every row to verify, in each "
+                       "of its states and at every configured size", owner))
     return res, {}
 
 
@@ -594,8 +644,11 @@ def _row_tests(ctx, r):
     locs = runner.tc_locations(ctx.project, checks._test_code(ctx), ctx.cfg, prefix="Q")
     if not locs:
         return na("FE4.row-tests", "No test is tagged with a queue row id", "fe-tester"), {}
+    if ctx.dry:
+        return na("FE4.row-tests", checks.DRY, "fe-tester"), {}
     if not r or r.get("cases") is None:
-        return na("FE4.row-tests", f"{len(locs)} rows tagged; pass status needs a JUnit report", "fe-tester"), {}
+        return na("FE4.row-tests", f"{len(locs)} rows tagged, but whether they pass is not read: "
+                  f"{runner.no_cases(r)}", "fe-tester"), {}
     seen = checks._observed_ids(locs, dict.fromkeys(locs), r["cases"])
     red = [f"{q}: {st}" for q, st in sorted(seen.items()) if st != "passed"]
     return (bad("FE4.row-tests", "Row-tagged tests not passing in this run", "fe-engineer", red) if red
@@ -622,25 +675,50 @@ def _panel_expected(ctx):
     return set(PANEL) if risk == "high" else {"fe-review-experience"}
 
 
-def review(ctx):
+def _review_round(ctx):
+    """(panelists, coordinated) of the review of the current build: the panelists dispatched since
+    this team's last builder dispatch, and whether `fe-reviewer` was."""
+    events = runlog.events(ctx.run / "run-log.jsonl")
+    built = max((e["seq"] for e in checks._team_dispatches(ctx, events, "fe")
+                 if e["agent"] in ("fe-engineer", "be-developer")), default=-1)
+    out = {e["agent"] for e in events if e["event"] == "dispatch" and e["seq"] > built}
+    return sorted(out & set(PANEL)), "fe-reviewer" in out
+
+
+def _tree_unchanged(ctx):
     owner = "orchestrator"
+    if ctx.dry:
+        return na("FE4.tree-unchanged", checks.DRY, owner)
     before = checks._load_mark(ctx, "fe-reviewer")["snapshot"]
     d = snap.diff(before, ctx.snapshot())
     # fe-tester runs beside the panel and writes tests; its scope is checked by fe-verify (ROLE.tester-scope).
     changed = [p for p in snap.changed(d)
                if not checks.glob_match(p, checks.run_dir_globs(ctx)) and not ctx.is_test(p)]
-    res = [state(ctx),
-           bad("FE4.tree-unchanged", "Files changed while reviewers ran (PLAYBOOK §4.3)", owner, changed)
-           if changed else ok("FE4.tree-unchanged", "Tree unchanged during review", owner)]
-    text, up = _need(ctx, "05-review.md", "fe-reviewer")
+    # Every reviewer dispatch takes a new mark: a change stays a failure until it is undone (checks.carry).
+    open_ = checks.carry(ctx, "FE4.tree-unchanged", "fe-reviewer", changed, before)
+    return (bad("FE4.tree-unchanged", "Files changed while reviewers ran (PLAYBOOK §4.3)", owner, open_)
+            if open_ else ok("FE4.tree-unchanged", "Tree unchanged during review", owner))
+
+
+def review(ctx):
+    res = [checks.state(ctx), _tree_unchanged(ctx)]
+    # One panelist and no coordinator: the orchestrator files that panelist's review as 05-review.md.
+    panel, coordinated = _review_round(ctx)
+    sole = panel[0] if len(panel) == 1 and not coordinated else None
+    author = sole or "fe-reviewer"
+    text, up = _need(ctx, "05-review.md", author)
     res.append(up)
     if text is None:
         return res, {}
     head = "\n".join(text.splitlines()[:12])
-    named = {p for p in PANEL if p in head}
+    named = {p for p in PANEL if p in head} | ({sole} if sole else set())
     lacking = sorted(_panel_expected(ctx) - named)
     res.append(bad("FE4.panel", "Panel smaller than PLAYBOOK §6 requires for this risk", "orchestrator", lacking)
-               if lacking else ok("FE4.panel", f"Panel: {', '.join(sorted(named))}", "orchestrator"))
+               if lacking else
+               bad("FE4.panel", f"{len(panel)} panelists ran and no fe-reviewer merged their candidates "
+                   "(PLAYBOOK Phase 4)", "orchestrator", panel) if len(panel) > 1 and not coordinated else
+               ok("FE4.panel", f"Panel: {', '.join(sorted(named))}" + (", the sole reviewer" if sole else ""),
+                  "orchestrator"))
     problems = []
     found = docs.findings(text)
     for fid, f in found.items():
@@ -653,10 +731,10 @@ def review(ctx):
             problems.append(f"{fid}: no UX, contract or WCAG reference")
         if not f.get("scenario"):
             problems.append(f"{fid}: no failure scenario")
-    res.append(bad("FE4.findings", "Findings fail the format or point at nothing", "fe-reviewer", problems)
-               if problems else ok("FE4.findings", f"{len(found)} findings well-formed and anchored", "fe-reviewer"))
+    res.append(bad("FE4.findings", "Findings fail the format or point at nothing", author, problems)
+               if problems else ok("FE4.findings", f"{len(found)} findings well-formed and anchored", author))
     open_ = sorted(fid for fid, f in found.items()
-                   if f.get("severity") in ("blocker", "major") and not checks.FIX_STATUS.search(f.get("status") or ""))
+                   if f.get("severity") in ("blocker", "major") and not checks.finding_closed(f.get("status")))
     return res, {"open_blocking": open_}
 
 
@@ -682,27 +760,30 @@ def _matrix(ctx, verdicts):
                      f"{'yes' if done else 'NO'} |")
         if not done:
             gaps.append(f"{req}: rows {cells or 'none'}")
-    (ctx.gdir / "traceability.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if not ctx.dry:
+        (ctx.gdir / MATRIX).parent.mkdir(parents=True, exist_ok=True)
+        (ctx.gdir / MATRIX).write_text("\n".join(lines) + "\n", encoding="utf-8")
     return (bad("FEA.matrix", "Active REQs not delivered by a verified row", "orchestrator", gaps) if gaps
-            else ok("FEA.matrix", f"{len(active)} active REQs delivered; matrix in {ctx.run_rel}/gates/traceability.md",
+            else ok("FEA.matrix", f"{len(active)} active REQs delivered; matrix in {ctx.run_rel}/gates/{MATRIX}",
                     "orchestrator"))
 
 
 def _trail(ctx):
-    """Frontend run-log trail (PLAYBOOK §3G)."""
+    """Frontend run-log trail (PLAYBOOK §3G). Both teams log into the one run log and each numbers
+    its own steps: the order of the design stops is read from this team's dispatches."""
     events = runlog.events(ctx.run / "run-log.jsonl")
+    mine = checks._team_dispatches(ctx, events, "fe")
     problems = checks._trail_common(events)
 
-    def first(pred):
-        return next((e["seq"] for e in events if pred(e)), None)
+    def first(pred, among=events):
+        return next((e["seq"] for e in among if pred(e)), None)
 
     def approved(stop):
         return first(lambda e: e["event"] == "human" and e["stop"] == stop and e["decision"] == "approved")
 
     ui_ok = approved("UI")
-    build = first(lambda e: e["event"] == "dispatch" and e["agent"] in ("fe-engineer", "be-developer")
-                  and str(e["phase"]) == "3")
-    proto = first(lambda e: e["event"] == "dispatch" and str(e["phase"]) == "2b")
+    build = first(lambda e: e["agent"] in ("fe-engineer", "be-developer") and str(e["phase"]) == "3", mine)
+    proto = first(lambda e: str(e["phase"]) == "2b", mine)
     if ui_ok is None:
         problems.append("no approved UI stop in the log (an external design logs it at kickoff)")
     else:
@@ -718,7 +799,7 @@ def _trail(ctx):
         problems.append(f"Phase 3 build dispatched (#{build}) before the Prototype was approved (#{proto_ok})")
     if _state_json(ctx).get("design_stops", 2) == 2:
         ux_ok = approved("UX")
-        ui_first = first(lambda e: e["event"] == "dispatch" and e["agent"] == "fe-ui")
+        ui_first = first(lambda e: e["agent"] == "fe-ui", mine)
         if ux_ok is None:
             problems.append("two-stop run: no approved UX stop in the log")
         elif ui_first is not None and ui_first < ux_ok:
@@ -729,7 +810,7 @@ def _trail(ctx):
 
 def accept(ctx):
     owner = "orchestrator"
-    res = [state(ctx)]
+    res = [checks.state(ctx)]
     red = _latest_ok(ctx, ["fe-build", "fe-verify", "fe-review"])
     b = read_json(ctx.gdir / "fe-build-latest.json")
     v = read_json(ctx.gdir / "fe-verify-latest.json")
@@ -756,7 +837,7 @@ def accept(ctx):
                if waiting else ok("FEA.feedback", "Every DFB that needs the user carries their decision", owner))
     res.append(_figma(ctx, owner))
     res.append(_trail(ctx))
-    res.append(checks.demo(ctx, peer=ctx.project / "docs" / "backend"))
+    res.append(checks.demo(ctx))
     return res, {"not_machine_checked": ["Constitution §6.6: what the user must do to make it live",
                                          "Constitution §6.7: user accepted, with date"]}
 

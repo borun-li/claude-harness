@@ -1,0 +1,90 @@
+{
+  "harness_version": "16.0.0",
+  "_comment": "Harness defaults; every install replaces this file. Your own defaults go in ~/.claude/harness-local/config.json and a project's in <project>/.claude/harness.json: each overrides the keys it names in the one before (keys merge two levels deep). Gate settings (globs, commands, timeouts) are separate: ~/.claude/gates/config.json and <project>/.claude/gates.json.",
+  "models": {
+    "_comment": "The model of each role per tier; _active_tier is the one in force. A role in floor is never dispatched below its model (the dispatch hook refuses). adjust: when the orchestrator moves a role one step for a single dispatch.",
+    "_active_tier": "quality",
+    "tiers": {
+      "quality": {
+        "label": "Quality first (default)",
+        "orchestrator": "opus",
+        "be-analyst": "opus", "be-architect": "opus", "be-developer": "opus", "be-tester": "sonnet",
+        "be-reviewer": "opus", "be-review-behavior": "opus", "be-review-reliability": "opus", "be-review-security": "opus",
+        "fe-ux": "opus", "fe-ui": "opus", "fe-engineer": "sonnet", "fe-tester": "sonnet",
+        "fe-reviewer": "opus", "fe-review-experience": "opus", "fe-review-accessibility": "opus", "fe-review-integration": "opus"
+      },
+      "balanced": {
+        "label": "Balanced",
+        "orchestrator": "opus",
+        "be-analyst": "sonnet", "be-architect": "opus", "be-developer": "sonnet", "be-tester": "haiku",
+        "be-reviewer": "opus", "be-review-behavior": "opus", "be-review-reliability": "opus", "be-review-security": "opus",
+        "fe-ux": "opus", "fe-ui": "sonnet", "fe-engineer": "sonnet", "fe-tester": "sonnet",
+        "fe-reviewer": "opus", "fe-review-experience": "opus", "fe-review-accessibility": "opus", "fe-review-integration": "opus"
+      },
+      "economy": {
+        "label": "Economy",
+        "orchestrator": "sonnet",
+        "be-analyst": "sonnet", "be-architect": "opus", "be-developer": "sonnet", "be-tester": "haiku",
+        "be-reviewer": "sonnet", "be-review-behavior": "sonnet", "be-review-reliability": "sonnet", "be-review-security": "sonnet",
+        "fe-ux": "opus", "fe-ui": "sonnet", "fe-engineer": "sonnet", "fe-tester": "haiku",
+        "fe-reviewer": "opus", "fe-review-experience": "opus", "fe-review-accessibility": "opus", "fe-review-integration": "opus"
+      },
+      "max": {
+        "label": "All Opus (no cost ceiling)",
+        "orchestrator": "opus",
+        "be-analyst": "opus", "be-architect": "opus", "be-developer": "opus", "be-tester": "opus",
+        "be-reviewer": "opus", "be-review-behavior": "opus", "be-review-reliability": "opus", "be-review-security": "opus",
+        "fe-ux": "opus", "fe-ui": "opus", "fe-engineer": "opus", "fe-tester": "opus",
+        "fe-reviewer": "opus", "fe-review-experience": "opus", "fe-review-accessibility": "opus", "fe-review-integration": "opus"
+      }
+    },
+    "floor": ["fe-ux", "fe-reviewer", "fe-review-experience", "fe-review-accessibility", "fe-review-integration"],
+    "adjust": {
+      "fe-ui": "sonnet when carrying out a decided change: a revision the user specified, syncing frames",
+      "fe-engineer": "opus for feasibility and the queue, cross-stack rows, client state or the data layer, or where a written invariant is touched",
+      "fe-tester": "opus when writing a new assertion that must be shown to fail"
+    }
+  },
+  "language": {
+    "_comment": "Documents follow the user's language unless a project sets default_docs; stated in the kickoff preview, not asked.",
+    "default_docs": "user"
+  },
+  "review": {
+    "_comment": "Backend panels (backend PLAYBOOK §6): design review runs only when risk is high; the review panel is trimmed by risk. The frontend panel is in frontend PLAYBOOK §6.",
+    "design_panel": ["be-review-behavior", "be-review-reliability"],
+    "backend_panel": ["be-review-behavior", "be-review-reliability", "be-review-security"]
+  },
+  "loops": {
+    "_comment": "max_rounds: redo rounds each item may take at a step (fixes, revisions, re-work after an answer), counted from the run log; past it, the user decides (Constitution §5.4). continue_max_context: an author is continued (Constitution §8.1) only while its last request was at most this many tokens.",
+    "max_rounds": 2,
+    "continue_max_context": 150000
+  },
+  "design_stop_rule": {
+    "_comment": "Two stops (UX, then UI) when the round has at least min_pages_for_two pages or a new flow; otherwise one. Proposed at kickoff, confirmed by the user.",
+    "min_pages_for_two": 2,
+    "new_flow_means_two": true
+  },
+  "figma": {
+    "_comment": "Frontend PLAYBOOK §1E. Counts every Figma MCP call made by fe-ux, fe-ui and fe-engineer, logged on their returns. per_page includes about 2 calls for a UX-stop wireframe.",
+    "monthly_budget": 300,
+    "per_run": { "base": 20, "per_page": 10 },
+    "warn_at": 0.8
+  },
+  "viewports": [1440, 768, 375],
+  "viewport_height": 900,
+  "delivery_surface": null,
+  "primary_user_role": null,
+  "product_class": null,
+  "taste": {
+    "_comment": "Measured on every web capture of a product whose product_class is `tool`, and reported by fe-verify; it fails nothing. The values are those of skills/design-taste §1, §4 and §6: change them with the skill, or in a project whose brand differs. null leaves a measure out. font_families_max: families outside code. radius_px: the corner radii used, besides fully round. body_px: the size most of the text is set in. gradients_max: elements with a gradient background. dialogs_open_max: dialogs visible at once.",
+    "font_families_max": 2,
+    "radius_px": [0, 4, 6],
+    "body_px": 14,
+    "gradients_max": 0,
+    "dialogs_open_max": 1
+  },
+  "artifacts": {
+    "_comment": "run_dir: where runs live, one directory per run (<run_dir>/<slug>/). A project may move it.",
+    "run_dir": "docs/runs"
+  }
+}

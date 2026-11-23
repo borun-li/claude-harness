@@ -3,6 +3,8 @@ import json
 import pathlib
 import re
 
+from . import runner
+
 
 def _exists(p, *names):
     return any((p / n).exists() for n in names)
@@ -66,8 +68,11 @@ def detect(project):
     if (p / "Makefile").exists() and stack != "make":
         for k, v in _make(p).items():
             cmds[k] = cmds[k] or v
-    return {"stack": stack, "commands": cmds, "confirmed": False,
-            "confirmed_on": None,
-            "_note": "Draft from gate.py profile. Edit, then set confirmed true and confirmed_on "
-                     "once the user approves. Any key from ~/.claude/gates/config.json may be "
-                     "overridden here (frontend_globs, test_globs, ...)."}
+    note = ("Draft from gate.py profile. Edit, then set confirmed true and confirmed_on "
+            "once the user approves. Any key from ~/.claude/gates/config.json may be "
+            "overridden here (frontend_globs, test_globs, ...).")
+    test = cmds.get("test")
+    plan = runner.junit_plan(test, p, "junit.xml") if test else None
+    if plan and plan[2] is None:  # a runner the gates get no per-test results from: say what to add
+        note += f" Per-test results of `{test}`: {plan[3]}."
+    return {"stack": stack, "commands": cmds, "confirmed": False, "confirmed_on": None, "_note": note}

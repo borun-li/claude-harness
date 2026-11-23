@@ -33,6 +33,7 @@ Your ONLY job is to find where real network and runtime conditions break the int
 
 ## Output
 
+- **Sole reviewer** (the brief says so; no coordinator follows): check each candidate against the code or the running interface yourself and keep only what stands. Return `report:` in place of `candidates`: the findings as `FND-###` in the structure of `~/.claude/frontend/templates/05-review.md`, or that there are none; the orchestrator files it.
 - Your handoff entry (HANDOFF.md §4) goes last in your return. Long output goes to a scratch file outside the project tree.
 - Return, most severe first:
 

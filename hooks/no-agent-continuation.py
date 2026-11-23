@@ -1,24 +1,31 @@
 #!/usr/bin/env python3
-"""PreToolUse(SendMessage) —— 已返回的 be-* / fe-* 代理，只按 Constitution §8.1 续用。
+"""PreToolUse(SendMessage): a be-* / fe-* agent that has returned is continued only per Constitution §8.1.
 
-**为什么是钩子而不是一句提示。** 续用多轮的代理上下文越积越大；新开的代理又要从头
-重读代码。§8.1 在两者之间划了线，这个文件是承载它的结构。
+**Why a hook and not a sentence.** An agent continued round after round carries a growing
+context; a fresh agent has to read the code again from the start. §8.1 draws the line between
+the two, and this file is the structure that holds it.
 
-**判据。** SendMessage 的 ``to`` 是代理名或 agentId，本身看不出角色。Claude Code
-为每个子代理写一份 ``<会话记录目录>/subagents/agent-<id>.meta.json``（``agentType``、
-``finished``），旁边是它的记录 ``agent-<id>.jsonl``。钩子据此判断：
+**The test.** SendMessage's ``to`` is an agent name or agentId and says nothing of the role.
+Claude Code writes ``<transcript dir>/subagents/agent-<id>.meta.json`` (``agentType``,
+``finished``) for each sub-agent, next to its transcript ``agent-<id>.jsonl``. From those:
 
-- 目标不是 be-* / fe-*（或查不到） → 放行。钩子只管本 harness 的团队。
-- 目标仍在运行（``finished`` 不为 true） → 放行。同一轮内给活着的代理补一句话不是续用。
-- 目标是**作者**（写被返工的那份东西的角色，``AUTHORS``） → 续用次数到 ``loops.max_rounds``
-  为止放行，且它最后一次请求的上下文不超过 ``loops.continue_max_context``；否则拒绝。
-  它已经读过的东西不必重读，这正是续用的意义。
-- 目标是**评判者**（审查员、``fe-tester``） → 只放行一次：因一个问题而 blocked，
-  同一轮内把答案带给它。评判永远由没见过这份工作的新代理做。
+- The target is not be-* / fe-* (or is not found) → allowed. The hook covers this harness's teams only.
+- The target is still running (``finished`` is not true) → allowed. A word to a live agent
+  within its round is not a continuation.
+- The target is an **author** (a role that writes the work being redone, ``AUTHORS``) → allowed
+  for a fix round, a revision or its role's next step on the same work, while its last request
+  carried at most ``loops.continue_max_context`` tokens (the harness config: ``harness/config.json``,
+  then ``harness-local/config.json``, then the project's ``.claude/harness.json``). What it has read
+  it need not read again.
+  The number of rounds is not counted here: the run log refuses a redo past ``loops.max_rounds``
+  when the continuation is logged.
+- The target is a **judge** (a reviewer, ``fe-tester``) → allowed once: it was blocked on a
+  question and gets the answer within its round. A judgement is always made by a fresh agent.
 
-放行的续用由这里交给 ``run-log.py dispatch`` 记进运行日志（它拒绝时照样拒绝）。
+An allowed continuation is handed to ``run-log.py dispatch`` here, to be written to the run log;
+what that refuses is refused.
 
-读不懂输入、找不到文件，一律放行 —— 钩子不该成为新的故障源。
+Unreadable input or a missing file → allowed: a hook must not become a new source of failure.
 """
 import json
 import pathlib
@@ -31,18 +38,22 @@ AUTHORS = {"be-analyst", "be-architect", "be-developer", "be-tester", "fe-ux", "
 HERE = pathlib.Path(__file__).resolve().parent
 
 REASON = (
-    "Constitution §8.1：这个 {kind} 已经返回，{why}。不要再续用它。\n"
-    "新开一个 {kind}（Agent 工具，subagent_type={kind}），按 ~/.claude/route/HANDOFF.md §3 "
-    "写简报：第几个 {kind}、第几轮、任务、条目、证据路径、阅读清单（代码地图和要读的 file:line）、"
-    "已知陷阱。上一轮学到的东西在交接和代码地图里，不在它的上下文里。"
+    "Constitution §8.1: this {kind} has returned and {why}. Do not continue it.\n"
+    "Start a fresh {kind} (Agent tool, subagent_type={kind}) with a brief per "
+    "~/.claude/route/HANDOFF.md §3: which {kind} and round, the task, the items, evidence paths, "
+    "the reading list (code map and file:line) and known traps. What the last round learned is "
+    "in the handoff and the code map, not in its context."
 )
 
 
-def loops(kind, cwd):
-    """团队配置的 loops，项目的 .claude/<team>.json 可整体覆盖（与 gate.loop_cap 同序）。"""
-    team = "backend" if kind.startswith("be-") else "frontend"
-    out = {"max_rounds": 2, "continue_max_context": 200000}
-    for f in (HERE.parent / team / "config.json", pathlib.Path(cwd or ".") / ".claude" / f"{team}.json"):
+def loops(cwd):
+    """``loops`` of the harness config: the harness default, then the user's own defaults, then the
+    project's. The layers and order of ``gatelib.common.harness_cfg``, read here without importing
+    it: this hook starts with the standard library alone."""
+    out = {"continue_max_context": 200000}
+    for f in (HERE.parent / "harness" / "config.json",
+              HERE.parent / "harness-local" / "config.json",
+              pathlib.Path(cwd or ".") / ".claude" / "harness.json"):
         try:
             out.update(json.loads(f.read_text()).get("loops") or {})
         except Exception:
@@ -51,21 +62,22 @@ def loops(kind, cwd):
 
 
 def last_context(transcript):
-    """代理最后一次请求送进模型的 token 数（输入 + 缓存写 + 缓存读）。"""
-    size = 0
+    """Tokens the agent's last request sent to the model (input + cache write + cache read);
+    None when the transcript cannot be read or holds no usage, so the size is unknown."""
+    size = None
     try:
-        for line in transcript.read_text().splitlines():
+        for line in transcript.read_text().split("\n"):
             u = (json.loads(line).get("message") or {}).get("usage") if '"usage"' in line else None
             if u:
                 size = sum(u.get(k, 0) for k in
                            ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"))
     except Exception:
-        return 0
+        return None
     return size
 
 
 def find_meta(subagents: pathlib.Path, to: str):
-    """``to`` 可以是 agentId，也可以是代理名；两种都试。"""
+    """``to`` is an agentId or an agent name: try both."""
     direct = subagents / f"agent-{to}.meta.json"
     if direct.is_file():
         return direct
@@ -86,7 +98,7 @@ def main() -> int:
     if payload.get("tool_name") != "SendMessage":
         return 0
     to = str(payload.get("tool_input", {}).get("to", "")).strip()
-    to = re.sub(r"\s*\[[^\]]*\]$", "", to)  # 去掉 " [ref]" 后缀
+    to = re.sub(r"\s*\[[^\]]*\]$", "", to)  # drop a trailing " [ref]"
     transcript = payload.get("transcript_path")
     if not to or to == "main" or not transcript:
         return 0
@@ -101,21 +113,25 @@ def main() -> int:
     kind = str(meta.get("agentType", ""))
     if not HARNESS_TYPE.match(kind) or meta.get("finished") is not True:
         return 0
-    ledger = meta_path.with_name(meta_path.name.replace(".meta.json", ".continuations"))
-    try:
-        used = int(ledger.read_text().strip() or 0) if ledger.exists() else 0
-    except Exception:
-        used = 0
+    author = kind in AUTHORS
+    ledger = meta_path.with_name(meta_path.name.replace(".meta.json", ".continuations"))  # judges only
+    used = 0
     why = None
-    if kind in AUTHORS:
-        cfg = loops(kind, payload.get("cwd"))
+    if author:
+        try:
+            limit = int(loops(payload.get("cwd"))["continue_max_context"])
+        except Exception:
+            limit = None
         size = last_context(meta_path.with_name(meta_path.name.replace(".meta.json", ".jsonl")))
-        if used >= max(1, int(cfg["max_rounds"])):
-            why = f"已经续用了 {used} 次（loops.max_rounds = {cfg['max_rounds']}）"
-        elif size > int(cfg["continue_max_context"]):
-            why = f"上下文已有 {size} token（loops.continue_max_context = {cfg['continue_max_context']}）"
-    elif used >= 1:
-        why = "已经续用过一次；评判者每一轮都要新开"
+        if size is not None and limit is not None and size > limit:  # an unknown size is not a size of 0
+            why = f"its last request carried {size} tokens of context (loops.continue_max_context = {limit})"
+    else:
+        try:
+            used = int(ledger.read_text().strip() or 0) if ledger.exists() else 0
+        except Exception:
+            used = 0
+        if used >= 1:
+            why = "it has been continued once already; a judge is fresh every round"
     if why:
         print(json.dumps({
             "hookSpecificOutput": {
@@ -125,23 +141,26 @@ def main() -> int:
             }
         }))
         return 0
-    # 放行的续用也是一次派工：此刻 meta 里还是 finished，查得出角色，就在这里记日志
-    # （等 PostToolUse 时代理已恢复运行，角色查不出来，续用就漏记了）。run-log 拒绝时照样拒绝。
+    # An allowed continuation is a dispatch too. The meta file still says finished here, so the
+    # role is known; by PostToolUse the agent is running again and the continuation would go
+    # unlogged. What run-log refuses (a redo past the round cap, a second writer in the run's tree,
+    # an isolated author whose worktree is gone) is refused.
     out = log_dispatch({**payload, "harness_agent_type": kind})
     if (out.get("hookSpecificOutput") or {}).get("permissionDecision") == "deny":
         print(json.dumps(out))
         return 0
-    try:
-        ledger.write_text(str(used + 1))
-    except Exception:
-        pass
+    if not author:
+        try:
+            ledger.write_text(str(used + 1))
+        except Exception:
+            pass
     if out:
         print(json.dumps(out))
     return 0
 
 
 def log_dispatch(payload) -> dict:
-    """交给 run-log.py dispatch，返回它的 JSON 输出（没有则为空）。"""
+    """Hand the payload to ``run-log.py dispatch``; its JSON output, or {} when it printed none."""
     try:
         p = subprocess.run([sys.executable, str(HERE / "run-log.py"), "dispatch"], input=json.dumps(payload),
                            capture_output=True, text=True, timeout=150)
