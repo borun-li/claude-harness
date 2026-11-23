@@ -71,9 +71,9 @@ backend (10.0.0) and frontend (15.0.0) version lines end here: the harness has o
   still in progress is finished on the version that started it, or abandoned.
 
 **Documentation**
-- The README is shorter: what it is, an example run, how it works in six points, the quick start
-  and a table of the tiers. The details it held (prerequisites, what install changes, each tier,
-  hooks, branches, configuration, upgrading) are in the new `GUIDE.md`.
+- The README is shorter: what it is, how it works in six points, the prerequisites, the quick
+  start and a table of the tiers. The details it held (what install changes, each tier, hooks,
+  branches, configuration, upgrading) are in the new `GUIDE.md`.
 - `skills/design-taste`: each rule carries its reason; motion, radius and spacing have exact
   values; each generic model default is listed with what to do instead; three lines (who, their
   most frequent task, its step count) are written before any screen; no harness-only terms, so

@@ -14,40 +14,6 @@ can stop and resume. It installs into `~/.claude` and works in every project.
 
 ---
 
-## See it in action
-
-An example of the smallest kind of run:
-
-```text
-You:   /route add a CSV export button to the orders page
-
-Team:  I read the code: the orders page and its API already exist, so this is
-       frontend work only. Two questions:
-       1. How big is this?  Small change · Standard change · Prototype · Full development
-       2. The goal as I understand it: "An Export CSV button on the orders page
-          downloads the orders on screen." Right?
-You:   Small change. Yes.
-
-Team:  The frontend engineer's plan:
-       - You will see: an "Export CSV" button above the orders table
-       - Files: OrdersPage.tsx, exportCsv.ts (new), exportCsv.test.ts (new)
-       - Check: the file has one line per order on screen
-       Build it?
-You:   Yes.
-
-Team:  Built. The build and the tests pass.
-       Before and after: orders-before.png · orders-after.png
-       Try it at http://localhost:5173/orders. Accept?
-You:   Accept.
-
-Team:  Committed on branch csv-export.
-```
-
-Bigger work follows the same shape with more of the team: a separate tester, reviewers, designers,
-and automatic checks between the steps.
-
----
-
 ## How it works
 
 1. **One orchestrator, sixteen specialists.** Your session delegates; each agent has one job
@@ -67,26 +33,49 @@ and automatic checks between the steps.
 
 ---
 
+## Prerequisites
+
+| To do this | You need |
+|---|---|
+| Anything | [Claude Code](https://claude.com/claude-code), Python 3.9+, git, Node.js 18+ with npm |
+| Work on a web interface | Also Google Chrome (it captures the evidence) |
+| A new visual design | Also the Figma plugin for Claude Code, with a seat that can write to Figma files |
+| Build from a Figma design you have | The Figma plugin; read access is enough |
+| A terminal interface | No Figma: screens are designed as text mockups |
+
+Developed on macOS; Linux should work; on Windows use WSL.
+
+---
+
 ## Quick Start
 
-You need [Claude Code](https://claude.com/claude-code), Python 3.9+, git and Node.js 18+; Google
-Chrome for work on a web interface.
+**1. Download.**
 
 ```sh
 git clone https://github.com/borun-li/claude-harness.git
 cd claude-harness
-./install.sh --check    # lists anything missing
-./install.sh            # backs up what it replaces, then copies into ~/.claude
 ```
 
-Restart Claude Code. Then, in any project:
+**2. Check the prerequisites.** It prints `prerequisites ok`, or each missing tool with what needs it.
+
+```sh
+./install.sh --check
+```
+
+**3. Install.** It backs up what it replaces, then copies the harness into `~/.claude`.
+
+```sh
+./install.sh
+```
+
+**4. Restart Claude Code and start.** In any project:
 
 ```
 /route <what you want, in plain words>
 ```
 
-Update later with `git pull && ./install.sh`. What install changes, how to undo it, and what
-designing in Figma needs: [GUIDE.md](GUIDE.md).
+Update later with `git pull && ./install.sh`. What install changes and how to undo it:
+[GUIDE.md](GUIDE.md#installing-updating-uninstalling).
 
 ---
 
@@ -145,7 +134,7 @@ evidence supplied by hand. Details: [GUIDE.md](GUIDE.md#what-it-supports).
 
 ## Documentation
 
-- [GUIDE.md](GUIDE.md): prerequisites, what install changes, each tier in detail, safety hooks,
+- [GUIDE.md](GUIDE.md): what install changes, each tier in detail, safety hooks,
   branches and pull requests, parallel work, long runs, configuration, upgrading, uninstalling
 - [Backend team](backend/README.md) · [Frontend team](frontend/README.md): each team's flow and rules
 - [ORCHESTRATOR.md](ORCHESTRATOR.md): how the main session dispatches and decides ·
