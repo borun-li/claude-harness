@@ -36,15 +36,7 @@ beyond the web grows as projects use it.
 
 ## Prerequisites
 
-| To do this | You need |
-|---|---|
-| Anything | [Claude Code](https://claude.com/claude-code), Python 3.9+, git, Node.js 18+ with npm |
-| Work on a web interface | Also Google Chrome (evidence capture) |
-| A new visual design | Also the Figma plugin for Claude Code, with a seat that can write to Figma files |
-| Build from a Figma design you have | The Figma plugin; read access is enough |
-| A terminal interface | No Figma: screens are designed as text mockups |
-
-Developed on macOS; Linux should work; on Windows use WSL.
+The table of what you need is in the [README](README.md#prerequisites). Two notes on Figma:
 
 The Figma agents list the Figma plugin's tools as `mcp__plugin_figma_figma__*`; if your server has
 another name, change that line in `agents/fe-ux.md`, `agents/fe-ui.md` and `agents/fe-engineer.md`.
